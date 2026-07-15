@@ -703,7 +703,14 @@ def updt_stat(gdat, gdatmodi):
 
     # Keep derived map/stat products synchronized with accepted state so
     # per-sweep frame plots reflect chain evolution between checkpoints.
-    for namevarb in ['cntpmodl', 'cntpresi', 'llik', 'llikmean', 'llikcmea', 'lpri']:
+    listnamevarbsync = ['cntpmodl', 'cntpresi', 'llik', 'llikmean', 'llikcmea', 'lpri',
+                        'conv', 'convelem', 'magn', 'defl', 'deflsubh', 'deflextr',
+                        'convpsec', 'convpsecodim', 'convpsecelem', 'convpsecelemodim',
+                        'cntplens', 'cntplensgrad', 'cntplensgradmgtd']
+    for e in getattr(gdat.fitt, 'indxsersfgrd', []):
+        listnamevarbsync.append('deflhostisf%d' % e)
+
+    for namevarb in listnamevarbsync:
         if hasattr(gdatmodi.next, namevarb):
             setattr(gdatmodi.this, namevarb, deepcopy(getattr(gdatmodi.next, namevarb)))
 
@@ -2686,6 +2693,8 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
                                 varb = _retr_default_missing(strgvarb)
                     elif strgvarb == 'cntpdata':
                         varb = getattr(gdat, 'cntpdata')
+                    elif gmodithis is not None and hasattr(gmodithis, strgvarb):
+                        varb = getattr(gmodithis, strgvarb)
                     elif hasattr(gdatmodi, namethis):
                         varb = getattr(gdatmodi, namethis)
                     else:
@@ -8954,6 +8963,40 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         deflextrtemp = getattr(gmodstat, 'deflextr', np.zeros((gdat.numbpixlcart, 2)))
         defltotltemp = getattr(gmodstat, 'defl', np.zeros((gdat.numbpixlcart, 2)))
         deflsubhtemp = getattr(gmodstat, 'deflsubh', np.zeros((gdat.numbpixl, 2)))
+
+        # Compatibility fallback: some sparse paths leave total deflection unset,
+        # even though component deflections are present.
+        defltotltemp = np.asarray(defltotltemp)
+        boolrebuilddefl = False
+        if defltotltemp.shape != (gdat.numbpixlcart, 2):
+            boolrebuilddefl = True
+        else:
+            booldeflzero = np.all(np.abs(defltotltemp) == 0.)
+            boolcompnonzero = False
+            if np.asarray(deflextrtemp).shape == (gdat.numbpixlcart, 2) and np.any(np.abs(deflextrtemp) > 0.):
+                boolcompnonzero = True
+            if np.asarray(deflsubhtemp).shape == (gdat.numbpixlcart, 2) and np.any(np.abs(deflsubhtemp) > 0.):
+                boolcompnonzero = True
+            if not boolcompnonzero:
+                for hosttemp in deflhosttemp:
+                    if np.asarray(hosttemp).shape == (gdat.numbpixlcart, 2) and np.any(np.abs(hosttemp) > 0.):
+                        boolcompnonzero = True
+                        break
+            if booldeflzero and boolcompnonzero:
+                boolrebuilddefl = True
+        if boolrebuilddefl:
+            defltotltemp = np.zeros((gdat.numbpixlcart, 2))
+            for hosttemp in deflhosttemp:
+                hostarr = np.asarray(hosttemp)
+                if hostarr.shape == defltotltemp.shape:
+                    defltotltemp += hostarr
+            deflextrarr = np.asarray(deflextrtemp)
+            if deflextrarr.shape == defltotltemp.shape:
+                defltotltemp += deflextrarr
+            deflsubharr = np.asarray(deflsubhtemp)
+            if deflsubharr.shape == defltotltemp.shape:
+                defltotltemp += deflsubharr
+            setattr(gmodstat, 'defl', defltotltemp)
         deflsing = np.zeros((gdat.numbpixlcart, 2, gmod.numbdeflsingplot))
         conv = np.zeros((gdat.numbpixlcart))
         convpsec = np.zeros(((gdat.numbsidecarthalf)**2))
@@ -11815,6 +11858,10 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                 plot_finl(gdatfinl, gdatprio=gdatprio, strgpdfn=strgpdfn, gdatsimu=gdatsimu, booltile=booltile)
             except Exception as excp:
                 print('Warning: skipping final plotting due to compatibility error: %s' % str(excp))
+            try:
+                _plot_finl_lpdf_fallback(gdatfinl, strgpdfn)
+            except Exception as excp:
+                print('Warning: could not generate fallback prior/likelihood final plots: %s' % str(excp))
             filestat = open_narr(gdatfinl.pathoutpcnfg + 'stat.txt', 'a')
             filestat.write('plotfinl%s written.\n' % strgpdfn)
             filestat.close()
@@ -11842,7 +11889,56 @@ def _has_final_plot_outputs(gdat, strgpdfn):
     typefileplot = getattr(gdat, 'typefileplot', 'pdf')
     patt = os.path.join(pathplotfinl, '**', '*.' + typefileplot)
     listfile = glob.glob(patt, recursive=True)
-    return len(listfile) > 0
+    if len(listfile) == 0:
+        return False
+
+    # Treat likelihood/prior summaries as required core finl products.
+    for name in ['lliktotl', 'lpritotl']:
+        pattcore = os.path.join(pathplotfinl, '**', '*' + name + '*.' + typefileplot)
+        if len(glob.glob(pattcore, recursive=True)) == 0:
+            return False
+
+    return True
+
+
+def _plot_finl_lpdf_fallback(gdat, strgpdfn):
+
+    if not hasattr(gdat, 'true') or gdat.true is None:
+        gdat.true = tdpy.gdatstrt()
+    if not hasattr(gdat.true, 'lpritotl'):
+        gdat.true.lpritotl = 0.
+    if not hasattr(gdat.true, 'lliktotl'):
+        gdat.true.lliktotl = 0.
+    if not hasattr(gdat, 'refr') or gdat.refr is None:
+        gdat.refr = tdpy.gdatstrt()
+    if not hasattr(gdat.refr, 'colr'):
+        gdat.refr.colr = 'r'
+
+    pathfinl = getattr(gdat, 'path' + strgpdfn + 'finl', None)
+    if pathfinl is None:
+        return
+
+    for strgpdfntemp in ['lpritotl', 'lliktotl']:
+        listname = 'list' + strgpdfn + strgpdfntemp
+        if not hasattr(gdat, listname):
+            continue
+        varb = np.asarray(getattr(gdat, listname)).flatten()
+        if varb.size == 0:
+            continue
+        if strgpdfntemp == 'lpritotl':
+            labl = r'$\ln P(M)$'
+        else:
+            labl = r'$\ln P(D|M)$'
+        path = pathfinl + strgpdfntemp
+        tdpy.mcmc.plot_hist(path, varb, labl)
+        listvarbdraw = []
+        listlabldraw = []
+        listcolrdraw = []
+        if hasattr(gdat, 'typedata') and gdat.typedata == 'simu':
+            listvarbdraw += [getattr(gdat.true, strgpdfntemp)]
+            listlabldraw += ['True model']
+            listcolrdraw += [gdat.refr.colr]
+        tdpy.mcmc.plot_trac(path, varb, labl, listvarbdraw=listvarbdraw, listlabldraw=listlabldraw, listcolrdraw=listcolrdraw)
 
 
 def _has_init_plot_outputs(gdat):
@@ -15254,6 +15350,39 @@ def plot_genemaps(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, strgvarb, indxen
    
     maps = retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn)
     maps = np.asarray(maps)
+
+    if strgstat == 'this' and strgvarb == 'conv' and maps.size > 0 and np.all(np.abs(maps) == 0.):
+        def _retr_defl_map(name):
+            try:
+                temp = np.asarray(retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, name, strgpdfn))
+            except Exception:
+                return None
+            temp = np.squeeze(temp)
+            if temp.ndim > 2:
+                temp = np.mean(temp, axis=tuple(range(temp.ndim - 2)))
+            if temp.shape == (gdat.numbpixlcart, 2):
+                return temp
+            return None
+
+        defltemp = _retr_defl_map('defl')
+        boolrebuild = defltemp is None or np.all(np.abs(defltemp) == 0.)
+        if boolrebuild:
+            deflreco = np.zeros((gdat.numbpixlcart, 2))
+            for e in getattr(gmod, 'indxsersfgrd', []):
+                hostmap = _retr_defl_map('deflhostisf%d' % e)
+                if hostmap is not None:
+                    deflreco += hostmap
+            deflextrmap = _retr_defl_map('deflextr')
+            if deflextrmap is not None:
+                deflreco += deflextrmap
+            deflsubhmap = _retr_defl_map('deflsubh')
+            if deflsubhmap is not None:
+                deflreco += deflsubhmap
+            defltemp = deflreco
+        if defltemp is not None and np.any(np.abs(defltemp) > 0.):
+            convtemp = retr_conv(gdat, defltemp)
+            maps = np.asarray(convtemp)[None, :, None]
+
     if maps.ndim > 3:
         maps = np.squeeze(maps)
         if maps.ndim > 2:
