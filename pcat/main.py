@@ -12495,6 +12495,47 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
     if not hasattr(gdat, 'lablsampdist'):
         gdat.lablsampdist = 'Posterior'
     gmod = getattr(gdat, strgmodl)
+    if not hasattr(gmod, 'lablelemsubs') or gmod.lablelemsubs is None or len(getattr(gmod, 'lablelemsubs', [])) < gmod.numbpopl:
+        listlabl = []
+        for l in gmod.indxpopl:
+            if hasattr(gmod, 'typeelem') and l < len(gmod.typeelem):
+                listlabl.append(str(gmod.typeelem[l]))
+            else:
+                listlabl.append('pop%d' % l)
+        gmod.lablelemsubs = listlabl
+    if not hasattr(gdat, 'liststrgelemtdimtype') or gdat.liststrgelemtdimtype is None or len(gdat.liststrgelemtdimtype) == 0:
+        gdat.liststrgelemtdimtype = ['bind']
+    if gmod.numbpopl > 0:
+        if not hasattr(gdat, 'liststrgelemtdimvarbinit') or gdat.liststrgelemtdimvarbinit is None:
+            gdat.liststrgelemtdimvarbinit = ['hist']
+        if not hasattr(gdat, 'liststrgelemtdimvarbfram') or gdat.liststrgelemtdimvarbfram is None:
+            gdat.liststrgelemtdimvarbfram = deepcopy(gdat.liststrgelemtdimvarbinit)
+            if getattr(gdat, 'boolinforefr', False):
+                gdat.liststrgelemtdimvarbfram += ['cmpl', 'fdis']
+        if not hasattr(gdat, 'liststrgelemtdimvarbfinl') or gdat.liststrgelemtdimvarbfinl is None:
+            gdat.liststrgelemtdimvarbfinl = deepcopy(gdat.liststrgelemtdimvarbfram)
+        if not hasattr(gdat, 'liststrgelemtdimvarbanim') or gdat.liststrgelemtdimvarbanim is None:
+            gdat.liststrgelemtdimvarbanim = deepcopy(gdat.liststrgelemtdimvarbfram)
+
+        if not hasattr(gmod, 'namepara'):
+            gmod.namepara = tdpy.gdatstrt()
+        if not hasattr(gmod.namepara, 'genrelem') or gmod.namepara.genrelem is None:
+            gmod.namepara.genrelem = [[] for _ in gmod.indxpopl]
+        if not hasattr(gmod.namepara, 'derielemodim') or gmod.namepara.derielemodim is None or len(gmod.namepara.derielemodim) < gmod.numbpopl:
+            gmod.namepara.derielemodim = [[] for _ in gmod.indxpopl]
+        for l in gmod.indxpopl:
+            if l >= len(gmod.namepara.derielemodim):
+                continue
+            if gmod.namepara.derielemodim[l] is None:
+                gmod.namepara.derielemodim[l] = []
+            if len(gmod.namepara.derielemodim[l]) == 0:
+                listfeat = []
+                if l < len(gmod.namepara.genrelem):
+                    listfeat += [name for name in gmod.namepara.genrelem[l] if name not in ['spec', 'specplot', 'deflprof']]
+                # Derived features often used in frame diagnostics.
+                listfeat += ['mcut', 'deltllik', 'mass', 'nobj']
+                gmod.namepara.derielemodim[l] = list(dict.fromkeys(listfeat))
+
     if not hasattr(gmod, 'listnameecomtotl'):
         gmod.listnameecomtotl = list(getattr(gmod, 'listnamegcom', []))
     if not hasattr(gdat, 'minmpara'):
@@ -12576,7 +12617,9 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                     listderielemodim = gmod.namepara.derielemodim[l]
                 for nameparaderielemodim in listderielemodim:
                     if not (nameparaderielemodim == 'flux' or nameparaderielemodim == 'mcut' or \
-                            nameparaderielemodim == 'deltllik' or nameparaderielemodim == 'defs' or nameparaderielemodim == 'nobj'):
+                            nameparaderielemodim == 'deltllik' or nameparaderielemodim == 'defs' or nameparaderielemodim == 'nobj' or \
+                            nameparaderielemodim == 'xpos' or nameparaderielemodim == 'ypos' or \
+                            nameparaderielemodim == 'asca' or nameparaderielemodim == 'acut' or nameparaderielemodim == 'mass'):
                         continue
                                                                               
                     if gdat.boolmakeshrtfram and strgstat == 'this' and strgmodl == 'fitt':
@@ -12585,6 +12628,9 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                     
                     name = nameparaderielemodim
                     namepopl = nameparaderielemodim + 'pop%d' % l
+                    if not hasattr(gmod.labltotlpara, namepopl) or not hasattr(gmod.scalpara, namepopl) or \
+                                    not hasattr(gmod.limtpara, namepopl) or not hasattr(gdat.bctrpara, name):
+                        continue
                     lablxdat = getattr(gmod.labltotlpara, namepopl)
                     scalxdat = getattr(gmod.scalpara, namepopl)
                     limtxdat = getattr(gmod.limtpara, namepopl)
@@ -12631,13 +12677,17 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                                 if not nameparaderielemodim in gmod.namepara.genrelem[l]:
                                     continue
                             
-                            plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, 'hist' + nameparaderielemodim + 'pop%d' % l, \
-                                              'bctr' + nameparaderielemodim, scalydat='logt', lablxdat=lablxdat, \
-                                              lablydat=lablydat, histodim=True, ydattype=ydattype, \
-                                              scalxdat=scalxdat, meanxdat=meanxdat, limtydat=limtydat, \
-                                              limtxdat=limtxdat, boolhistprio=boolhistprio, \
-                                              #indxydat=indxydat, strgindxydat=strgindxydat, \
-                                              nameinte='histodim/', typehist=typehist)
+                            try:
+                                plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, 'hist' + nameparaderielemodim + 'pop%d' % l, \
+                                                  'bctr' + nameparaderielemodim, scalydat='logt', lablxdat=lablxdat, \
+                                                  lablydat=lablydat, histodim=True, ydattype=ydattype, \
+                                                  scalxdat=scalxdat, meanxdat=meanxdat, limtydat=limtydat, \
+                                                  limtxdat=limtxdat, boolhistprio=boolhistprio, \
+                                                  #indxydat=indxydat, strgindxydat=strgindxydat, \
+                                                  nameinte='histodim/', typehist=typehist)
+                            except Exception as excp:
+                                print('Warning: skipping hist%s pop%d (%s/%s) due to plotting error: %s' % \
+                                            (nameparaderielemodim, l, ydattype, typehist, str(excp)))
     
     if not booltile:
         if gmod.numbpopl > 0:
@@ -12966,10 +13016,13 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                                 if strgelemtdimvarb.startswith('hist'):
                                     
                                     strgtotl = strgelemtdimvarb + strgfrst + strgseco + 'pop%d' % l0
-                                    plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelemtdimvarb, \
-                                                                               l0, strgfrst + 'pop%d' % l0, \
-                                                                                   strgseco + 'pop%d' % l0, \
-                                                                                   strgtotl, strgpdfn=strgpdfn)
+                                    try:
+                                        plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelemtdimvarb, \
+                                                                                   l0, strgfrst + 'pop%d' % l0, \
+                                                                                       strgseco + 'pop%d' % l0, \
+                                                                                       strgtotl, strgpdfn=strgpdfn)
+                                    except Exception as excp:
+                                        print('Warning: skipping %s correlation plot due to plotting error: %s' % (strgtotl, str(excp)))
                                 else:
                                     if booltile:
                                         continue
@@ -12979,8 +13032,11 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                                     if strgelemtdimvarb.startswith('fdis'):
                                         for q in gdat.indxrefr:
                                             strgtotl = strgelemtdimvarb + strgfrst + strgseco + 'pop%dpop%d' % (q, l0)
-                                            plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelemtdimvarb, \
-                                                                                            l0, strgfrst, strgseco, strgtotl, strgpdfn=strgpdfn)
+                                            try:
+                                                plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelemtdimvarb, \
+                                                                                                l0, strgfrst, strgseco, strgtotl, strgpdfn=strgpdfn)
+                                            except Exception as excp:
+                                                print('Warning: skipping %s correlation plot due to plotting error: %s' % (strgtotl, str(excp)))
                                     elif strgelemtdimvarb.startswith('excr') or strgelemtdimvarb.startswith('incr'):
                                         for qq in gdatsimu.indxrefr:
                                             if strgelemtdimvarb.startswith('excr'):
@@ -12988,14 +13044,20 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                                                     if getattr(gdat, 'crex' + strgfrst + strgseco + 'pop%dpop%dpop%d' % (q, qq, l0)) is None:
                                                         continue
                                                     strgtotl = strgelemtdimvarb + strgfrst + strgseco + 'pop%dpop%dpop%d' % (q, qq, l0)
-                                                    plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelemtdimvarb, \
-                                                                                                l0, strgfrst, strgseco, strgtotl, strgpdfn=strgpdfn)
+                                                    try:
+                                                        plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelemtdimvarb, \
+                                                                                                    l0, strgfrst, strgseco, strgtotl, strgpdfn=strgpdfn)
+                                                    except Exception as excp:
+                                                        print('Warning: skipping %s correlation plot due to plotting error: %s' % (strgtotl, str(excp)))
                                             else:
                                                 if strgfrst[-4:] in gdat.listnamerefr and strgseco[-4:] in gdat.listnamerefr:
                                                     continue
                                                 strgtotl = strgelemtdimvarb + strgfrst + strgseco + 'pop%dpop%d' % (qq, l0)
-                                                plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelemtdimvarb, \
-                                                                                            l0, strgfrst, strgseco, strgtotl, strgpdfn=strgpdfn)
+                                                try:
+                                                    plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelemtdimvarb, \
+                                                                                                l0, strgfrst, strgseco, strgtotl, strgpdfn=strgpdfn)
+                                                except Exception as excp:
+                                                    print('Warning: skipping %s correlation plot due to plotting error: %s' % (strgtotl, str(excp)))
         
             numbelemtotlmaxm = getattr(getattr(gmod, 'maxmpara', tdpy.gdatstrt()), 'numbelemtotl', 0)
             if not (gdat.typedata == 'simu' and numbelemtotlmaxm == 0):
@@ -13029,9 +13091,11 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                                     continue
                                 
                                 strgtotl = 'cmpl' + refrstrgfrst + refrstrgseco + 'pop%dpop%d' % (l0, q)
-                                
-                                plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, 'bind', 'cmpl', \
-                                                        q, refrstrgfrst + 'pop%d' % l0, refrstrgseco + 'pop%d' % l0, strgtotl, strgpdfn=strgpdfn)
+                                try:
+                                    plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, 'bind', 'cmpl', \
+                                                            q, refrstrgfrst + 'pop%d' % l0, refrstrgseco + 'pop%d' % l0, strgtotl, strgpdfn=strgpdfn)
+                                except Exception as excp:
+                                    print('Warning: skipping %s correlation plot due to plotting error: %s' % (strgtotl, str(excp)))
             
     if not booltile:
         if not (gdat.boolmakeshrtfram and strgstat == 'this' and strgmodl == 'fitt'):
@@ -13149,12 +13213,18 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                 # gradient of the lens emission
                 for i in gdat.indxener:
                     for m in gdat.indxdqlt:
-                        plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, 'cntplensgrad', indxenerplot=i, indxdqltplot=m)
+                        try:
+                            plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, 'cntplensgrad', indxenerplot=i, indxdqltplot=m)
+                        except Exception as excp:
+                            print('Warning: skipping cntplensgrad deflection plot for this frame: %s' % str(excp))
                 
         if not (gdat.boolmakeshrtfram and strgstat == 'this' and strgmodl == 'fitt'):
             if gmod.boollens:
                 # overall deflection field
-                plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, multfact=0.1)
+                try:
+                    plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, multfact=0.1)
+                except Exception as excp:
+                    print('Warning: skipping overall deflection plot for this frame: %s' % str(excp))
                 
                 # deflection field due to individual lenses
                 for k in range(gmod.numbdeflsingplot):  
@@ -13164,15 +13234,24 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                         multfact = 1.
                     elif k >= 2:
                         multfact = 10.
-                    plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, indxdefl=k, multfact=multfact)
+                    try:
+                        plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, indxdefl=k, multfact=multfact)
+                    except Exception as excp:
+                        print('Warning: skipping deflection plot for lens %d in this frame: %s' % (k, str(excp)))
                 
                 # residual deflection field
                 if strgmodl == 'fitt' and gdat.typedata == 'simu':
-                    plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, nameparagenrelem='resi', multfact=100.)
+                    try:
+                        plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, nameparagenrelem='resi', multfact=100.)
+                    except Exception as excp:
+                        print('Warning: skipping residual deflection plot for this frame: %s' % str(excp))
                     if strgstat != 'pdfn':
                         numbsingcomm = int(getattr(getattr(gdatmodi, strgstat), 'numbsingcomm', 0))
                         for k in range(numbsingcomm):
-                            plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, nameparagenrelem='resi', indxdefl=k, multfact=100.)
+                            try:
+                                plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, nameparagenrelem='resi', indxdefl=k, multfact=100.)
+                            except Exception as excp:
+                                print('Warning: skipping residual deflection plot for lens %d in this frame: %s' % (k, str(excp)))
                     
                     if gdat.numbpixl > 1:
                         if gmod.numbpopl > 0:
