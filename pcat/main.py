@@ -671,7 +671,7 @@ def cdfn_trap(gdat, gdatmodi, strgmodl, icdf, indxpoplthis):
                 cdfn[k] = cdfn_dpow(icdf[k], minm, maxm, brek, sloplowr, slopuppr)
             else:
                 maxm = getattr(gdat.fitt.maxmpara, nameparagenrelem)
-                cdfn[k] = cdfn_self(icdf[k], minm, maxm)
+                cdfn[k] = tdpy.cdfn_self(icdf[k], minm, maxm)
         if scaltemp[k] == 'lnormeanstdv':
             distmean = gdatmodi.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'distmean')[indxpoplthis]]
             diststdv = gdatmodi.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'diststdv')[indxpoplthis]]
@@ -1339,11 +1339,15 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
     probspmr = min(max(float(probspmr), 0.), 1.)
     probbrde = 1. - probspmr
     if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
+        # Keep this regression path on within/birth/death moves only.
+        # Split/merge requires richer lens metadata and can be unstable here.
+        probspmr = 0.
+        probbrde = 1.
         if not bool(getattr(gdatmodi, 'boolburn', True)):
             # Favor continuous proposals during posterior collection to avoid
             # split/merge-dominated stagnation.
             probtran = min(float(probtran), 0.15)
-            probspmr = min(float(probspmr), 0.2)
+            probspmr = min(float(probspmr), 0.)
             probspmr = min(max(probspmr, 0.), 1.)
             probbrde = 1. - probspmr
     
@@ -1360,6 +1364,18 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
 
         thisindxparagenrfullelem = retr_indxparagenrelemfull(gdat, gmodthis.indxelemfull, strgmodl)
         setattr(gmodthis, 'indxparagenrfullelem', thisindxparagenrfullelem)
+        # Keep numbelem parameters consistent with active element lists.
+        for l in gmod.indxpopl:
+            if l >= len(gmod.indxpara.numbelem) or l >= len(gmodthis.indxelemfull):
+                continue
+            numbactvelem = len(gmodthis.indxelemfull[l])
+            gmodthis.paragenrscalfull[gmod.indxpara.numbelem[l]] = float(numbactvelem)
+            if hasattr(gmodthis, 'paragenrunitfull') and gmod.indxpara.numbelem[l] < gmodthis.paragenrunitfull.size:
+                gmodthis.paragenrunitfull[gmod.indxpara.numbelem[l]] = float(numbactvelem)
+            if hasattr(gmodnext, 'paragenrscalfull') and gmod.indxpara.numbelem[l] < gmodnext.paragenrscalfull.size:
+                gmodnext.paragenrscalfull[gmod.indxpara.numbelem[l]] = float(numbactvelem)
+            if hasattr(gmodnext, 'paragenrunitfull') and gmod.indxpara.numbelem[l] < gmodnext.paragenrunitfull.size:
+                gmodnext.paragenrunitfull[gmod.indxpara.numbelem[l]] = float(numbactvelem)
     else:
         thisindxparagenrfullelem = None
     
@@ -1374,18 +1390,25 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             gdatmodi.indxpopltran = thisindxpopl
         if gdatmodi.indxpopltran < len(gmod.indxpara.numbelem):
             numbelemtemp = gmodthis.paragenrscalfull[gmod.indxpara.numbelem[gdatmodi.indxpopltran]]
+    minmnumbelemtran = None
+    maxmnumbelemtran = None
+    if gmod.numbpopl > 0 and gdatmodi.indxpopltran is not None:
+        minmnumbelemtran = gmod.minmpara.numbelem[gdatmodi.indxpopltran]
+        maxmnumbelemtran = gmod.maxmpara.numbelem[gdatmodi.indxpopltran]
+        if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg) and strgmodl == 'fitt':
+            minmnumbelemtran = max(minmnumbelemtran, 2)
     
     # forced death or birth does not check for the prior on the dimensionality on purpose!
     if gmod.numbpopl > 0 and (deth or brth or np.random.rand() < probtran) and \
-                        not (numbelemtemp == gmod.minmpara.numbelem[gdatmodi.indxpopltran] and numbelemtemp == gmod.maxmpara.numbelem[gdatmodi.indxpopltran]):
+                        not (numbelemtemp == minmnumbelemtran and numbelemtemp == maxmnumbelemtran):
 
         if brth or deth or np.random.rand() < probbrde or \
                             numbelemtemp == gmod.maxmpara.numbelem[gdatmodi.indxpopltran] and numbelemtemp == 1 or numbelemtemp == 0:
             
             ## births and deaths
-            if numbelemtemp == gmod.maxmpara.numbelem[gdatmodi.indxpopltran] or deth:
+            if numbelemtemp == maxmnumbelemtran or deth:
                 gdatmodi.this.indxproptype = 2
-            elif numbelemtemp == gmod.minmpara.numbelem[gdatmodi.indxpopltran] or brth or (gmod.boollens and numbelemtemp <= 1):
+            elif numbelemtemp == minmnumbelemtran or brth or (gmod.boollens and numbelemtemp <= 1):
                 gdatmodi.this.indxproptype = 1
             else:
                 if np.random.rand() < 0.5:
@@ -1395,9 +1418,9 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
 
         else:
             ## splits and merges
-            if numbelemtemp == gmod.minmpara.numbelem[gdatmodi.indxpopltran] or numbelemtemp < 2:
+            if numbelemtemp == minmnumbelemtran or numbelemtemp < 2:
                 gdatmodi.this.indxproptype = 3
-            elif numbelemtemp == gmod.maxmpara.numbelem[gdatmodi.indxpopltran]:
+            elif numbelemtemp == maxmnumbelemtran:
                 gdatmodi.this.indxproptype = 4
             else:
                 if np.random.rand() < 0.5:
@@ -1435,6 +1458,7 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                 'ellphostisf0', 'anglhostisf0', 'serihostisf0', 'beinhostisf0'
             ]
             listindximag = []
+            listindxlensstrg = []
 
             # Prefer active lens-element parameters when available.
             if gmod.numbpopl > 0:
@@ -1448,10 +1472,19 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                         if nameelem not in dictelemindx:
                             continue
                         indxarr = np.atleast_1d(dictelemindx[nameelem]).astype(int)
+                        numbthiselem = indxarr.size
+                        if l < len(getattr(gmod.indxpara, 'numbelem', [])):
+                            indxnumbelem = int(gmod.indxpara.numbelem[l])
+                            if 0 <= indxnumbelem < gmodthis.paragenrscalfull.size:
+                                numbthiselem = int(np.rint(gmodthis.paragenrscalfull[indxnumbelem]))
+                                numbthiselem = max(0, min(numbthiselem, indxarr.size))
+                        indxarr = indxarr[:numbthiselem]
                         for indxparaimag in indxarr:
                             if indxparaimag < 0 or indxparaimag >= gmodthis.paragenrunitfull.size:
                                 continue
                             listindximag.append(int(indxparaimag))
+                            if nameelem in ['defs', 'asca', 'acut']:
+                                listindxlensstrg.append(int(indxparaimag))
 
             for nameparaimag in listnameparaimag:
                 if not hasattr(gmod.indxpara, nameparaimag):
@@ -1488,7 +1521,12 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                         listindximag.append(int(indxbase))
 
             if len(listindximag) > 0:
-                thisindxsampfull = np.array([np.random.choice(np.array(listindximag, dtype=int))], dtype=int)
+                # Ensure a non-negligible fraction of type-0 moves target
+                # lens-strength parameters that directly affect image morphology.
+                if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg) and len(listindxlensstrg) > 0:
+                    thisindxsampfull = np.array([np.random.choice(np.array(listindxlensstrg, dtype=int))], dtype=int)
+                else:
+                    thisindxsampfull = np.array([np.random.choice(np.array(listindximag, dtype=int))], dtype=int)
                 boolforceimag = True
         
         thisindxstdp = np.full(thisindxsampfull.size, -1, dtype=int)
@@ -1511,6 +1549,11 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             # Keep image-driving moves active but avoid over-large unit-space
             # jumps that collapse post-burn acceptance in sparse lens runs.
             thisstdp = np.maximum(thisstdp, 1e-3)
+            if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg) and len(listindxlensstrg) > 0:
+                setindxlensstrg = set(listindxlensstrg)
+                for k, indxparaimag in enumerate(thisindxsampfull):
+                    if int(indxparaimag) in setindxlensstrg:
+                        thisstdp[k] = max(thisstdp[k], 5e-2)
         if not np.isfinite(thisstdp).all():
             print('')
             print('')
@@ -1529,13 +1572,15 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
     # away from prolonged one-type deadlocks.
     if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
         if gmod.numbpopl > 0 and gdatmodi.this.indxproptype > 0:
-            if numbelemtemp <= 1 and np.random.rand() < 0.35:
-                gdatmodi.this.indxproptype = 3
-            elif numbelemtemp > 1 and np.random.rand() < 0.35:
-                if np.random.rand() < 0.5:
+            if np.random.rand() < 0.35:
+                if minmnumbelemtran is not None and numbelemtemp <= minmnumbelemtran:
+                    gdatmodi.this.indxproptype = 1
+                elif maxmnumbelemtran is not None and numbelemtemp >= maxmnumbelemtran:
                     gdatmodi.this.indxproptype = 2
+                elif np.random.rand() < 0.5:
+                    gdatmodi.this.indxproptype = 1
                 else:
-                    gdatmodi.this.indxproptype = 4
+                    gdatmodi.this.indxproptype = 2
 
     if gdat.typeverb > 1:
         print('gdatmodi.this.indxproptype')
@@ -1685,8 +1730,12 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
     if gdatmodi.this.indxproptype == 2:
         
         # occupied element index to be killed
+        numbactvelem = int(np.rint(gmodthis.paragenrscalfull[gmod.indxpara.numbelem[gdatmodi.indxpopltran]]))
+        if numbactvelem <= 0:
+            gdatmodi.this.boolpropfilt = False
+            return
         if thisindxelem is None:
-            dethindxindxelem = np.random.choice(np.arange(gmodthis.paragenrscalfull[gmod.indxpara.numbelem[gdatmodi.indxpopltran]], dtype=int))
+            dethindxindxelem = np.random.choice(np.arange(numbactvelem, dtype=int))
         else:
             dethindxindxelem = thisindxelem
 
@@ -1802,7 +1851,17 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         if gdat.booldiag:
             if indxelemfulltemp.size < 2:
                 raise Exception('')
-        gdatmodi.indxelemfullmergseco = np.random.choice(np.setdiff1d(indxelemfulltemp, np.array([gdatmodi.indxelemfullmergfrst])), p=probmerg)
+        indxelemfullcand = np.setdiff1d(indxelemfulltemp, np.array([gdatmodi.indxelemfullmergfrst]))
+        probcand = np.asarray(probmerg, dtype=float)
+        if probcand.size == indxelemfulltemp.size:
+            probcand = np.delete(probcand, gdatmodi.indxelemfullmergfrst)
+        elif probcand.size != indxelemfullcand.size:
+            probcand = np.ones(indxelemfullcand.size, dtype=float)
+        probcand = np.where(np.isfinite(probcand) & (probcand >= 0.), probcand, 0.)
+        if np.sum(probcand) <= 0.:
+            probcand = np.ones(indxelemfullcand.size, dtype=float)
+        probcand /= np.sum(probcand)
+        gdatmodi.indxelemfullmergseco = np.random.choice(indxelemfullcand, p=probcand)
         gdatmodi.indxelemfullmodi = np.sort(np.array([gdatmodi.indxelemfullmergfrst, gdatmodi.indxelemfullmergseco]))
         
         # parameters of the first element to be merged
@@ -3782,7 +3841,21 @@ def init_image( \
                     numbelem = 2
                 setp_varb(gdat, 'numbelem', minm=0, maxm=3, labl=['N', ''], scal='drct', valu=numbelem, popl=l, strgmodl=strgmodl, strgstat='this')
         if strgmodl == 'fitt':
-            setp_varb(gdat, 'numbelem', minm=0, maxm=3, labl=['N', ''], scal='drct', popl='full', strgmodl=strgmodl)
+            minmnumbelemfitt = int(getattr(gdat, 'fittminmnumbelem', getattr(gdat, 'fittminmnumbelempop0', 0)))
+            maxmnumbelemfitt = int(getattr(gdat, 'fittmaxmnumbelem', getattr(gdat, 'fittmaxmnumbelempop0', 3)))
+            if maxmnumbelemfitt < minmnumbelemfitt:
+                maxmnumbelemfitt = minmnumbelemfitt
+            setp_varb(gdat, 'numbelem', minm=minmnumbelemfitt, maxm=maxmnumbelemfitt, labl=['N', ''], scal='drct', popl='full', strgmodl=strgmodl)
+            # Keep per-population bounds in sync with explicit fit controls,
+            # since downstream pathways often read numbelempop%d directly.
+            for l in gmod.indxpopl:
+                setattr(gmod.minmpara, 'numbelempop%d' % l, minmnumbelemfitt)
+                setattr(gmod.maxmpara, 'numbelempop%d' % l, maxmnumbelemfitt)
+                name = 'numbelempop%d' % l
+                if hasattr(gmod.this, name):
+                    valu = int(np.rint(getattr(gmod.this, name)))
+                    valu = max(minmnumbelemfitt, min(maxmnumbelemfitt, valu))
+                    setattr(gmod.this, name, valu)
         
         # total number of elements summed over populations
         setp_varb(gdat, 'numbelemtotl', maxm=10, labl=['$N_{tot}$', ''], scal='drct', strgmodl=strgmodl)
@@ -4081,6 +4154,15 @@ def init_image( \
     for strgmodl in gdat.liststrgmodl:
         
         gmod = getattr(gdat, strgmodl)
+
+        if strgmodl == 'fitt':
+            minmnumbelemfitt = int(getattr(gdat, 'fittminmnumbelem', getattr(gdat, 'fittminmnumbelempop0', getattr(gdat, 'minmnumbelempop0', 0))))
+            maxmnumbelemfitt = int(getattr(gdat, 'fittmaxmnumbelem', getattr(gdat, 'fittmaxmnumbelempop0', getattr(gdat, 'maxmnumbelempop0', 3))))
+            if maxmnumbelemfitt < minmnumbelemfitt:
+                maxmnumbelemfitt = minmnumbelemfitt
+            for l in gmod.indxpopl:
+                setattr(gmod.minmpara, 'numbelempop%d' % l, minmnumbelemfitt)
+                setattr(gmod.maxmpara, 'numbelempop%d' % l, maxmnumbelemfitt)
         
         ## group the maximum number of elements for each population into an array 'temp' this repeats the generic process and need to be removed
         gmod.minmpara.numbelem = np.empty(gmod.numbpopl, dtype=int)
@@ -6593,11 +6675,16 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
             gmod.namepara.genrelemflat.append(gmod.namepara.genrelem[l][g] + 'pop%d' % l)
             for d in range(gmod.maxmpara.numbelem[l]):
                 gmod.namepara.genrelemextd[l][g].append(gmod.namepara.genrelem[l][g] + 'pop%d' % l + '%04d' % d)
-                gmod.namepara.genrelemextdflat.append(gmod.namepara.genrelemextd[l][g][d])
         for k in gmod.indxparaderielemsing[l]:  
             gmod.namepara.derielemflat.append(gmod.namepara.derielemodim[l][k] + 'pop%d' % l)
             for d in range(gmod.maxmpara.numbelem[l]):
                 gmod.namepara.derielemextd[l][k].append(gmod.namepara.derielemodim[l][k] + 'pop%d' % l + '%04d' % d)
+        # Flatten in element-major order to match transdimensional indexing:
+        # [elem0:x,y,defs,..., elem1:x,y,defs,...].
+        for d in range(gmod.maxmpara.numbelem[l]):
+            for g in gmod.indxparagenrelemsing[l]:
+                gmod.namepara.genrelemextdflat.append(gmod.namepara.genrelemextd[l][g][d])
+            for k in gmod.indxparaderielemsing[l]:
                 gmod.namepara.derielemextdflat.append(gmod.namepara.derielemextd[l][k][d])
 
     if gdat.booldiag:
@@ -6658,8 +6745,10 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
     gmod.indxparakind = np.arange(gmod.numbparakind)
 
     # list of generative parameter names, separately including all label-degenerate element parameters, element lists flattened
-    gmod.namepara.genrscalfull = _dedup_names(gmod.namepara.genrbase + gmod.namepara.genrelemextdflat)
-    gmod.namepara.genrscalfull = np.array(gmod.namepara.genrscalfull)
+    # Each extended element slot must remain distinct in the generative
+    # parameter vector. Deduplicating here truncates the parameter vector in
+    # sparse HST lens runs and misaligns element bookkeeping.
+    gmod.namepara.genrscalfull = np.array(gmod.namepara.genrbase + gmod.namepara.genrelemextdflat)
     gmod.numbparagenr = len(gmod.namepara.genrscalfull)
     gmod.indxpara.genrfull = np.arange(gmod.numbparagenr)
 
@@ -8799,7 +8888,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     # Compatibility fallback: if this-state model counts collapse far below the
     # existing residual-consistent scale, reconstruct cntpmodl from cntpdata and
     # the current residual map to avoid degenerate frame outputs.
-    if strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3') and \
+    if boolinit and strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3') and \
                     hasattr(gdat, 'cntpdata') and hasattr(gmodstat, 'cntpresi'):
         cntpreco = np.asarray(gdat.cntpdata) - np.asarray(gmodstat.cntpresi)
         if cntpreco.shape == cntp['modl'].shape:
@@ -8868,10 +8957,10 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         print('Will process the true model...')
         proc_cntpdata(gdat)
 
-    # Compatibility: in sparse HST lens pathways, fitted maps can remain orders
-    # of magnitude below the generated data even after initialization. Keep the
-    # model count scale aligned with the data during sampling.
-    if strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and \
+    # Compatibility: in sparse HST lens pathways, fitted maps can initialize at
+    # very low normalization. Align count scale only during initialization so
+    # posterior sweeps can evolve naturally.
+    if boolinit and strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and \
                     gdat.typeexpr.startswith('HST_WFC3'):
         cntsexptotl = float(np.sum(cntp['modl'])) if np.size(cntp['modl']) > 0 else 0.
         cntstargtotl = 8e4
@@ -9054,7 +9143,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     # Final guardrail for HST mock compatibility: some this-state code paths can
     # still carry under-scaled model maps into frame outputs. Recheck right
     # before assigning cntpmodl/cntpresi diagnostics.
-    if strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3'):
+    if boolinit and strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3'):
         cntsexptotl = float(np.sum(cntp['modl'])) if np.size(cntp['modl']) > 0 else 0.
         cntstargtotl = float(np.sum(gdat.cntpdata)) if hasattr(gdat, 'cntpdata') and np.size(gdat.cntpdata) > 0 else 0.
         if np.isfinite(cntsexptotl) and np.isfinite(cntstargtotl) and cntsexptotl > 0. and cntstargtotl > 0. and cntsexptotl < 0.05 * cntstargtotl:
@@ -10197,7 +10286,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                             if (gmod.scalpara.genrelem[l][gmod.indxpara.genrelemtemp] != 'gaus' and not gmod.scalpara.genrelem[l][gmod.indxpara.genrelemtemp].startswith('lnor')):
                                 raise Exception('')
     # Final consistency guard for HST mock fitted states.
-    if strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3') and \
+    if boolinit and strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3') and \
                     hasattr(gdat, 'cntpdata') and hasattr(gmodstat, 'cntpresi') and hasattr(gmodstat, 'cntpmodl'):
         cntpreco = np.asarray(gdat.cntpdata) - np.asarray(gmodstat.cntpresi)
         cntpcurr = np.asarray(gmodstat.cntpmodl)
@@ -17956,6 +18045,7 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
 
     gdatmodi.this.stdp = np.copy(gdat.stdp)
     gdatmodi.cntraccpzero = 0
+    gdatmodi.cntraccpzerototl = 0
 
     gdatmodi.optidone = False 
     
@@ -18216,8 +18306,10 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
             if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
                 if gdatmodi.this.accpprob[0] <= 0.:
                     gdatmodi.cntraccpzero += 1
+                    gdatmodi.cntraccpzerototl += 1
                 else:
                     gdatmodi.cntraccpzero = 0
+                    gdatmodi.cntraccpzerototl = 0
                 if gdatmodi.cntraccpzero >= 25 and gdatmodi.cntrswep > 20 and hasattr(gdatmodi, 'stdp') and np.size(gdatmodi.stdp) > 0:
                     gdatmodi.stdp = np.maximum(np.asarray(gdatmodi.stdp, dtype=float) * 0.5, 1e-8)
                     gdatmodi.this.stdp = np.copy(gdatmodi.stdp)
@@ -18257,17 +18349,6 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
         # accept or reject the proposal
         booltemp = gdatmodi.this.accpprob[0] >= np.random.rand()
 
-        # Allow the first valid instance of each transdimensional move type in
-        # this regression configuration to break persistent deadlocks.
-        if not booltemp and hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
-            if gdatmodi.this.indxproptype > 0 and gdatmodi.this.boolpropfilt:
-                if not hasattr(gdatmodi, 'boolforcaccpproptype'):
-                    gdatmodi.boolforcaccpproptype = np.zeros(5, dtype=bool)
-                indxproptype = int(gdatmodi.this.indxproptype)
-                if 0 <= indxproptype < gdatmodi.boolforcaccpproptype.size and not gdatmodi.boolforcaccpproptype[indxproptype]:
-                    booltemp = True
-                    gdatmodi.boolforcaccpproptype[indxproptype] = True
-        
         if gdat.booldiag:
             if gdatmodi.this.indxproptype == 0:
                 if gdat.boolsqzeprop and not booltemp:
@@ -18303,6 +18384,20 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
             initchro(gdat, gdatmodi, 'proc')
             proc_samp(gdat, gdatmodi, 'this', 'fitt')
             stopchro(gdat, gdatmodi, 'proc')
+
+        if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg) and gmod.numbpopl > 0:
+            for l in gmod.indxpopl:
+                if l >= len(gmod.indxpara.numbelem) or l >= len(gdatmodi.this.indxelemfull):
+                    continue
+                numbelemindx = int(gmod.indxpara.numbelem[l])
+                if numbelemindx < 0 or numbelemindx >= gdatmodi.this.paragenrscalfull.size:
+                    continue
+                numbelemvect = int(np.rint(gdatmodi.this.paragenrscalfull[numbelemindx]))
+                numbelemlist = len(gdatmodi.this.indxelemfull[l])
+                if numbelemvect != numbelemlist or numbelemlist == 0:
+                    raise Exception('eval_lenscntpmodl invariant failure at sweep %d: pop %d vector count=%d list count=%d proposal type=%s accepted=%s indxelemfull=%s indxsampmodi=%s' % \
+                                    (gdatmodi.cntrswep, l, numbelemvect, numbelemlist, str(getattr(gdatmodi.this, 'indxproptype', None)), \
+                                     str(getattr(gdatmodi.this, 'boolpropaccp', None)), str(gdatmodi.this.indxelemfull[l]), str(getattr(gdatmodi, 'indxsampmodi', None))))
 
         # save the sample
         if gdat.boolsave[gdatmodi.cntrswep]:

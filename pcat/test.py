@@ -1422,6 +1422,17 @@ def exec_lensmockfittnumb(strgcnfgextnexec=None):
 
     print('Setting up strong-lens mock count test...')
     print('Running PCAT sampling runtime for HST lens image generation and posterior inference...')
+    anglfact = 3600.0 * 180.0 / nump.pi
+    numbswep = int(oper.environ.get('PCAT_LENS_NUMBSWEP', '3000'))
+    numbburn = int(oper.environ.get('PCAT_LENS_NUMBBURN', '400'))
+    numbsamp = int(oper.environ.get('PCAT_LENS_NUMBSAMP', '400'))
+    boolmakeplot = oper.environ.get('PCAT_LENS_BOOLMAKEPLOT', '1').strip().lower() not in ('0', 'false', 'no')
+    boolmakeplotinit = oper.environ.get('PCAT_LENS_BOOLMAKEPLOTINIT', '1').strip().lower() not in ('0', 'false', 'no')
+    fittminmnumbelempop0 = int(oper.environ.get('PCAT_LENS_FITTMINMNUMBELEMPOP0', '2'))
+    fittmaxmnumbelempop0 = int(oper.environ.get('PCAT_LENS_FITTMAXMNUMBELEMPOP0', '10'))
+    if fittmaxmnumbelempop0 < fittminmnumbelempop0:
+        fittmaxmnumbelempop0 = fittminmnumbelempop0
+    fittminmdefs = float(oper.environ.get('PCAT_LENS_FITTMINMDEFS', str(0.005 / anglfact)))
     strgcnfg = 'eval_lenscntpmodl'
     if strgcnfgextnexec is not None:
         strgcnfg += '_%s' % strgcnfgextnexec
@@ -1435,8 +1446,8 @@ def exec_lensmockfittnumb(strgcnfgextnexec=None):
         truefluxhostisf0=8e-16,
         truenumbelempop0=25,
         typeelem=["lens"],
-        boolmakeplot=True,
-        boolmakeplotinit=True,
+        boolmakeplot=boolmakeplot,
+        boolmakeplotinit=boolmakeplotinit,
         boolfast=False,
         forcneww=True,
         typepixl="cart",
@@ -1449,14 +1460,17 @@ def exec_lensmockfittnumb(strgcnfgextnexec=None):
         # Keep at least one fitted perturber active to avoid a trivially flat
         # chain when an early death move is accepted.
         inittype="refr",
-        numbelempop0=3,
-        fittminmnumbelempop0=1,
-        fittmaxmnumbelempop0=10,
+        numbelempop0=max(3, fittminmnumbelempop0),
+        fittminmnumbelem=fittminmnumbelempop0,
+        fittminmnumbelempop0=fittminmnumbelempop0,
+        fittmaxmnumbelempop0=fittmaxmnumbelempop0,
+        fittminmdefs=fittminmdefs,
+        minmdefs=fittminmdefs,
         probtran=0.8,
         probspmr=0.8,
-        numbswep=3000,
-        numbburn=400,
-        numbsamp=400,
+        numbswep=numbswep,
+        numbburn=numbburn,
+        numbsamp=numbsamp,
         plot_func=pcat.plot_lens,
         boolsimuonly=False,
     )
