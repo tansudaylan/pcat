@@ -2722,6 +2722,13 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
                 else:
                     varb = np.zeros_like(gdat.cntpdata)
 
+    boolmapvarb = strgvarb.startswith('cntp') or strgvarb.startswith('sbrt') or strgvarb in ['conv', 'convelem', 'magn', 'defl', 'cntplens']
+    if boolmapvarb:
+        varbarr = np.asarray(varb)
+        if varbarr.ndim == 0 or varbarr.size == 1:
+            # Do not broadcast scalar placeholders to full maps in plotting.
+            varb = _retr_default_missing(strgvarb)
+
     if indxlist is not None:
         varb = varb[indxlist]
 
@@ -9379,7 +9386,18 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
 
     #### count maps
     cntp = dict()
-    for name in gmod.listnamegcom:
+    listnamegcomactv = list(getattr(gmod, 'listnamegcom', []))
+    if len(listnamegcomactv) == 0:
+        listnamegcomactv = ['modl']
+    # Compatibility fallback: sparse bookkeeping can drop physical components
+    # (e.g., lens) from listnamegcom, which then zeroes frame diagnostics.
+    listnamecompat = [name for name in ['lens', 'bgrd', 'extsbgrd', 'dfnc', 'dfncsubt', 'modl'] if name in sbrt]
+    listnamecompat += sorted([name for name in sbrt.keys() if name.startswith('hostisf') or name.startswith('back')])
+    for name in listnamecompat:
+        if name not in listnamegcomactv:
+            listnamegcomactv.append(name)
+
+    for name in listnamegcomactv:
         
         if gdat.typeverb > 1:
             print('Computing the count map for %s...' % name)
@@ -9452,8 +9470,12 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         cntplensgrad *= gdat.sizepixl
         indx = np.where(np.fabs(cntplensgrad) > 1. * gdat.sizepixl)
         cntplensgrad[indx] = np.sign(cntplensgrad[indx]) * 1. * gdat.sizepixl
-        deflmgtd = np.sqrt(np.sum(defl**2, axis=1))
-        setattr(gmodstat, 'deflmgtd', deflmgtd)
+        deflcurr = getattr(gmodstat, 'defl', None)
+        if deflcurr is not None:
+            deflcurr = np.asarray(deflcurr)
+            if deflcurr.ndim == 2 and deflcurr.shape[1] == 2:
+                deflmgtd = np.sqrt(np.sum(deflcurr**2, axis=1))
+                setattr(gmodstat, 'deflmgtd', deflmgtd)
         setattr(gmodstat, 'cntplensgrad', cntplensgrad)
         setattr(gmodstat, 'cntplensgradmgtd', cntplensgradmgtd)
 
@@ -9487,7 +9509,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                     ypossourtemp = getattr(gmodstat, 'ypossour', 0.)
                     gmodstat.dictelem[l]['distsour'] = retr_angldist(gdat, gmodstat.dictelem[l]['xpos'],  gmodstat.dictelem[l]['ypos'], xpossourtemp, ypossourtemp)
                 
-                if getattr(gmod, 'boollenssubh', False):
+                if getattr(gmod, 'boollenssubh', False) and hasattr(chalcedon_mod, 'retr_deflcutf'):
                     if 'lens' not in cntp:
                         continue
                     reqrkeys = ['xpos', 'ypos', 'defs', 'asca', 'acut']
@@ -9504,8 +9526,10 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                     gmodstat.dictelem[l]['relm'] = np.empty(gmodstat.numbelem[l])
 
                     # temp -- this can be placed earlier in the code
+                    iref = gdat.indxener[0]
+                    mref = gdat.indxdqlt[0]
                     cntplensobjt = sp.interpolate.RectBivariateSpline(gdat.bctrpara.yposcart, gdat.bctrpara.xposcart, \
-                                                            cntp['lens'][ii, :, mm].reshape((gdat.numbsidecart, gdat.numbsidecart)).T)
+                                                            cntp['lens'][iref, :, mref].reshape((gdat.numbsidecart, gdat.numbsidecart)).T)
                     
                     for k in np.arange(gmodstat.numbelem[l]):
                         
@@ -9818,31 +9842,41 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
 
     ### Exculusive comparison with the true state
     if strgmodl == 'fitt' and gdat.typedata == 'simu':
-        if gmod.boollens and hasattr(gdat.true.this, 'deflsing') and hasattr(gdat.true.this, 'deflsingmgtd') and hasattr(gdat.true.this, 'defl') and hasattr(gdat.true.this, 'deflmgtd'):
-            numbsingcomm = min(deflsing.shape[2], gmod.deflsing.shape[2])
-            deflsingresi = deflsing[0, ..., :numbsingcomm] - gmod.deflsing[..., :numbsingcomm]
-            deflsingresimgtd = np.sqrt(np.sum(deflsingresi**2, axis=1))
-            deflsingresiperc = 100. * deflsingresimgtd / gmod.deflsingmgtd[..., :numbsingcomm]
-            setattr(gmodstat, 'numbsingcomm', numbsingcomm)
-            setattr(gmodstat, 'deflsingresi', deflsingresi)
-            truedeflmgtd = getattr(gdat.true.this, 'deflmgtd')
-            truedefl = getattr(gdat.true.this, 'defl')
-            deflresi = defl - truedefl
-            deflresimgtd = np.sqrt(np.sum(deflresi**2, axis=1))
-            deflresiperc = 100. * deflresimgtd / truedeflmgtd
-            setattr(gmodstat, 'deflresi', deflresi)
-            setattr(gmodstat, 'deflresimgtd', deflresimgtd)
-            if gmod.numbpopl > 0:
-                trueconvelem = getattr(gdat.true.this, 'convelem')
-                convelemresi = convelem[:] - trueconvelem
-                convelemresiperc = 100. * convelemresi / trueconvelem
+        if gmod.boollens and hasattr(gdat.true, 'this'):
+            truestat = gdat.true.this
+            thisdeflsing = getattr(gmodstat, 'deflsing', None)
+            truedeflsing = getattr(truestat, 'deflsing', None)
+            if thisdeflsing is not None and truedeflsing is not None:
+                numbsingcomm = min(np.asarray(thisdeflsing).shape[2], np.asarray(truedeflsing).shape[2])
+                deflsingresi = np.asarray(thisdeflsing)[..., :numbsingcomm] - np.asarray(truedeflsing)[..., :numbsingcomm]
+                setattr(gmodstat, 'numbsingcomm', numbsingcomm)
+                setattr(gmodstat, 'deflsingresi', deflsingresi)
+
+            thisdefl = getattr(gmodstat, 'defl', None)
+            truedefl = getattr(truestat, 'defl', None)
+            if thisdefl is not None and truedefl is not None:
+                deflresi = np.asarray(thisdefl) - np.asarray(truedefl)
+                deflresimgtd = np.sqrt(np.sum(deflresi**2, axis=1))
+                setattr(gmodstat, 'deflresi', deflresi)
+                setattr(gmodstat, 'deflresimgtd', deflresimgtd)
+
+            thisconvelem = getattr(gmodstat, 'convelem', None)
+            trueconvelem = getattr(truestat, 'convelem', None)
+            if thisconvelem is not None and trueconvelem is not None:
+                convelemresi = np.asarray(thisconvelem) - np.asarray(trueconvelem)
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    convelemresiperc = 100. * convelemresi / np.where(np.asarray(trueconvelem) != 0., np.asarray(trueconvelem), np.nan)
                 setattr(gmodstat, 'convelemresi', convelemresi)
                 setattr(gmodstat, 'convelemresiperc', convelemresiperc)
-            truemagn = getattr(gdat.true.this, 'magn')
-            magnresi = magn[:] - truemagn
-            magnresiperc = 100. * magnresi / truemagn
-            setattr(gmodstat, 'magnresi', magnresi)
-            setattr(gmodstat, 'magnresiperc', magnresiperc)
+
+            thismagn = getattr(gmodstat, 'magn', None)
+            truemagn = getattr(truestat, 'magn', None)
+            if thismagn is not None and truemagn is not None:
+                magnresi = np.asarray(thismagn) - np.asarray(truemagn)
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    magnresiperc = 100. * magnresi / np.where(np.asarray(truemagn) != 0., np.asarray(truemagn), np.nan)
+                setattr(gmodstat, 'magnresi', magnresi)
+                setattr(gmodstat, 'magnresiperc', magnresiperc)
     
         if gmod.numbpopl > 0:
             boolinforefr = getattr(gdat, 'boolinforefr', False)
