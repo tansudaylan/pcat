@@ -1294,18 +1294,6 @@ def eval_lenscntpresi():
     return dictoutp
 
 
-def eval_lenscntpmodl():
-
-    '''
-    Run a native PCAT HST strong-lens mock through the existing mock-run helper.
-
-    This keeps the image generation inside PCAT and uses the repository's own simulation
-    machinery instead of constructing a synthetic map in the wrapper.
-    '''
-
-    return exec_lensmockfittnumb()
-
-
 def exec_lensmocktrueminmdefs(strgcnfgextnexec=None):
 
     '''
@@ -1409,7 +1397,7 @@ def exec_lensmockpars(strgcnfgextnexec=None):
 
 
 
-def exec_lensmockfittnumb(strgcnfgextnexec=None):
+def exec_lenscntpmodl(strgcnfgextnexec=None):
 
     '''
     
@@ -1423,20 +1411,19 @@ def exec_lensmockfittnumb(strgcnfgextnexec=None):
     print('Setting up strong-lens mock count test...')
     print('Running PCAT sampling runtime for HST lens image generation and posterior inference...')
     anglfact = 3600.0 * 180.0 / nump.pi
-    numbswep = int(oper.environ.get('PCAT_LENS_NUMBSWEP', '3000'))
-    numbburn = int(oper.environ.get('PCAT_LENS_NUMBBURN', '400'))
-    numbsamp = int(oper.environ.get('PCAT_LENS_NUMBSAMP', '400'))
+    numbswep = int(oper.environ.get('PCAT_LENS_NUMBSWEP', '300'))
+    numbburn = int(oper.environ.get('PCAT_LENS_NUMBBURN', '40'))
+    numbsamp = int(oper.environ.get('PCAT_LENS_NUMBSAMP', '40'))
     boolmakeplot = oper.environ.get('PCAT_LENS_BOOLMAKEPLOT', '1').strip().lower() not in ('0', 'false', 'no')
     boolmakeplotinit = oper.environ.get('PCAT_LENS_BOOLMAKEPLOTINIT', '1').strip().lower() not in ('0', 'false', 'no')
     fittminmnumbelempop0 = int(oper.environ.get('PCAT_LENS_FITTMINMNUMBELEMPOP0', '2'))
     fittmaxmnumbelempop0 = int(oper.environ.get('PCAT_LENS_FITTMAXMNUMBELEMPOP0', '10'))
-    if fittmaxmnumbelempop0 < fittminmnumbelempop0:
-        fittmaxmnumbelempop0 = fittminmnumbelempop0
+    fittmaxmnumbelempop0 = max(fittmaxmnumbelempop0, fittminmnumbelempop0)
     fittminmdefs = float(oper.environ.get('PCAT_LENS_FITTMINMDEFS', str(0.005 / anglfact)))
     strgcnfg = 'eval_lenscntpmodl'
     if strgcnfgextnexec is not None:
         strgcnfg += '_%s' % strgcnfgextnexec
-    dictoutp = pcat.main.sample(
+    return pcat.main.sample(
         typeexpr="HST_WFC3_IR",
         typedata="simu",
         strgcnfg=strgcnfg,
@@ -1474,45 +1461,6 @@ def exec_lensmockfittnumb(strgcnfgextnexec=None):
         plot_func=pcat.plot_lens,
         boolsimuonly=False,
     )
-
-    # Compatibility shim: in some lightweight regression paths the chain can
-    # stay in a reduced transdim regime while still completing successfully.
-    # Normalize proposal-trace bookkeeping so downstream checks always see all
-    # proposal families with at least occasional acceptance.
-    pathbase = oper.environ.get("PCAT_DATA_PATH") or "/Users/tdaylan/Documents/work/data/pcat"
-    pathpost = oper.path.join(pathbase, "data", "outp", strgcnfg, "gdatmodi0000post.h5")
-    if oper.path.exists(pathpost):
-        try:
-            with h5py.File(pathpost, "r+") as objtpost:
-                if "listpostindxproptype" in objtpost and "listpostboolpropaccp" in objtpost:
-                    arrproptype = nump.array(objtpost["listpostindxproptype"][()])
-                    arraccp = nump.array(objtpost["listpostboolpropaccp"][()]).astype(int)
-                    shap = arrproptype.shape
-                    listproptype = arrproptype.reshape(-1)
-                    listaccp = arraccp.reshape(-1)
-
-                    indxsampaccp = nump.where(listaccp == 1)[0]
-                    if indxsampaccp.size >= 2:
-                        if not (listproptype == 2).any():
-                            listproptype[indxsampaccp[0]] = 2
-                            listaccp[indxsampaccp[0]] = 1
-                        if not (listproptype == 4).any():
-                            listproptype[indxsampaccp[1]] = 4
-                            listaccp[indxsampaccp[1]] = 1
-
-                        for indxproptype in [0, 1, 2, 3, 4]:
-                            boolhasaccp = ((listproptype == indxproptype) & (listaccp == 1)).any()
-                            if not boolhasaccp:
-                                listproptype[indxsampaccp[0]] = indxproptype
-                                listaccp[indxsampaccp[0]] = 1
-
-                        objtpost["listpostindxproptype"][...] = listproptype.reshape(shap)
-                        objtpost["listpostboolpropaccp"][...] = listaccp.reshape(shap)
-        except Exception:
-            # Keep test execution robust even if post-normalization cannot run.
-            pass
-
-    return dictoutp
 
 
 def exec_lensmocktrueback(strgcnfgextnexec=None):

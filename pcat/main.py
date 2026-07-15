@@ -3212,7 +3212,7 @@ def init_image( \
          ##  0: no text output except critical warnings
          ##  1: minimal description of the execution
          ##  2: detailed description of the execution
-         typeverb=2, \
+         typeverb=1, \
 
          ## base path where visuals and data will be written
          pathbase=None, \
@@ -14350,15 +14350,22 @@ def plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelem
         
         if strgstat == 'this' or strgstat == 'mlik':
             if strgelemtdimtype == 'bind':
+                nameattr = strgstat + strgtotl
+                if not hasattr(gdatmodi, nameattr):
+                    plt.close(figr)
+                    return
                 meanfrst = getattr(gdat.blimpara, strgfrst)
                 meanseco = getattr(gdat.blimpara, strgseco)
-                hist = getattr(gdatmodi, strgstat + strgtotl)
+                hist = getattr(gdatmodi, nameattr)
                 if strgtotl.startswith('hist') or strgtotl.startswith('exr') or strgtotl.startswith('incr') or np.amax(hist) <= 0.:
                     normtdim = None
                 else:
                     normtdim = mpl.colors.LogNorm(0.5, vmax=np.amax(hist))
                 imag = axis.pcolor(meanfrst, meanseco, hist.T, cmap='Blues', label=gdat.lablparagenrscalfull, alpha=gdat.alphhist, norm=normtdim)
             else:
+                if not hasattr(gdatmodi, 'this') or not hasattr(gdatmodi.this, strgfrst) or not hasattr(gdatmodi.this, strgseco):
+                    plt.close(figr)
+                    return
                 varbfrst = getattr(gdatmodi.this, strgfrst)[indxpoplfrst]
                 varbseco = getattr(gdatmodi.this, strgseco)[indxpoplfrst]
                 if len(varbfrst) == 0 or len(varbseco) == 0:
@@ -14410,6 +14417,7 @@ def plot_elemtdim(gdat, gdatmodi, strgstat, strgmodl, strgelemtdimtype, strgelem
     
     nameinte = strgelemtdimvarb + 'tdim/'
     path = retr_plotpath(gdat, gdatmodi, strgpdfn, strgstat, strgmodl, '%s%s' % (strgmometemp, strgtotl), nameinte=nameinte)
+    print('    Writing to %s...' % path)
     
     savefigr(gdat, gdatmodi, figr, path)
     plt.close(figr)
@@ -14434,7 +14442,6 @@ def plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, strgydat, strgxdat, 
                      scal=None, scalxdat=None, scalydat=None, limtxdat=None, limtydat=None, omittrue=False, nameinte='', \
                      lablxdat='', lablydat='', histodim=False, offslegd=None, booltdim=False, ydattype='totl', boolhistprio=True):
    
-    print('    Plotting %s vs %s (type: %s)...' % (strgydat, strgxdat, typehist))
     gmod = getattr(gdat, strgmodl)
     gmodstat = getattr(gmod, strgstat)
 
@@ -14726,6 +14733,7 @@ def plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, strgydat, strgxdat, 
         path = retr_plotpath(gdat, gdatmodi, strgpdfn, strgstat, strgmodl, 'histcorrreca' + strgydat[4:], nameinte=nameinte)
     else:
         path = retr_plotpath(gdat, gdatmodi, strgpdfn, strgstat, strgmodl, strgydat, nameinte=nameinte)
+    print('    Writing to %s...' % path)
     savefigr(gdat, gdatmodi, figr, path)
     plt.close(figr)
 
@@ -15493,6 +15501,8 @@ def plot_3fgl_thrs(gdat):
     
 
 def plot_init(gdat):
+    if getattr(gdat, '_plot_init_completed', False):
+        return
     
     print('Making initial plots (init = initial diagnostics; intr = intermediate diagnostics)...')
 
@@ -15536,7 +15546,7 @@ def plot_init(gdat):
                 axis.set_title('Data counts')
                 axis.set_xlabel('x')
                 axis.set_ylabel('y')
-                path = gdat.pathplotcnfg + 'datacountsen%02devt%d.%s' % (i, m, gdat.typefileplot)
+                path = gdat.pathinit + 'datacountsen%02devt%d.%s' % (i, m, gdat.typefileplot)
                 plt.tight_layout()
                 savefigr(gdat, None, figr, path)
                 plt.close(figr)
@@ -15619,6 +15629,8 @@ def plot_init(gdat):
                     plt.tight_layout()
                     figr.savefig(path)
                     plt.close(figr)
+
+    gdat._plot_init_completed = True
                 
 
 def plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, \
@@ -15637,7 +15649,32 @@ def plot_defl(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, \
 
     defl = np.asarray(defl)
     numbpixlcart = int(gdat.numbsidecart * gdat.numbsidecart)
-    if defl.size == 2 * numbpixlcart:
+    if defl.ndim == 3 and defl.shape[0] == numbpixlcart and defl.shape[1] == 2:
+        # Pixel-major vector field with an extra component axis, e.g.
+        # (numpixl, 2, nlens). Select a requested component or average over it.
+        if indxdefl is not None:
+            indxdefluse = int(indxdefl)
+            if indxdefluse < 0:
+                indxdefluse = 0
+            if indxdefluse >= defl.shape[2]:
+                indxdefluse = defl.shape[2] - 1
+            defl = defl[:, :, indxdefluse]
+        else:
+            defl = np.mean(defl, axis=2)
+        defl = defl.reshape((gdat.numbsidecart, gdat.numbsidecart, 2))
+    elif defl.ndim == 3 and defl.shape[0] == 2 and defl.shape[1] == numbpixlcart:
+        # Component-major field, optionally with an extra trailing axis.
+        if indxdefl is not None and defl.shape[2] > 1:
+            indxdefluse = int(indxdefl)
+            if indxdefluse < 0:
+                indxdefluse = 0
+            if indxdefluse >= defl.shape[2]:
+                indxdefluse = defl.shape[2] - 1
+            defl = defl[:, :, indxdefluse]
+        else:
+            defl = np.mean(defl, axis=2)
+        defl = np.moveaxis(defl, 0, -1).reshape((gdat.numbsidecart, gdat.numbsidecart, 2))
+    elif defl.size == 2 * numbpixlcart:
         defl = defl.reshape((gdat.numbsidecart, gdat.numbsidecart, 2))
     elif defl.size == numbpixlcart:
         defl = defl.reshape((gdat.numbsidecart, gdat.numbsidecart, 1))
@@ -15738,11 +15775,6 @@ def plot_genemaps(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, strgvarb, indxen
     
     # make a color bar
     make_cbar(gdat, axis, imag, strgvarb)
-    
-    print('strgvarb')
-    print(strgvarb)
-    print('maps')
-    summgene(maps)
     
     # make legend
     make_legdmaps(gdat, strgstat, strgmodl, axis)
@@ -15908,7 +15940,7 @@ def init( \
          ##  0: no text output except critical warnings
          ##  1: minimal description of the execution
          ##  2: detailed description of the execution
-         typeverb=2, \
+         typeverb=1, \
 
          ## base path where visuals and data will be written
          pathbase=None, \
