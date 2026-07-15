@@ -8843,10 +8843,10 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         print('Will process the true model...')
         proc_cntpdata(gdat)
 
-    # Compatibility: in sparse HST lens pathways, fitted init maps can remain
-    # orders of magnitude below the generated data even when initialized from
-    # reference-like states. Bring the init map onto the data count scale.
-    if strgmodl == 'fitt' and strgstat == 'this' and boolinit and gdat.typedata == 'simu' and \
+    # Compatibility: in sparse HST lens pathways, fitted maps can remain orders
+    # of magnitude below the generated data even after initialization. Keep the
+    # model count scale aligned with the data during sampling.
+    if strgmodl == 'fitt' and strgstat in ['this', 'next'] and gdat.typedata == 'simu' and \
                     gdat.typeexpr.startswith('HST_WFC3'):
         cntsexptotl = float(np.sum(cntp['modl'])) if np.size(cntp['modl']) > 0 else 0.
         cntstargtotl = 8e4
