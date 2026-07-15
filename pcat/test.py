@@ -54,6 +54,10 @@ def _normalize_legacy_pcat_args(dictargs):
 def _apply_test_defaults(dictargs):
 
     dictout = dict(dictargs)
+    # Avoid re-applying compatibility defaults when a wrapper already normalized
+    # and constrained this argument dictionary.
+    if dictout.pop('_testdefaults_applied', False):
+        return dictout
     boolfast = bool(dictout.pop("boolfast", True))
     maxm_numbswep = int(oper.environ.get("PCAT_FAST_NUMBSWEP", "200"))
     maxm_numbsamp = int(oper.environ.get("PCAT_FAST_NUMBSAMP", "25"))
@@ -85,6 +89,7 @@ def _apply_test_defaults(dictargs):
     if "numbswepplot" not in dictout or dictout["numbswepplot"] is None or dictout["numbswepplot"] > dictout["numbswep"]:
         dictout["numbswepplot"] = max(1, min(maxm_numbswepplot, dictout["numbswep"]))
 
+    dictout['_testdefaults_applied'] = True
     return dictout
 
 
@@ -113,7 +118,10 @@ def _clear_forced_run_state(dictargs):
 def _init_compat(*args, **kwargs):
 
     if len(args) == 1 and isinstance(args[0], dict) and len(kwargs) == 0:
-        return _pcat_init_native(_apply_test_defaults(_normalize_legacy_pcat_args(args[0])))
+        dictargs = _normalize_legacy_pcat_args(args[0])
+        if not dictargs.get('_testdefaults_applied', False):
+            dictargs = _apply_test_defaults(dictargs)
+        return _pcat_init_native(dictargs)
 
     if len(kwargs) > 0:
         dictargs = {}
