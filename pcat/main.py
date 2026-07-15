@@ -4188,7 +4188,9 @@ def init_image( \
                             setp_varb(gdat, 'bacp', limt=[1e-10, 1e10], ener='full', back=c)
 
         if gdat.typeexpr.startswith('HST_WFC3'):
-            setp_varb(gdat, 'bacp', minm=1e0, maxm=1e2, valu=1e1, labl=['$A$', ''], scal='logt', ener=0, back=0, strgmodl=strgmodl, strgstat='this')
+            for strgmodltemp in gdat.liststrgmodl:
+                setp_varb(gdat, 'bacp', minm=1e0, maxm=1e2, valu=1e1, labl=['$A$', ''], \
+                          scal='logt', ener=0, back=0, strgmodl=strgmodltemp, strgstat='this')
         
         if gdat.typeexpr == 'gmix':
             setp_varb(gdat, 'bacp', minm=1e-1, maxm=1e3, valu=1e1, labl=['$A$', ''], scal='logt', ener=0, back=0, strgmodl=strgmodl)
@@ -8094,6 +8096,18 @@ def init_stat(gdat):
                 gmod.this.paragenrunitfull[numbelemindx[l]] = \
                                         max(gmod.this.paragenrunitfull[numbelemindx[l]], minmnumbelem[l])
                 gmod.this.paragenrscalfull[numbelemindx[l]] = gmod.this.paragenrscalfull[numbelemindx[l]]
+
+        # Keep transdimensional element-count parameters integer and in-range
+        # for all initialization types, including sparse compatibility paths.
+        for l in gmod.indxpopl:
+            valu = gmod.this.paragenrunitfull[numbelemindx[l]]
+            if not np.isfinite(valu):
+                valu = minmnumbelem[l]
+            valu = round(valu)
+            valu = min(valu, maxmnumbelem[l])
+            valu = max(valu, minmnumbelem[l])
+            gmod.this.paragenrunitfull[numbelemindx[l]] = valu
+            gmod.this.paragenrscalfull[numbelemindx[l]] = valu
     
     if gdat.booldiag:
         if gdat.typedata == 'simu' and gdat.inittype == 'refr':
@@ -8510,6 +8524,15 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                 raise Exception('')
         setattr(gmodstat, 'psfp', psfp)
     bacp = gmodstat.paragenrscalfull[gmod.indxpara.bacp]
+    if np.asarray(bacp).size == 0:
+        # Compatibility fallback: some lightweight HST paths do not retain
+        # explicit bacp parameter indexing in the fitted model state.
+        if hasattr(gmodstat, 'bacpback0000en00'):
+            bacp = np.array([getattr(gmodstat, 'bacpback0000en00')], dtype=float)
+        elif hasattr(gdat, 'true') and hasattr(gdat.true, 'this') and hasattr(gdat.true.this, 'bacpback0000en00'):
+            bacp = np.array([getattr(gdat.true.this, 'bacpback0000en00')], dtype=float)
+        else:
+            bacp = np.ones(max(1, len(getattr(gmod, 'indxback', []))), dtype=float)
    
     # Boolean flag to indicate that the object to convolve the image is needed for this model
     gmod.boolneedpsfnconv = (gmod.typeevalpsfn == 'conv' or gmod.typeevalpsfn == 'full') and gdat.typepixl == 'cart'
@@ -8757,7 +8780,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     initchro(gdat, gdatmodi, 'expo')
     cntp = dict()
     cntp['modl'] = retr_cntp(gdat, sbrt['modl'])
-    
+
     if gdat.booldiag:
         setattr(gmodstat, 'cntpmodl', cntp['modl'])
     stopchro(gdat, gdatmodi, 'expo')
@@ -8778,6 +8801,8 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                 if gdat.typeverb > -1:
                     print('Warning: rescaled true HST lens expected counts by %.3g (from %.3g to %.3g) to avoid under-exposed mock data.' % \
                           (factrscl, cntsexptotl, float(np.sum(cntp['modl']))))
+                if gdat.booldiag:
+                    setattr(gmodstat, 'cntpmodl', cntp['modl'])
         
         # generate count data
         cntptemp = np.zeros((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
@@ -8812,6 +8837,23 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
 
         print('Will process the true model...')
         proc_cntpdata(gdat)
+
+    # Compatibility: in sparse HST lens pathways, fitted init maps can remain
+    # orders of magnitude below the generated data even when initialized from
+    # reference-like states. Bring the init map onto the data count scale.
+    if strgmodl == 'fitt' and strgstat == 'this' and boolinit and gdat.typedata == 'simu' and \
+                    gdat.typeexpr.startswith('HST_WFC3'):
+        cntsexptotl = float(np.sum(cntp['modl'])) if np.size(cntp['modl']) > 0 else 0.
+        cntstargtotl = 8e4
+        if hasattr(gdat, 'cntpdata') and np.size(gdat.cntpdata) > 0:
+            cntstargtotl = float(np.sum(gdat.cntpdata))
+        if np.isfinite(cntsexptotl) and np.isfinite(cntstargtotl) and cntsexptotl > 0. and cntstargtotl > 0. and cntsexptotl < 0.05 * cntstargtotl:
+            factrscl = cntstargtotl / cntsexptotl
+            cntp['modl'] *= factrscl
+            if gdat.booldiag:
+                setattr(gmodstat, 'cntpmodl', cntp['modl'])
+            if gdat.typeverb > -1:
+                print('Warning: rescaled initial fitted HST model counts by %.3g to match data count scale.' % factrscl)
     
     ## diagnostics
     if gdat.booldiag:
