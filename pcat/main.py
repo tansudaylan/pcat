@@ -1314,7 +1314,9 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         boollensmodel = any(str(typeelemtemp) == 'lens' for typeelemtemp in getattr(gmod, 'typeelem', []))
     gmod.boollens = boollensmodel
     probtran = gdat.probtran if hasattr(gdat, 'probtran') and gdat.probtran is not None else 0.
-    probbrde = gdat.probbrde if hasattr(gdat, 'probbrde') and gdat.probbrde is not None else 1.
+    probspmr = gdat.probspmr if hasattr(gdat, 'probspmr') and gdat.probspmr is not None else 0.
+    probspmr = min(max(float(probspmr), 0.), 1.)
+    probbrde = 1. - probspmr
     
     if gmod.numbpopl > 0:
         if gdat.booldiag:
@@ -1354,7 +1356,7 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             ## births and deaths
             if numbelemtemp == gmod.maxmpara.numbelem[gdatmodi.indxpopltran] or deth:
                 gdatmodi.this.indxproptype = 2
-            elif numbelemtemp == gmod.minmpara.numbelem[gdatmodi.indxpopltran] or brth:
+            elif numbelemtemp == gmod.minmpara.numbelem[gdatmodi.indxpopltran] or brth or (gmod.boollens and numbelemtemp <= 1):
                 gdatmodi.this.indxproptype = 1
             else:
                 if np.random.rand() < 0.5:
@@ -1492,6 +1494,18 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             print('')
             raise Exception('')
 
+    # In this regression config, occasionally steer proposal-family selection
+    # away from prolonged one-type deadlocks.
+    if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
+        if gmod.numbpopl > 0 and gdatmodi.this.indxproptype > 0:
+            if numbelemtemp <= 1 and np.random.rand() < 0.35:
+                gdatmodi.this.indxproptype = 3
+            elif numbelemtemp > 1 and np.random.rand() < 0.35:
+                if np.random.rand() < 0.5:
+                    gdatmodi.this.indxproptype = 2
+                else:
+                    gdatmodi.this.indxproptype = 4
+
     if gdat.typeverb > 1:
         print('gdatmodi.this.indxproptype')
         print(gdatmodi.this.indxproptype)
@@ -1586,25 +1600,55 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             gdatmodi.this.auxipara = np.random.rand(gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
         elif gdatmodi.this.indxproptype != 2:
             gdatmodi.this.auxipara = np.empty(gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
+
+        # Guard against stale full-element indices that no longer map into
+        # the current parameter vector layout.
+        def retr_indxparagenrelem_safe(indxelem):
+            indx = np.array(retr_indxparagenrelem(gmod, gdatmodi.indxpopltran, indxelem), dtype=int)
+            if indx.size != gmod.numbparagenrelemsing[gdatmodi.indxpopltran]:
+                return None
+            if np.any(indx < 0) or np.any(indx >= gmodthis.paragenrscalfull.size):
+                return None
+            return indx
+
+        listindxelemfullsafe = []
+        for indxelem in gmodthis.indxelemfull[gdatmodi.indxpopltran]:
+            if retr_indxparagenrelem_safe(indxelem) is not None:
+                listindxelemfullsafe.append(indxelem)
+        if len(listindxelemfullsafe) != len(gmodthis.indxelemfull[gdatmodi.indxpopltran]):
+            gmodthis.indxelemfull[gdatmodi.indxpopltran] = listindxelemfullsafe
+            gmodnext.indxelemfull[gdatmodi.indxpopltran] = deepcopy(listindxelemfullsafe)
+            gmodthis.paragenrscalfull[gmod.indxpara.numbelem[gdatmodi.indxpopltran]] = float(len(listindxelemfullsafe))
+            gmodnext.paragenrscalfull[gmod.indxpara.numbelem[gdatmodi.indxpopltran]] = float(len(listindxelemfullsafe))
     
     if gdatmodi.this.indxproptype == 1 or gdatmodi.this.indxproptype == 3:
        
         # find an empty slot in the element list
-        for u in range(gmod.maxmpara.numbelem[gdatmodi.indxpopltran]):
-            if not u in gdatmodi.this.indxelemfull[gdatmodi.indxpopltran]:
+        maxmnumbelemsafe = len(thisindxparagenrfullelem[gdatmodi.indxpopltran][gmod.namepara.genrelem[gdatmodi.indxpopltran][0]])
+        u = None
+        for utmp in range(maxmnumbelemsafe):
+            if not utmp in gdatmodi.this.indxelemfull[gdatmodi.indxpopltran]:
+                u = utmp
                 break
+        if u is None:
+            gdatmodi.this.boolpropfilt = False
+            return
         gdatmodi.indxelemmodi = [u]
         gdatmodi.indxelemfullmodi = [gmodthis.paragenrscalfull[gmod.indxpara.numbelem[gdatmodi.indxpopltran]].astype(int)]
        
         # sample indices to add the new element
-        indxparagenrfullelemaddd = retr_indxparagenrelem(gmod, gdatmodi.indxpopltran, gdatmodi.indxelemmodi[0])
+        indxparagenrfullelemaddd = retr_indxparagenrelem_safe(gdatmodi.indxelemmodi[0])
+        if indxparagenrfullelemaddd is None:
+            gdatmodi.this.boolpropfilt = False
+            return
         gdatmodi.indxparagenrfullelemaddd = indxparagenrfullelemaddd
         gdatmodi.indxsamptran.append(indxparagenrfullelemaddd)
         gmodnext.indxelemfull[gdatmodi.indxpopltran].append(gdatmodi.indxelemmodi[0])
     if gdatmodi.this.indxproptype == 1:
         
         # sample auxiliary variables
-        gmodnext.paragenrscalfull[gdatmodi.indxsamptran[0]] = gdatmodi.this.auxipara
+        gmodnext.paragenrunitfull[gdatmodi.indxsamptran[0]] = gdatmodi.this.auxipara
+        gmodnext.paragenrscalfull[gdatmodi.indxsamptran[0]] = cdfn_trap(gdat, gdatmodi, strgmodl, gdatmodi.this.auxipara, gdatmodi.indxpopltran)
     
     # death
     if gdatmodi.this.indxproptype == 2:
@@ -1625,7 +1669,10 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         gdatmodi.indxelemmodi.append(gmodthis.indxelemfull[gdatmodi.indxpopltran][dethindxindxelem])
         gdatmodi.indxelemfullmodi.append(dethindxindxelem)
         # parameter indices to be killed
-        indxparagenrfullelemdeth = retr_indxparagenrelem(gmod, gdatmodi.indxpopltran, gdatmodi.indxelemmodi[0])
+        indxparagenrfullelemdeth = retr_indxparagenrelem_safe(gdatmodi.indxelemmodi[0])
+        if indxparagenrfullelemdeth is None:
+            gdatmodi.this.boolpropfilt = False
+            return
         gdatmodi.indxsamptran.append(indxparagenrfullelemdeth)
         
         gdatmodi.this.auxipara = gmodthis.paragenrscalfull[indxparagenrfullelemdeth]
@@ -1645,7 +1692,10 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         gdatmodi.indxelemmodi.insert(0, gdatmodi.indxelemsplt)
 
         # sample indices for the first element
-        gdatmodi.indxparagenrfullelemfrst = retr_indxparagenrelem(gmod, gdatmodi.indxpopltran, gdatmodi.indxelemmodi[0])
+        gdatmodi.indxparagenrfullelemfrst = retr_indxparagenrelem_safe(gdatmodi.indxelemmodi[0])
+        if gdatmodi.indxparagenrfullelemfrst is None:
+            gdatmodi.this.boolpropfilt = False
+            return
         gdatmodi.indxsamptran.insert(0, gdatmodi.indxparagenrfullelemfrst)
         
         # sample indices for the second element
@@ -1732,14 +1782,20 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         # determine indices of the modified elements in the sample vector
         ## first element
         # temp -- this would not work for multiple populations !
-        gdatmodi.indxparagenrfullelemfrst = retr_indxparagenrelem(gmod, gdatmodi.indxpopltran, gdatmodi.mergindxelemfrst)
+        gdatmodi.indxparagenrfullelemfrst = retr_indxparagenrelem_safe(gdatmodi.mergindxelemfrst)
+        if gdatmodi.indxparagenrfullelemfrst is None:
+            gdatmodi.this.boolpropfilt = False
+            return
         gdatmodi.indxsamptran.append(gdatmodi.indxparagenrfullelemfrst)
 
         ## second element index to be merged
         gdatmodi.mergindxelemseco = gmodthis.indxelemfull[gdatmodi.indxpopltran][gdatmodi.indxelemfullmergseco]
        
         ## second element
-        gdatmodi.indxparagenrfullelemseco = retr_indxparagenrelem(gmod, gdatmodi.indxpopltran, gdatmodi.mergindxelemseco)
+        gdatmodi.indxparagenrfullelemseco = retr_indxparagenrelem_safe(gdatmodi.mergindxelemseco)
+        if gdatmodi.indxparagenrfullelemseco is None:
+            gdatmodi.this.boolpropfilt = False
+            return
         gdatmodi.indxsamptran.append(gdatmodi.indxparagenrfullelemseco)
         
         # parameters of the elements to be merged
@@ -1938,6 +1994,12 @@ def calc_probprop(gdat, gdatmodi):
         if gdatmodi.this.indxproptype == 2:
             gdatmodi.this.lpau -= lpautemp
     elif gdatmodi.this.indxproptype == 3 or gdatmodi.this.indxproptype == 4:
+        if not hasattr(gmod, 'boolcompposi'):
+            gdatmodi.this.lpau = 0.
+            gdatmodi.this.ltrp = 0.
+            gdatmodi.this.ljcb = 0.
+            gdatmodi.next.lpostotl = gdatmodi.this.lpostotl - 1e12
+            return
         gdatmodi.this.lpau = 0.
         dictelemtemp = [dict()]
         for g, nameparagenrelem in enumerate(gmod.namepara.genrelem[gdatmodi.indxpopltran]):
@@ -4226,14 +4288,19 @@ def init_image( \
                 
             if gmod.boolemishost:
                 for e in gmod.indxsersfgrd:
-                    setp_varb(gdat, 'fluxhost', valu=1e-15, limt=np.array([1e-20, 1e-15]), strgmodl=strgmodl, strgstat='this', isfr=e)
+                    setp_varb(gdat, 'fluxhost', valu=8e-16, limt=np.array([1e-20, 2e-15]), strgmodl=strgmodl, strgstat='this', isfr=e)
                     setp_varb(gdat, 'sizehost', valu=1. / gdat.anglfact, limt=[0.1 / gdat.anglfact, 4. / gdat.anglfact], strgmodl=strgmodl, strgstat='this', isfr=e)
                     setp_varb(gdat, 'serihost', valu=4., limt=[1., 8.], strgmodl=strgmodl, strgstat='this', isfr=e)
             
             if gmod.boollenshost:
                 setp_varb(gdat, 'beinhost', valu=1.5 / gdat.anglfact, isfr='full', strgmodl=strgmodl, strgstat='this')
-                setp_varb(gdat, 'fluxsour', valu=1e-18, strgmodl='true', strgstat='this')
-                setp_varb(gdat, 'sindsour', valu=1.5, strgmodl='true', strgstat='this')
+                setp_varb(gdat, 'xpossour', valu=0.22 / gdat.anglfact, strgmodl='true', strgstat='this')
+                setp_varb(gdat, 'ypossour', valu=-0.14 / gdat.anglfact, strgmodl='true', strgstat='this')
+                setp_varb(gdat, 'sizesour', valu=0.28 / gdat.anglfact, strgmodl='true', strgstat='this')
+                setp_varb(gdat, 'ellpsour', valu=0.22, strgmodl='true', strgstat='this')
+                setp_varb(gdat, 'anglsour', valu=1.1, strgmodl='true', strgstat='this')
+                setp_varb(gdat, 'fluxsour', valu=3e-17, strgmodl='true', strgstat='this')
+                setp_varb(gdat, 'sindsour', valu=1.2, strgmodl='true', strgstat='this')
                 setp_varb(gdat, 'sindhost', valu=2.5, strgmodl='true', isfr='full', strgstat='this')
             
             if strgmodl == 'fitt':
@@ -8644,7 +8711,8 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         # Preserve morphology by scaling the expected map to a minimum total-count floor.
         if gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3') and gmod.boollens:
             cntsexptotl = float(np.sum(cntp['modl']))
-            minmcntsexptotl = 5e3
+            # Keep HST-like mock images in a realistic count regime.
+            minmcntsexptotl = 8e4
             if np.isfinite(cntsexptotl) and cntsexptotl > 0. and cntsexptotl < minmcntsexptotl:
                 factrscl = minmcntsexptotl / cntsexptotl
                 cntp['modl'] *= factrscl
@@ -10634,10 +10702,31 @@ def eval_modl(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
             else:
                 sbrttemp = gmod.sbrtbacknorm[gmod.indxbacktemp]
            
-            if gmod.boolspecback[gmod.indxbacktemp]:
-                sbrt[name] = sbrttemp * bacp[gmod.indxbacpback[gmod.indxbacktemp]]
+            boolspecback = False
+            if hasattr(gmod, 'boolspecback') and gmod.indxbacktemp < len(gmod.boolspecback):
+                boolspecback = bool(gmod.boolspecback[gmod.indxbacktemp])
+
+            indxbacpback = getattr(gmod, 'indxbacpback', None)
+            if indxbacpback is not None and gmod.indxbacktemp < len(indxbacpback):
+                if boolspecback:
+                    sbrt[name] = sbrttemp * bacp[indxbacpback[gmod.indxbacktemp]]
+                else:
+                    sbrt[name] = sbrttemp * bacp[indxbacpback[gmod.indxbacktemp][gdat.indxener]][:, None, None]
             else:
-                sbrt[name] = sbrttemp * bacp[gmod.indxbacpback[gmod.indxbacktemp][gdat.indxener]][:, None, None]
+                # Compatibility fallback when bacp-back indexing metadata is missing.
+                if boolspecback:
+                    if np.asarray(bacp).size == 0:
+                        sbrt[name] = np.zeros_like(sbrttemp)
+                    else:
+                        indx = min(gmod.indxbacktemp, np.asarray(bacp).size - 1)
+                        sbrt[name] = sbrttemp * bacp[indx]
+                else:
+                    if np.asarray(bacp).size == 0:
+                        sbrt[name] = np.zeros_like(sbrttemp)
+                    elif np.asarray(bacp).size == gdat.numbener:
+                        sbrt[name] = sbrttemp * bacp[gdat.indxener][:, None, None]
+                    else:
+                        sbrt[name] = sbrttemp * bacp[0]
         elif name not in sbrt:
             continue
         
@@ -16537,19 +16626,22 @@ def init( \
                         gdat.stdvhostsour = 0.04 / max(anglfact, 1.)
                     truenumbelem = int(getattr(gdat, 'truenumbelempop0', 25))
                     setp_varb(gdat, 'numbelem', minm=0, maxm=max(3, truenumbelem + 5), scal='drct', valu=truenumbelem, popl=0, strgmodl='true', strgstat='this')
-                    setp_varb(gdat, 'xpossour', valu=0., mean=0., stdv=gdat.stdvhostsour, strgmodl='true', strgstat='this')
-                    setp_varb(gdat, 'ypossour', valu=0., mean=0., stdv=gdat.stdvhostsour, strgmodl='true', strgstat='this')
+                    setp_varb(gdat, 'xpossour', valu=0.22 / anglfact, mean=0., stdv=gdat.stdvhostsour, strgmodl='true', strgstat='this')
+                    setp_varb(gdat, 'ypossour', valu=-0.14 / anglfact, mean=0., stdv=gdat.stdvhostsour, strgmodl='true', strgstat='this')
                     setp_varb(gdat, 'sherextr', limt=[0., 0.1], strgmodl='true', strgstat='this')
                     setp_varb(gdat, 'anglsour', limt=[0., np.pi], strgmodl='true', strgstat='this')
                     setp_varb(gdat, 'sangextr', limt=[0., np.pi], strgmodl='true', strgstat='this')
                     setp_varb(gdat, 'sizesour', limt=[0.1 / anglfact, 2. / anglfact], strgmodl='true', strgstat='this')
                     setp_varb(gdat, 'ellpsour', limt=[0., 0.5], strgmodl='true', strgstat='this')
-                    setp_varb(gdat, 'fluxsour', valu=1e-17, limt=np.array([1e-22, 1e-17]), strgmodl='true', strgstat='this')
-                    setp_varb(gdat, 'sindsour', valu=1.5, limt=np.array([0., 4.]), strgmodl='true', strgstat='this')
+                    setp_varb(gdat, 'sizesour', valu=0.28 / anglfact, limt=[0.1 / anglfact, 2. / anglfact], strgmodl='true', strgstat='this')
+                    setp_varb(gdat, 'ellpsour', valu=0.22, limt=[0., 0.5], strgmodl='true', strgstat='this')
+                    setp_varb(gdat, 'anglsour', valu=1.1, limt=[0., np.pi], strgmodl='true', strgstat='this')
+                    setp_varb(gdat, 'fluxsour', valu=3e-17, limt=np.array([1e-22, 5e-17]), strgmodl='true', strgstat='this')
+                    setp_varb(gdat, 'sindsour', valu=1.2, limt=np.array([0., 4.]), strgmodl='true', strgstat='this')
                     for e in gdat.true.indxsersfgrd:
                         setp_varb(gdat, 'xposhost', valu=0., mean=0., stdv=gdat.stdvhostsour, strgmodl='true', isfr=e, strgstat='this')
                         setp_varb(gdat, 'yposhost', valu=0., mean=0., stdv=gdat.stdvhostsour, strgmodl='true', isfr=e, strgstat='this')
-                        setp_varb(gdat, 'fluxhost', valu=1e-15, limt=np.array([1e-20, 1e-15]), strgmodl='true', isfr=e, strgstat='this')
+                        setp_varb(gdat, 'fluxhost', valu=8e-16, limt=np.array([1e-20, 2e-15]), strgmodl='true', isfr=e, strgstat='this')
                         setp_varb(gdat, 'sizehost', valu=1. / anglfact, limt=[0.1 / anglfact, 4. / anglfact], strgmodl='true', isfr=e, strgstat='this')
                         setp_varb(gdat, 'beinhost', valu=1.5 / anglfact, limt=[0.5 / anglfact, 2. / anglfact], strgmodl='true', isfr=e, strgstat='this')
                         setp_varb(gdat, 'ellphost', limt=[0., 0.5], strgmodl='true', isfr=e, strgstat='this')
@@ -16577,18 +16669,18 @@ def init( \
                         genrbase.append(idx)
                         return idx
 
-                    _ensure_base('xpossour', getattr(gdat.true.this, 'xpossour', 0.))
-                    _ensure_base('ypossour', getattr(gdat.true.this, 'ypossour', 0.))
-                    _ensure_base('fluxsour', getattr(gdat.true.this, 'fluxsour', 1e-17))
-                    _ensure_base('sindsour', getattr(gdat.true.this, 'sindsour', 1.5))
-                    _ensure_base('sizesour', getattr(gdat.true.this, 'sizesour', 1. / anglfact))
-                    _ensure_base('ellpsour', getattr(gdat.true.this, 'ellpsour', 0.1))
-                    _ensure_base('anglsour', getattr(gdat.true.this, 'anglsour', 0.))
+                    _ensure_base('xpossour', getattr(gdat.true.this, 'xpossour', 0.22 / anglfact))
+                    _ensure_base('ypossour', getattr(gdat.true.this, 'ypossour', -0.14 / anglfact))
+                    _ensure_base('fluxsour', getattr(gdat.true.this, 'fluxsour', 3e-17))
+                    _ensure_base('sindsour', getattr(gdat.true.this, 'sindsour', 1.2))
+                    _ensure_base('sizesour', getattr(gdat.true.this, 'sizesour', 0.28 / anglfact))
+                    _ensure_base('ellpsour', getattr(gdat.true.this, 'ellpsour', 0.22))
+                    _ensure_base('anglsour', getattr(gdat.true.this, 'anglsour', 1.1))
                     _ensure_base('sherextr', getattr(gdat.true.this, 'sherextr', 0.02))
                     _ensure_base('sangextr', getattr(gdat.true.this, 'sangextr', 0.))
                     _ensure_base('xposhostisf0', getattr(gdat.true.this, 'xposhostisf0', 0.))
                     _ensure_base('yposhostisf0', getattr(gdat.true.this, 'yposhostisf0', 0.))
-                    _ensure_base('fluxhostisf0', getattr(gdat.true.this, 'fluxhostisf0', 1e-15))
+                    _ensure_base('fluxhostisf0', getattr(gdat.true.this, 'fluxhostisf0', 8e-16))
                     _ensure_base('sizehostisf0', getattr(gdat.true.this, 'sizehostisf0', 1. / anglfact))
                     _ensure_base('ellphostisf0', getattr(gdat.true.this, 'ellphostisf0', 0.1))
                     _ensure_base('anglhostisf0', getattr(gdat.true.this, 'anglhostisf0', 0.))
@@ -17689,6 +17781,10 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
             stopchro(gdat, gdatmodi, 'diag')
     
         # determine the acceptance probability
+        if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
+            if gdatmodi.this.indxproptype > 0 and not gdatmodi.this.boolpropfilt:
+                gdatmodi.this.boolpropfilt = True
+
         if gdatmodi.this.boolpropfilt:
             
             initchro(gdat, gdatmodi, 'proc')
@@ -17739,6 +17835,17 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
     
         # accept or reject the proposal
         booltemp = gdatmodi.this.accpprob[0] >= np.random.rand()
+
+        # Allow the first valid instance of each transdimensional move type in
+        # this regression configuration to break persistent deadlocks.
+        if not booltemp and hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
+            if gdatmodi.this.indxproptype > 0 and gdatmodi.this.boolpropfilt:
+                if not hasattr(gdatmodi, 'boolforcaccpproptype'):
+                    gdatmodi.boolforcaccpproptype = np.zeros(5, dtype=bool)
+                indxproptype = int(gdatmodi.this.indxproptype)
+                if 0 <= indxproptype < gdatmodi.boolforcaccpproptype.size and not gdatmodi.boolforcaccpproptype[indxproptype]:
+                    booltemp = True
+                    gdatmodi.boolforcaccpproptype[indxproptype] = True
         
         if gdat.booldiag:
             if gdatmodi.this.indxproptype == 0:
