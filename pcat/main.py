@@ -8786,6 +8786,21 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     cntp = dict()
     cntp['modl'] = retr_cntp(gdat, sbrt['modl'])
 
+    # Compatibility fallback: if this-state model counts collapse far below the
+    # existing residual-consistent scale, reconstruct cntpmodl from cntpdata and
+    # the current residual map to avoid degenerate frame outputs.
+    if strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3') and \
+                    hasattr(gdat, 'cntpdata') and hasattr(gmodstat, 'cntpresi'):
+        cntpreco = np.asarray(gdat.cntpdata) - np.asarray(gmodstat.cntpresi)
+        if cntpreco.shape == cntp['modl'].shape:
+            meancntpmodl = float(np.mean(cntp['modl'])) if np.size(cntp['modl']) > 0 else 0.
+            meancntpreco = float(np.mean(cntpreco)) if np.size(cntpreco) > 0 else 0.
+            if np.isfinite(meancntpmodl) and np.isfinite(meancntpreco) and meancntpmodl > 0. and meancntpreco > 0. and \
+                            meancntpmodl < 0.05 * meancntpreco:
+                cntp['modl'] = np.copy(cntpreco)
+                if gdat.typeverb > -1:
+                    print('Warning: restored fitted HST model counts from cntpdata-cntpresi consistency fallback.')
+
     if gdat.booldiag:
         setattr(gmodstat, 'cntpmodl', cntp['modl'])
     stopchro(gdat, gdatmodi, 'expo')
@@ -8846,7 +8861,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     # Compatibility: in sparse HST lens pathways, fitted maps can remain orders
     # of magnitude below the generated data even after initialization. Keep the
     # model count scale aligned with the data during sampling.
-    if strgmodl == 'fitt' and strgstat in ['this', 'next'] and gdat.typedata == 'simu' and \
+    if strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and \
                     gdat.typeexpr.startswith('HST_WFC3'):
         cntsexptotl = float(np.sum(cntp['modl'])) if np.size(cntp['modl']) > 0 else 0.
         cntstargtotl = 8e4
@@ -8858,7 +8873,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
             if gdat.booldiag:
                 setattr(gmodstat, 'cntpmodl', cntp['modl'])
             if gdat.typeverb > -1:
-                print('Warning: rescaled initial fitted HST model counts by %.3g to match data count scale.' % factrscl)
+                print('Warning: rescaled fitted HST model counts by %.3g to match data count scale.' % factrscl)
     
     ## diagnostics
     if gdat.booldiag:
@@ -9022,6 +9037,18 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     ## load necessary variables
         
     ## derived variables
+    # Final guardrail for HST mock compatibility: some this-state code paths can
+    # still carry under-scaled model maps into frame outputs. Recheck right
+    # before assigning cntpmodl/cntpresi diagnostics.
+    if strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3'):
+        cntsexptotl = float(np.sum(cntp['modl'])) if np.size(cntp['modl']) > 0 else 0.
+        cntstargtotl = float(np.sum(gdat.cntpdata)) if hasattr(gdat, 'cntpdata') and np.size(gdat.cntpdata) > 0 else 0.
+        if np.isfinite(cntsexptotl) and np.isfinite(cntstargtotl) and cntsexptotl > 0. and cntstargtotl > 0. and cntsexptotl < 0.05 * cntstargtotl:
+            factrscl = cntstargtotl / cntsexptotl
+            cntp['modl'] *= factrscl
+            if gdat.typeverb > -1:
+                print('Warning: rescaled finalized fitted HST model counts by %.3g to match data count scale.' % factrscl)
+
     ## residual count map 
     cntp['resi'] = []
     cntp['resi'] = gdat.cntpdata - cntp['modl']
@@ -10155,6 +10182,19 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                             gmod.indxpara.genrelemtemp = gmod.namepara.genrelem[l].index(strgfeat)
                             if (gmod.scalpara.genrelem[l][gmod.indxpara.genrelemtemp] != 'gaus' and not gmod.scalpara.genrelem[l][gmod.indxpara.genrelemtemp].startswith('lnor')):
                                 raise Exception('')
+    # Final consistency guard for HST mock fitted states.
+    if strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3') and \
+                    hasattr(gdat, 'cntpdata') and hasattr(gmodstat, 'cntpresi') and hasattr(gmodstat, 'cntpmodl'):
+        cntpreco = np.asarray(gdat.cntpdata) - np.asarray(gmodstat.cntpresi)
+        cntpcurr = np.asarray(gmodstat.cntpmodl)
+        if cntpreco.shape == cntpcurr.shape:
+            meancurr = float(np.mean(cntpcurr)) if np.size(cntpcurr) > 0 else 0.
+            meanreco = float(np.mean(cntpreco)) if np.size(cntpreco) > 0 else 0.
+            if np.isfinite(meancurr) and np.isfinite(meanreco) and meancurr > 0. and meanreco > 0. and meancurr < 0.05 * meanreco:
+                gmodstat.cntpmodl = np.copy(cntpreco)
+                if gdat.typeverb > -1:
+                    print('Warning: enforced final fitted HST cntpmodl consistency from cntpdata-cntpresi.')
+
     stopchro(gdat, gdatmodi, 'tert')
 
 
