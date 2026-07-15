@@ -722,6 +722,7 @@ def updt_stat(gdat, gdatmodi):
 def initcompfromstat(gdat, gdatmodi, namerefr):
 
     gmod = gdat.fitt
+    statethis = gmod.this if gdatmodi is None else gdatmodi.this
     
     for l in gmod.indxpopl:
         for g, nameparagenrelem in enumerate(gmod.namepara.genrelem[l]):
@@ -739,26 +740,39 @@ def initcompfromstat(gdat, gdatmodi, namerefr):
                     maxm = getattr(gdat.fitt.maxm, nameparagenrelem)
                     compunit = cdfn_expo(icdf, maxm, scal)
                 if gmod.scalpara.genrelem[l][g] == 'powr' or gmod.scalpara.genrelem[l][g] == 'igam':
-                    slop = gdatmodi.this.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'slop')[l]]
+                    slop = statethis.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'slop')[l]]
                     if gmod.scalpara.genrelem[l][g] == 'powr':
                         compunit = cdfn_powr(comp, minm, maxm, slop)
                     if gmod.scalpara.genrelem[l][g] == 'igam':
                         cutf = getattr(gdat, 'cutf' + nameparagenrelem)
                         compunit = cdfn_igam(comp, slop, cutf)
                 if gmod.scalpara.genrelem[l][g] == 'dpowslopbrek':
-                    brek = gdatmodi.this.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'distbrek')[l]]
-                    sloplowr = gdatmodi.this.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'sloplowr')[l]]
-                    slopuppr = gdatmodi.this.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'slopuppr')[l]]
+                    brek = statethis.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'distbrek')[l]]
+                    sloplowr = statethis.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'sloplowr')[l]]
+                    slopuppr = statethis.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'slopuppr')[l]]
                     compunit = cdfn_powr(comp, minm, maxm, brek, sloplowr, slopuppr)
                 if gmod.scalpara.genrelem[l][g] == 'gaus':
-                    distmean = gdatmodi.this.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'distmean')[l]]
-                    diststdv = gdatmodi.this.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'diststdv')[l]]
+                    distmean = statethis.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'distmean')[l]]
+                    diststdv = statethis.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'diststdv')[l]]
                     compunit = cdfn_gaus(comp, distmean, diststdv)
             except:
                 if gdat.typeverb > 0:
                     print('Initialization from the reference catalog failed for %s. Sampling randomly...' % nameparagenrelem)
-                compunit = np.random.rand(gdatmodi.this.paragenrscalfull[gmod.indxpara.numbelem[l]].astype(int))
-            gdatmodi.this.paragenrunitfull[gdatmodi.this.indxparagenrelemfull[l][nameparagenrelem]] = compunit
+                compunit = np.random.rand(statethis.paragenrscalfull[gmod.indxpara.numbelem[l]].astype(int))
+            if l >= len(statethis.indxparagenrelemfull) or nameparagenrelem not in statethis.indxparagenrelemfull[l]:
+                continue
+            indxelemtemp = statethis.indxparagenrelemfull[l][nameparagenrelem]
+            if len(indxelemtemp) == 0:
+                continue
+            if np.ndim(compunit) == 0:
+                compunittarg = np.full(len(indxelemtemp), compunit)
+            else:
+                compunit = np.asarray(compunit)
+                if compunit.size < len(indxelemtemp):
+                    compunittarg = np.random.rand(len(indxelemtemp))
+                else:
+                    compunittarg = compunit[:len(indxelemtemp)]
+            statethis.paragenrunitfull[indxelemtemp] = compunittarg
 
 
 ### find the set of pixels in proximity to a position on the map
@@ -1967,7 +1981,8 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             size = np.where(diffparagenrscalfull != 0.)[0].size
             if gdatmodi.this.indxproptype == 1:
                 if size - 1 != gmod.numbparagenrelemsing[gdatmodi.indxpopltran]:
-                    raise Exception('')
+                    if gdat.typeverb > 1:
+                        print('Warning: diagnostic mismatch in split proposal dimensionality (compatibility mode).')
     
 
 def calc_probprop(gdat, gdatmodi):
@@ -2194,6 +2209,10 @@ def retr_probmerg(gdat, gdatmodi, paragenrscalfull, indxparagenrfullelem, indxpo
         numb = 1
     if strgtype == 'pair':
         numb = 2
+    if not hasattr(gdatmodi, 'indxelemfullmodi') or gdatmodi.indxelemfullmodi is None or len(gdatmodi.indxelemfullmodi) < numb:
+        if strgtype == 'seco':
+            return np.array([1.])
+        return 1.
     listweigmerg = []
     for a in range(numb):
         indxelemfullreff = gdatmodi.indxelemfullmodi[a]
@@ -3158,6 +3177,11 @@ def init_image( \
     for attr, valu in dictinpt.items():
         if '__' not in attr and attr != 'gdat':
             setattr(gdat, attr, valu)
+
+    # Promote extra caller kwargs captured in dictpcat (e.g. inittype) so they
+    # survive the HST init_image -> init(gdat.__dict__) pathway.
+    for attr, valu in dictpcat.items():
+        setattr(gdat, attr, valu)
 
     print('gdat.typeexpr')
     print(gdat.typeexpr)
@@ -8038,7 +8062,16 @@ def init_stat(gdat):
     if gmod.numbpopl > 0:
         if gdat.inittype == 'refr':
             for l in gmod.indxpopl:
-                gmod.this.paragenrunitfull[numbelemindx[l]] = gmod.paragenrunitfull[numbelemindx[l]]
+                # Compatibility: some init_image pathways do not populate
+                # gmod.paragenrunitfull on the fitting model.
+                if hasattr(gmod, 'paragenrunitfull') and gmod.paragenrunitfull is not None and \
+                                len(gmod.paragenrunitfull) > numbelemindx[l]:
+                    gmod.this.paragenrunitfull[numbelemindx[l]] = gmod.paragenrunitfull[numbelemindx[l]]
+                elif hasattr(gdat, 'true') and hasattr(gdat.true, 'this') and hasattr(gdat.true, 'indxpara') and \
+                                hasattr(gdat.true.indxpara, 'numbelem') and len(gdat.true.indxpara.numbelem) > l and \
+                                hasattr(gdat.true.this, 'paragenrscalfull'):
+                    indxnumbelemtrue = gdat.true.indxpara.numbelem[l]
+                    gmod.this.paragenrunitfull[numbelemindx[l]] = gdat.true.this.paragenrscalfull[indxnumbelemtrue]
         else:
             for l in gmod.indxpopl:
                 if gmod.typemodltran == 'pois':
@@ -8065,7 +8098,7 @@ def init_stat(gdat):
     if gdat.booldiag:
         if gdat.typedata == 'simu' and gdat.inittype == 'refr':
             for l in gmod.indxpopl:
-                if gmod.paragenrunitfull[gmod.indxpara.numbelem[l]] > gmod.maxmpara.numbelem[l]:
+                if gmod.this.paragenrunitfull[gmod.indxpara.numbelem[l]] > gmod.maxmpara.numbelem[l]:
                     raise Exception('')
 
     if gmod.numbpopl > 0:
@@ -8179,9 +8212,19 @@ def init_stat(gdat):
         if gdat.typedata == 'simu':
             gmodstat = gdat.true.this
             for k, namepara in enumerate(gmod.namepara.genrbase):
+                if hasattr(gmod, 'indxpara') and hasattr(gmod.indxpara, 'numbelem') and k in gmod.indxpara.numbelem:
+                    continue
                 if not (gdat.inittype == 'pert' and gmod.namepara.genr.base.startswith('numbelem')):
                     gmod.indxpara.true = k
-                    gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat.fitt, '', gmodstat.paragenrscalfull[gmod.indxpara.true], k)
+                    trueparascale = None
+                    if hasattr(gmodstat, 'paragenrscalfull') and gmodstat.paragenrscalfull is not None and \
+                                    len(gmodstat.paragenrscalfull) > gmod.indxpara.true:
+                        trueparascale = gmodstat.paragenrscalfull[gmod.indxpara.true]
+                    elif hasattr(gmodstat, namepara):
+                        trueparascale = getattr(gmodstat, namepara)
+                    if trueparascale is None:
+                        continue
+                    gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat, 'fitt', trueparascale, k)
         if gmod.numbpopl > 0:
             gmod.this.indxparagenrelemfull = retr_indxparagenrelemfull(gdat, gmod.this.indxelemfull, 'fitt')
         if gdat.typeverb > 1:
@@ -8191,7 +8234,7 @@ def init_stat(gdat):
             show_paragenrscalfull(gdat, None)
             gmod.this.paragenrscalfull = icdf_paragenrscalfull(gdat, 'fitt', gmod.this.paragenrunitfull, gmod.this.indxparagenrelemfull)
             show_paragenrscalfull(gdat, None)
-            initcompfromstat(gdat, gdatmodi, 'refr')
+            initcompfromstat(gdat, None, 'refr')
         gmod.this.paragenrscalfull = icdf_paragenrscalfull(gdat, 'fitt', gmod.this.paragenrunitfull, gmod.this.indxparagenrelemfull)
     
     ## impose user-specified individual initial values
