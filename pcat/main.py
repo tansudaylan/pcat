@@ -7580,8 +7580,13 @@ def retr_imag(gdat, axis, maps, strgstat, strgmodl, strgcbar, indxenerplot=None,
     vmax = getattr(gdat.maxmpara, strgcbar)
     if scal == 'asnh':
         maps = np.arcsinh(maps)
+        vmin = np.arcsinh(vmin)
+        vmax = np.arcsinh(vmax)
     if scal == 'logt':
-        maps = np.log10(maps)
+        minmlogt = 1e-300
+        maps = np.log10(np.maximum(maps, minmlogt))
+        vmin = np.log10(max(vmin, minmlogt))
+        vmax = np.log10(max(vmax, minmlogt))
     if imag is None:
         imag = axis.imshow(maps, cmap=cmap, origin='lower', extent=gdat.exttrofi, interpolation='nearest', vmin=vmin, vmax=vmax, alpha=gdat.alphmaps)
         return imag
