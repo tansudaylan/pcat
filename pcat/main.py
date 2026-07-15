@@ -17080,6 +17080,22 @@ def init( \
         
         if gdat.typeverb > 0:
             print('Writing the global state to the disc before spawning workers...')
+        if gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3') and hasattr(gdat, 'cntpdata') and \
+                        hasattr(gdat, 'fitt') and hasattr(gdat.fitt, 'this') and hasattr(gdat.fitt.this, 'cntpmodl'):
+            meancntpmodlinit = float(np.mean(gdat.fitt.this.cntpmodl)) if np.size(gdat.fitt.this.cntpmodl) > 0 else 0.
+            meancntpdatainit = float(np.mean(gdat.cntpdata)) if np.size(gdat.cntpdata) > 0 else 0.
+            if np.isfinite(meancntpmodlinit) and np.isfinite(meancntpdatainit) and \
+                            meancntpmodlinit > 0. and meancntpdatainit > 0. and meancntpmodlinit < 0.05 * meancntpdatainit:
+                factrsclinit = meancntpdatainit / meancntpmodlinit
+                gdat.fitt.this.cntpmodl *= factrsclinit
+                if hasattr(gdat.fitt.this, 'cntpbgrd'):
+                    gdat.fitt.this.cntpbgrd *= factrsclinit
+                if hasattr(gdat.fitt.this, 'cntplens'):
+                    gdat.fitt.this.cntplens *= factrsclinit
+                if hasattr(gdat.fitt.this, 'cntpresi'):
+                    gdat.fitt.this.cntpresi = gdat.cntpdata - gdat.fitt.this.cntpmodl
+                if gdat.typeverb > -1:
+                    print('Warning: rescaled saved initial fitted HST count maps by %.3g to match data scale.' % factrsclinit)
         narr_task('Writing mandatory initialization state to disk.', gdat=gdat, phase='during', major=True)
         path = gdat.pathoutpcnfg + 'gdatinit'
         try:
