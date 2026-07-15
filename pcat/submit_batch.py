@@ -1,13 +1,23 @@
 from __init__ import *
 
 
+def narr_open(path, mode='r'):
+    pathnorm = os.path.normpath(path)
+    if mode.startswith('r') and '+' not in mode:
+        action = 'Reading'
+    else:
+        action = 'Writing'
+    print '%s %s...' % (action, pathnorm)
+    return open(pathnorm, mode)
+
+
 path = os.environ["TDGU_PATH"] + '/'
-fileoutp = open(path + 'pcatsubm.log', 'w')
+fileoutp = narr_open(path + 'pcatsubm.log', 'w')
 cntr = 0
 for name in os.listdir(path):
     if name.endswith(".py"):
         print name
-        fileobjt = open(path + name, 'r')
+        fileobjt = narr_open(path + name, 'r')
         for line in fileobjt:
             if line.startswith('def pcat_'):
                 
@@ -32,6 +42,7 @@ for name in os.listdir(path):
                 print
                 print
                 print
+            fileobjt.close()
 
 fileoutp.close()
 

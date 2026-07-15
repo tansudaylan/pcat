@@ -1,5 +1,15 @@
 from __init__ import *
 
+
+def narr_open(path, mode='r'):
+    pathnorm = os.path.normpath(path)
+    if mode.startswith('r') and '+' not in mode:
+        action = 'Reading'
+    else:
+        action = 'Writing'
+    print '%s %s...' % (action, pathnorm)
+    return open(pathnorm, mode)
+
 # flag to force-delete all runs
 if len(sys.argv) > 1 and sys.argv[1] == 'forcdele':
     boolforcdele = True
@@ -24,11 +34,12 @@ for strgextn in liststrgextn:
             # check the chain status
             pathchec = pathfile.replace('imag', 'data/outp') + '/stat.txt'
             if os.path.isfile(pathchec):
-                filestat = open(pathchec, 'r')
+                filestat = narr_open(pathchec, 'r')
                 boolkeep = False
                 for line in filestat:
                     if line == 'gdatmodipost written.\n':
                         boolkeep = True
+                filestat.close()
         
             strgtemp = pathfile[pathfile.rfind('_')+1:]
             if strgtemp.endswith('tile'):

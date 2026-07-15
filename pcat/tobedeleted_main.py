@@ -79,6 +79,35 @@ import networkx as nx
 from .util import *
 
 
+def narr_open(path, mode='r'):
+
+    pathnorm = os.path.normpath(path)
+    if mode.startswith('r') and '+' not in mode:
+        action = 'Reading'
+    else:
+        action = 'Writing'
+    print '%s %s...' % (action, pathnorm)
+    return open(pathnorm, mode)
+
+
+def narr_h5(path, mode):
+
+    pathnorm = os.path.normpath(path)
+    if mode.startswith('r') and '+' not in mode:
+        action = 'Reading'
+    else:
+        action = 'Writing'
+    print '%s %s...' % (action, pathnorm)
+    return h5py.File(pathnorm, mode)
+
+
+def narr_fits_open(path):
+
+    pathnorm = os.path.normpath(path)
+    print 'Reading %s...' % pathnorm
+    return ap.io.fits.open(pathnorm)
+
+
 def init( \
          # user interaction
          ## type of verbosity
@@ -409,14 +438,14 @@ def init( \
         # write the list of arguments to file
         fram = inspect.currentframe()
         listargs, temp, temp, listargsvals = inspect.getargvalues(fram)
-        fileargs = open(gdat.pathoutprtag + 'cmndargs.txt', 'w')
+        fileargs = narr_open(gdat.pathoutprtag + 'cmndargs.txt', 'w')
         fileargs.write('PCAT call arguments\n')
         for args in listargs:
             fileargs.write('%s = %s\n' % (args, listargsvals[args]))
         fileargs.close()
         
         # write the list of arguments to file
-        fileargs = open(gdat.pathoutprtag + 'args.txt', 'w')
+        fileargs = narr_open(gdat.pathoutprtag + 'args.txt', 'w')
         fileargs.write('PCAT call arguments\n')
         for args in listargs:
             fileargs.write('%20s %s\n' % (args, listargsvals[args]))
@@ -1270,7 +1299,7 @@ def init( \
         gdat.factnewtlght = 2.09e13 # Msun / pc
         
         # the adis in the file is kpc
-        fileh5py = h5py.File(gdat.pathdata + 'inpt/adis.h5','r')
+        fileh5py = narr_h5(gdat.pathdata + 'inpt/adis.h5', 'r')
         
         gdat.redsintp = fileh5py['reds'][()]
         gdat.adisintp = fileh5py['adis'][()] * 1e6 # [pc]
@@ -2077,7 +2106,7 @@ def init( \
             for q in gdat.indxrefr:
                 # temp -- this should depend on q
                 if len(gdat.listpathwcss) > 0:
-                    listhdun = ap.io.fits.open(gdat.listpathwcss)
+                    listhdun = narr_fits_open(gdat.listpathwcss)
                     wcso = ap.wcs.WCS(listhdun[0].header)
                     skycobjt = ap.coordinates.SkyCoord("galactic", l=gdat.refrlgal[q][0, :] * 180. / pi, b=gdat.refrbgal[q][0, :] * 180. / pi, unit='deg')
                     rasc = skycobjt.fk5.ra.degree
@@ -2239,7 +2268,7 @@ def init( \
         gdat.liststrgvarbarryswep += ['ljcb']
     
         # write the numpy RNG state to file
-        with open(gdat.pathoutprtag + 'stat.p', 'wb') as thisfile:
+        with narr_open(gdat.pathoutprtag + 'stat.p', 'wb') as thisfile:
         	cPickle.dump(np.random.get_state(), thisfile)
         
         # process lock for simultaneous plotting
@@ -2249,7 +2278,7 @@ def init( \
             print('Writing the global state to the disc before spawning workers...')
         path = gdat.pathoutprtag + 'gdatinit'
         writfile(gdat, path) 
-        gdat.filestat = open(gdat.pathoutprtag + 'stat.txt', 'w')
+        gdat.filestat = narr_open(gdat.pathoutprtag + 'stat.txt', 'w')
         gdat.filestat.write('gdatinit written.\n')
         gdat.filestat.close()
         
@@ -2582,7 +2611,7 @@ class logg(object):
     def __init__(self, gdat):
         self.terminal = sys.stdout
         gdat.pathstdo = gdat.pathoutprtag + 'stdo.txt'
-        self.log = open(gdat.pathstdo, 'a')
+        self.log = narr_open(gdat.pathstdo, 'a')
         pathlink = gdat.pathplotrtag + 'stdo.txt'
         os.system('ln -s %s %s' % (gdat.pathstdo, pathlink))
     
@@ -2762,7 +2791,7 @@ def worksamp(gdat, lock, strgpdfn='post'):
         pool.close()
         pool.join()
     
-    gdat.filestat = open(gdat.pathoutprtag + 'stat.txt', 'a')
+    gdat.filestat = narr_open(gdat.pathoutprtag + 'stat.txt', 'a')
     gdat.filestat.write('gdatmodi%s written.\n' % strgpdfn)
     gdat.filestat.close()
 
@@ -3050,7 +3079,7 @@ def work(pathoutprtag, lock, strgpdfn, indxprocwork):
             path = gdat.pathoutprtag + 'opti.h5'
             if gdat.typeverb > 0:
                 print('Writing the estimated covariance matrix to %s...' % path)
-            thisfile = h5py.File(path, 'w')
+            thisfile = narr_h5(path, 'w')
             thisfile.create_dataset('stdp', data=gdatmodi.stdp)
             thisfile.close()
             
@@ -3256,7 +3285,7 @@ def work(pathoutprtag, lock, strgpdfn, indxprocwork):
                 
                 booltemp = False
                 if os.path.isfile(path) and gdatmodi.indxprocwork == 0:
-                    thisfilechec = h5py.File(path, 'r')
+                    thisfilechec = narr_h5(path, 'r')
                     if thisfilechec['lliktotl'][...] > gdatmodi.thislliktotl:
                         if gdat.typeverb > 0:
                             print('Not saving the state to %s because loglikelihood is lower...' % path)
@@ -3275,7 +3304,7 @@ def work(pathoutprtag, lock, strgpdfn, indxprocwork):
                     if gdat.typeverb > 0:
                         print('Saving the state to %s...' % path)
         
-                    thisfile = h5py.File(path, 'w')
+                    thisfile = narr_h5(path, 'w')
                     thisfile.create_dataset('lliktotl', data=gdatmodi.thislliktotl)
                     for listnameparabase in gdat.fittlistnameparabase:
                         indxparabase = getattr(gdat, 'fittindxparabase' + listnameparabase)

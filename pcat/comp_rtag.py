@@ -1,5 +1,15 @@
 from __init__ import *
 
+
+def narr_open(path, mode='r'):
+    pathnorm = os.path.normpath(path)
+    if mode.startswith('r') and '+' not in mode:
+        action = 'Reading'
+    else:
+        action = 'Writing'
+    print '%s %s...' % (action, pathnorm)
+    return open(pathnorm, mode)
+
 def comp(nameplot):
     
     if nameplot == 'DS_Store':
@@ -51,7 +61,7 @@ os.system(cmnd)
 
 pathlist = pathimag + 'listrtag.txt'
 
-with open(pathlist) as thisfile:
+with narr_open(pathlist, 'r') as thisfile:
     listline = thisfile.readlines()
     listline = [x.strip() for x in listline] 
 
