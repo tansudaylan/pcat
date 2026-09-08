@@ -2885,7 +2885,7 @@ def plot_lens(gdat):
         listlabl = []
         for spec, size, indx in zip(listspec, listsize, listindx):
             listydat.append(spec * retr_sbrtsersnorm(gdat.blimpara.angl, size, indxsers=indx))
-            listlabl.append('$R_e = %.3g ^{\prime\prime}, n = %.2g$' % (size * gdat.anglfact, indx))
+            listlabl.append(r'$R_e = %.3g ^{\prime\prime}, n = %.2g$' % (size * gdat.anglfact, indx))
         path = gdat.pathinitintr + 'sersprof.%s' % gdat.typefileplot
         tdpy.plot_gene(path, xdat, listydat, scalxdat='logt', scalydat='logt', lablxdat=lablxdat, lablydat=gdat.lablfluxtotl, \
                                                                                                    listlegd=listlegd, listhlin=1e-7, limtydat=[1e-8, 1e0])
@@ -3335,7 +3335,7 @@ def init_image( \
     if gdat.typeexpr == 'gmix':
         gdat.lablenerunit = ''
     if gdat.typeexpr == 'fire':
-        gdat.lablenerunit = '$\mu$m^{-1}'
+        gdat.lablenerunit = r'$\mu$m^{-1}'
     
     # energy axis
     if gdat.typeexpr == 'ferm':
@@ -3370,7 +3370,7 @@ def init_image( \
     setp_varb(gdat, 'numbpixl', labl=['$N_{pix}$', ''])
     
     if gdat.expo is not None:
-        setp_varb(gdat, 'expo', minm=np.amin(gdat.expo), maxm=np.amax(gdat.expo), labl=['$\epsilon$', ''], cmap='OrRd', scal='logt')
+        setp_varb(gdat, 'expo', minm=np.amin(gdat.expo), maxm=np.amax(gdat.expo), labl=[r'$\epsilon$', ''], cmap='OrRd', scal='logt')
     
     # string indicating the energy band
     if gdat.strgenerfull is None:
@@ -3928,7 +3928,7 @@ def init_image( \
         if gdat.typeexpr == 'gmix':
             gdat.lablgangunit = ''
         if gdat.typeexpr == 'sdss' or gdat.typeexpr == 'chan' or gdat.typeexpr.startswith('HST'):
-            gdat.lablgangunit = '$^{\prime\prime}$'
+            gdat.lablgangunit = r'$^{\prime\prime}$'
     
     if gdat.lablxpos is None:
         if gdat.typeexpr == 'gmix':
@@ -3961,7 +3961,7 @@ def init_image( \
             gdat.strgenerunit = 'erg'
             gdat.nameenerunit = 'ergs'
         if gdat.typeexpr == 'fire':
-            gdat.strgenerunit = '$\mu$ m$^{-1}$'
+            gdat.strgenerunit = r'$\mu$ m$^{-1}$'
             gdat.nameenerunit = 'imum'
 
     if gdat.nameexpr is None:
@@ -4190,12 +4190,12 @@ def init_image( \
             maxm = 10.
             
             setp_varb(gdat, 'defs', minm=minm, maxm=maxm, scal='powr', labl=[r'$\alpha$', ''], strgmodl=strgmodl)
-            setp_varb(gdat, 'mcut', minm=minm, maxm=maxm, scal='powr', labl=['$m_c$', ''], strgmodl=strgmodl)
-            setp_varb(gdat, 'asca', minm=minm, maxm=maxm, scal='self', labl=['$\theta_s$', ''], strgmodl=strgmodl)
-            setp_varb(gdat, 'acut', minm=minm, maxm=maxm, scal='self', labl=['$\theta_c$', ''], strgmodl=strgmodl)
-            setp_varb(gdat, 'rele', minm=minm, maxm=maxm, scal='self', labl=['$R$', ''], strgmodl=strgmodl)
+            setp_varb(gdat, 'mcut', minm=minm, maxm=maxm, scal='powr', labl=[r'$m_c$', ''], strgmodl=strgmodl)
+            setp_varb(gdat, 'asca', minm=minm, maxm=maxm, scal='self', labl=[r'$\theta_s$', ''], strgmodl=strgmodl)
+            setp_varb(gdat, 'acut', minm=minm, maxm=maxm, scal='self', labl=[r'$\theta_c$', ''], strgmodl=strgmodl)
+            setp_varb(gdat, 'rele', minm=minm, maxm=maxm, scal='self', labl=[r'$R$', ''], strgmodl=strgmodl)
             ## distance to the source
-            setp_varb(gdat, 'distsour', minm=minm, maxm=maxm, scal='powr', labl=['$\delta \theta_S$', ''], strgmodl=strgmodl)
+            setp_varb(gdat, 'distsour', minm=minm, maxm=maxm, scal='powr', labl=[r'$\delta \theta_S$', ''], strgmodl=strgmodl)
             ## relevance
             #setp_varb(gdat, 'rele', minm=minm, maxm=maxm, scal='powr', labl=['$R_{%d}$', ''], strgmodl=strgmodl)
             
@@ -4203,9 +4203,9 @@ def init_image( \
             ## total deflection
             setp_varb(gdat, 'defl', minm=gdat.maxmgangdata/1e4, maxm=gdat.maxmgangdata, numbbins=10, scal='powr', labl=[r'$\alpha$', ''], strgmodl=strgmodl)
             ## subhalo deflection
-            setp_varb(gdat, 'deflsubh', minm=gdat.maxmgangdata/1e4, maxm=gdat.maxmgangdata, numbbins=10, scal='powr', labl=['$\alpha_s$', ''], strgmodl=strgmodl)
+            setp_varb(gdat, 'deflsubh', minm=gdat.maxmgangdata/1e4, maxm=gdat.maxmgangdata, numbbins=10, scal='powr', labl=[r'$\alpha_s$', ''], strgmodl=strgmodl)
             ## deflection profile of an individual subhalo
-            setp_varb(gdat, 'deflprof', minm=minm, maxm=maxm, scal='powr', labl=['$\alpha(r)$', ''], strgmodl=strgmodl)
+            setp_varb(gdat, 'deflprof', minm=minm, maxm=maxm, scal='powr', labl=[r'$\alpha(r)$', ''], strgmodl=strgmodl)
             
             for l in gmod.indxpopl:
                 setp_varb(gdat, 'defs', minm=minm, maxm=maxm, scal='powr', labl=[r'$\alpha$', ''], popl=l, strgmodl=strgmodl)
@@ -4223,11 +4223,11 @@ def init_image( \
                 setp_varb(gdat, 'rele', minm=minm, maxm=maxm, scal='powr', labl=['$R_{%d}$' % l, ''], popl=l, strgmodl=strgmodl)
                 setp_varb(gdat, 'rele', minm=minm, maxm=maxm, scal='powr', labl=['$R_{%d}$' % l, ''], popl=l, strgmodl=strgmodl, iele='full')
         
-                setp_varb(gdat, 'deflprof', minm=minm, maxm=maxm, scal='powr', labl=['$\alpha_{%d}(r)$' % l, ''], popl=l, strgmodl=strgmodl)
-                setp_varb(gdat, 'deflprof', minm=minm, maxm=maxm, scal='powr', labl=['$\alpha_{%d}(r)$' % l, ''], popl=l, strgmodl=strgmodl, iele='full')
+                setp_varb(gdat, 'deflprof', minm=minm, maxm=maxm, scal='powr', labl=[r'$\alpha_{%d}(r)$' % l, ''], popl=l, strgmodl=strgmodl)
+                setp_varb(gdat, 'deflprof', minm=minm, maxm=maxm, scal='powr', labl=[r'$\alpha_{%d}(r)$' % l, ''], popl=l, strgmodl=strgmodl, iele='full')
                 
-                setp_varb(gdat, 'distsour', minm=minm, maxm=maxm, scal='powr', labl=['$\delta \theta_S$', ''], popl=l, strgmodl=strgmodl)
-                setp_varb(gdat, 'distsour', minm=minm, maxm=maxm, scal='powr', labl=['$\delta \theta_S$', ''], popl=l, strgmodl=strgmodl, iele='full')
+                setp_varb(gdat, 'distsour', minm=minm, maxm=maxm, scal='powr', labl=[r'$\delta \theta_S$', ''], popl=l, strgmodl=strgmodl)
+                setp_varb(gdat, 'distsour', minm=minm, maxm=maxm, scal='powr', labl=[r'$\delta \theta_S$', ''], popl=l, strgmodl=strgmodl, iele='full')
         
         ### background parameters
         if gdat.typeexpr == 'chan':
@@ -4400,13 +4400,13 @@ def init_image( \
                 setp_varb(gdat, 'xpossour', valu=0., mean=0., stdv=gdat.stdvhostsour, labl=['$x_{S}$', 'arcsec'], strgmodl=strgmodl, strgstat='this')
                 setp_varb(gdat, 'ypossour', valu=0., mean=0., stdv=gdat.stdvhostsour, labl=['$y_{S}$', 'arcsec'], strgmodl=strgmodl, strgstat='this')
                 
-                setp_varb(gdat, 'sherextr', limt=[0., 0.1], labl=['$\rho_{ext}$', ''], strgmodl=strgmodl, strgstat='this')
-                setp_varb(gdat, 'anglsour', limt=[0., np.pi], labl=['$\phi_{S}$', 'degree'], strgmodl=strgmodl, strgstat='this')
-                setp_varb(gdat, 'sangextr', limt=[0., np.pi], labl=['$\phi_{ext}$', ''], strgmodl=strgmodl, strgstat='this')
-                setp_varb(gdat, 'sangextr', labl=['$\phi_{ext}$', ''], strgmodl=strgmodl, strgstat='this')
+                setp_varb(gdat, 'sherextr', limt=[0., 0.1], labl=[r'$\rho_{ext}$', ''], strgmodl=strgmodl, strgstat='this')
+                setp_varb(gdat, 'anglsour', limt=[0., np.pi], labl=[r'$\phi_{S}$', 'degree'], strgmodl=strgmodl, strgstat='this')
+                setp_varb(gdat, 'sangextr', limt=[0., np.pi], labl=[r'$\phi_{ext}$', ''], strgmodl=strgmodl, strgstat='this')
+                setp_varb(gdat, 'sangextr', labl=[r'$\phi_{ext}$', ''], strgmodl=strgmodl, strgstat='this')
                 setp_varb(gdat, 'sizesour', limt=[0.1 / gdat.anglfact, 2. / gdat.anglfact], \
-                                                                        labl=['$R_{S}$', 'arcsec'], strgmodl=strgmodl, strgstat='this')
-                setp_varb(gdat, 'ellpsour', limt=[0., 0.5], labl=['$\epsilon_{S}$', ''], strgmodl=strgmodl, strgstat='this')
+                                                                        labl=[r'$R_{S}$', 'arcsec'], strgmodl=strgmodl, strgstat='this')
+                setp_varb(gdat, 'ellpsour', limt=[0., 0.5], labl=[r'$\epsilon_{S}$', ''], strgmodl=strgmodl, strgstat='this')
             
                 setp_varb(gdat, 'fluxsour', valu=1e-17, limt=np.array([1e-22, 1e-17]), labl=['$f_{S}$', 'erg/s'], strgmodl=strgmodl, strgstat='this')
                 setp_varb(gdat, 'sindsour', limt=np.array([0., 4.]), strgmodl=strgmodl, strgstat='this')
@@ -4417,13 +4417,13 @@ def init_image( \
                     setp_varb(gdat, 'yposhost', labl=['$y_{H%d}$' % e, 'arcsec'], isfr=e)
                     setp_varb(gdat, 'fluxhost', labl=['$f_{H%d}$' % e, 'erg/s'], isfr=e)
                     setp_varb(gdat, 'sizehost', labl=['$R_{H%d}$' % e, 'arcsec'], isfr=e)
-                    setp_varb(gdat, 'beinhost', labl=['$\theta_{E,H%d}$' % e, 'arcsec'], isfr=e)
-                    setp_varb(gdat, 'serihost', labl=['$n_{Ser,H%d}$' % e, ''], isfr=e)
+                    setp_varb(gdat, 'beinhost', labl=[r'$\theta_{E,H%d}$' % e, 'arcsec'], isfr=e)
+                    setp_varb(gdat, 'serihost', labl=[r'$n_{Ser,H%d}$' % e, ''], isfr=e)
             
                     setp_varb(gdat, 'sindhost', limt=np.array([0., 4.]), isfr=e, strgmodl=strgmodl)
                     setp_varb(gdat, 'beinhost', limt=[0.5 / gdat.anglfact, 2. / gdat.anglfact], isfr=e, strgmodl=strgmodl)
-                    setp_varb(gdat, 'ellphost', limt=[0., 0.5], labl=['$\epsilon_{H%d}$' % e, ''], isfr=e, strgmodl=strgmodl)
-                    setp_varb(gdat, 'anglhost', limt=[0., np.pi], labl=['$\phi_{H%d}$' % e, 'degree'], isfr=e, strgmodl=strgmodl, strgstat='this')
+                    setp_varb(gdat, 'ellphost', limt=[0., 0.5], labl=[r'$\epsilon_{H%d}$' % e, ''], isfr=e, strgmodl=strgmodl)
+                    setp_varb(gdat, 'anglhost', limt=[0., np.pi], labl=[r'$\phi_{H%d}$' % e, 'degree'], isfr=e, strgmodl=strgmodl, strgstat='this')
                     setp_varb(gdat, 'xposhost', valu=0., mean=0., stdv=gdat.stdvhostsour, strgmodl='true', isfr=e, strgstat='this')
                     setp_varb(gdat, 'yposhost', valu=0., mean=0., stdv=gdat.stdvhostsour, strgmodl='true', isfr=e, strgstat='this')
                 
@@ -4738,9 +4738,9 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
                 setp_varb(gdat, 'gang', minm=0, maxm=gdat.maxmgangdata, labl=[r'$\psi$', ''], popl=l, strgmodl=strgmodl, iele='full')
 
         # loglikelihood difference for each element
-        setp_varb(gdat, 'deltllik', labl=['$\Delta \log L$', ''], minm=1., maxm=100., strgmodl=strgmodl)
-        setp_varb(gdat, 'deltllik', labl=['$\Delta \log L$', ''], minm=1., maxm=100., popl=l, strgmodl=strgmodl)
-        setp_varb(gdat, 'deltllik', labl=['$\Delta \log L$', ''], minm=1., maxm=100., popl=l, strgmodl=strgmodl, iele='full')
+        setp_varb(gdat, 'deltllik', labl=[r'$\Delta \log L$', ''], minm=1., maxm=100., strgmodl=strgmodl)
+        setp_varb(gdat, 'deltllik', labl=[r'$\Delta \log L$', ''], minm=1., maxm=100., popl=l, strgmodl=strgmodl)
+        setp_varb(gdat, 'deltllik', labl=[r'$\Delta \log L$', ''], minm=1., maxm=100., popl=l, strgmodl=strgmodl, iele='full')
         
     # construct the fitting model
     setp_paragenrscalbase(gdat, strgmodl='fitt')
@@ -4945,10 +4945,10 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
         ##setp_varb(gdat, 'bein')
 
         ## angular deviation
-        setp_varb(gdat, 'anglhalf', minm=0., maxm=3*gdat.maxmgangdata, labl=['$\theta$', ''], numbbins=1000)
+        setp_varb(gdat, 'anglhalf', minm=0., maxm=3*gdat.maxmgangdata, labl=[r'$\theta$', ''], numbbins=1000)
         setp_varb(gdat, 'anglfull', minm=0., maxm=3*gdat.maxmgangdata, numbbins=1000)
         
-    setp_varb(gdat, 'anglfromhost', minm=0., maxm=3*gdat.maxmgangdata, numbbins=1000, labl=['$\theta_{\rm{0,hst}}$', ''])
+    setp_varb(gdat, 'anglfromhost', minm=0., maxm=3*gdat.maxmgangdata, numbbins=1000, labl=[r'$\theta_{\rm{0,hst}}$', ''])
     
     # temp
     #gdat.blimpara.anglcosi = np.sort(np.cos(gdat.blimpara.angl))
@@ -5273,9 +5273,9 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
     gdat.scalpara.cntpresi = 'asnh'
     gdat.cmappara.cntpresi = make_cmapdivg('Red', 'Orange')
 
-    setp_varb(gdat, 'conv', minm=1e-2, maxm=10., labl=['$\kappa$', ''], cmap='Purples', scal='logt')
+    setp_varb(gdat, 'conv', minm=1e-2, maxm=10., labl=[r'$\kappa$', ''], cmap='Purples', scal='logt')
     setp_varb(gdat, 's2nr', minm=0., maxm=10., labl=['SNR', ''], cmap='magma', scal='asnh')
-    setp_varb(gdat, 'magn', minm=-1e2, maxm=1e2, labl=['$\mu$', ''], cmap='BrBG', scal='asnh')
+    setp_varb(gdat, 'magn', minm=-1e2, maxm=1e2, labl=[r'$\mu$', ''], cmap='BrBG', scal='asnh')
     
     gdat.minmdeflresiperc = -100.
     gdat.maxmdeflresiperc = 100.
@@ -5524,7 +5524,7 @@ def retr_refrchaninit(gdat):
             labl = getattr(gmod.lablrootpara, nameparagenrelem)
             gdat.listlabltermlacp += ['$u_{%s%s}$' % (strgpopl, labl)]
     gdat.listnametermlacp += ['ltrp']
-    gdat.listlabltermlacp += [u'$\ln P(q)$']
+    gdat.listlabltermlacp += [r'$\ln P(q)$']
     gdat.listnametermlacp += ['ljcb']
     gdat.listlabltermlacp += [r'$\ln \alpha_j$']
     
@@ -6338,14 +6338,14 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
     gdat.lablsbrt = r'\Sigma'
     
     gdat.labldeflprof = r'\alpha_a'
-    gdat.labldeflprofunit = u'$^{\prime\prime}$'
+    gdat.labldeflprofunit = r'$^{\prime\prime}$'
     
     gdat.strgenerkevv = 'keV'
     gdat.strgenergevv = 'GeV'
     gdat.strgenerergs = 'erg'
-    gdat.strgenerimum = '\mu m^{-1}'
+    gdat.strgenerimum = r'\mu m^{-1}'
 
-    gdat.labldefsunit = u'$^{\prime\prime}$'
+    gdat.labldefsunit = r'$^{\prime\prime}$'
     gdat.lablprat = 'cm$^{-2}$ s$^{-1}$'
     
 
@@ -6458,20 +6458,20 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
     setattr(gdat, 'scalflux0400plot', 'logt')
     
     for q in gdat.indxrefr:
-        setattr(gmod.lablrootpara, 'aerr' + gdat.listnamerefr[q], '\Delta_{%d}' % q)
-    gdat.lablsigm = '\sigma_l'
-    gdat.lablgamm = '\gamma_l'
+        setattr(gmod.lablrootpara, 'aerr' + gdat.listnamerefr[q], r'\Delta_{%d}' % q)
+    gdat.lablsigm = r'\sigma_l'
+    gdat.lablgamm = r'\gamma_l'
 
-    gdat.lablbcom = '\eta'
+    gdat.lablbcom = r'\eta'
     
     gdat.lablinfopost = 'D_{KL}'
     gdat.lablinfopostunit = 'nat'
     gdat.lablinfoprio = 'D_{KL,pr}'
     gdat.lablinfopriounit = 'nat'
     
-    gdat.labllevipost = '\ln P(D)'
+    gdat.labllevipost = r'\ln P(D)'
     gdat.labllevipostunit = 'nat'
-    gdat.lablleviprio = '\ln P_{pr}(D)'
+    gdat.lablleviprio = r'\ln P_{pr}(D)'
     gdat.labllevipriounit = 'nat'
     
     gdat.lablsind = 's'
@@ -13584,7 +13584,7 @@ def plot_infopvks(gdat, gdatprio, name, namefull, nameseco=None):
         scal = getattr(gdat, 'scal' + name) 
         
         # common title
-        titl = '$D_{KL} = %.3g$, KS = %.3g $\sigma$' % (info, pvks)
+        titl = r'$D_{KL} = %.3g$, KS = %.3g $\sigma$' % (info, pvks)
 
         # DKL density
         pathdinf = gdat.pathinfo + 'dinf' + namefull
@@ -13938,9 +13938,9 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
     for strgpdfntemp in ['lpritotl', 'lliktotl']:
 
         if strgpdfntemp == 'lpritotl':
-            labltemp = '\ln P(M)'
+            labltemp = r'\ln P(M)'
         if strgpdfntemp == 'lliktotl':
-            labltemp = '\ln P(D|M)'
+            labltemp = r'\ln P(D|M)'
         labl = r'$%s$' % labltemp
 
         path = getattr(gdat, 'path' + strgpdfn + 'finl') + strgpdfntemp
@@ -17548,8 +17548,8 @@ def sample_parallel( \
     # add others to the variable list
     listnamevarbcomp += ['lliktotl', 'lliktotl', 'infopost', 'bcom', 'lliktotl', 'lliktotl', 'lliktotl', 'levipost']
     listscalvarbcomp += ['self', 'self', 'self', 'self', 'self', 'self', 'self', 'self']
-    listlablvarbcomp += ['$\ln P(D|M_{min})$', '$\ln P(D|M_{max})$', '$D_{KL}$', '$\eta_B$', '$\sigma_{P(D|M)}$', r'$\gamma_{P(D|M)}$', \
-                                                                                                                    r'$\kappa_{P(D|M)}$', '$\ln P_H(D)$']
+    listlablvarbcomp += [r'$\ln P(D|M_{min})$', r'$\ln P(D|M_{max})$', r'$D_{KL}$', r'$\eta_B$', r'$\sigma_{P(D|M)}$', r'$\gamma_{P(D|M)}$', \
+                                                                                                                    r'$\kappa_{P(D|M)}$', r'$\ln P_H(D)$']
     listtypevarbcomp += ['minm', 'maxm', '', '', 'stdv', 'skew', 'kurt', '']
     listpdfnvarbcomp += ['post', 'post', 'post', 'post', 'post', 'post', 'post', 'post']
     listgdatvarbcomp += ['post', 'post', 'post', 'post', 'post', 'post', 'post', 'post']
@@ -17569,7 +17569,7 @@ def sample_parallel( \
         
         listnamevarbcomp += ['leviprio']
         listscalvarbcomp += ['self']
-        listlablvarbcomp += ['$\ln P_{pr}(D)$']
+        listlablvarbcomp += [r'$\ln P_{pr}(D)$']
         listtypevarbcomp += ['']
         listpdfnvarbcomp += ['prio']
         listgdatvarbcomp += ['prio']
