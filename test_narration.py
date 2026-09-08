@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 """Test to verify plotting narration appears."""
 
+import pathlib
 import sys
-sys.path.insert(0, '/Users/tdaylan/Documents/work/git/pcat')
+
+ROOT = pathlib.Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 # Mock objects to test plotting function narration
 class MockGdat:

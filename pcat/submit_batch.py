@@ -1,4 +1,11 @@
-from __init__ import *
+"""Legacy batch-submission helper.
+
+This script is retained only as a historical convenience and is not part of the
+maintained PCAT API surface.
+"""
+
+import os
+import sys
 
 
 def narr_open(path, mode='r'):
@@ -7,42 +14,33 @@ def narr_open(path, mode='r'):
         action = 'Reading'
     else:
         action = 'Writing'
-    print '%s %s...' % (action, pathnorm)
+    print(f'{action} {pathnorm}...')
     return open(pathnorm, mode)
 
 
-path = os.environ["TDGU_PATH"] + '/'
-fileoutp = narr_open(path + 'pcatsubm.log', 'w')
-cntr = 0
-for name in os.listdir(path):
-    if name.endswith(".py"):
-        print name
-        fileobjt = narr_open(path + name, 'r')
-        for line in fileobjt:
-            if line.startswith('def pcat_'):
-                
-                #if cntr == 5:
-                #    break
-                
-                cntr += 1
-                namefunc = line[4:-1].split('(')[0]
-                cmnd = 'python $TDGU_PATH/%s %s' % (name, namefunc)
-                print cmnd
-                try:
-                    os.system(cmnd)
-                except Exception as excp:
-                    strg = str(excp)
-                    fileoutp.write('%s failed.' % namefunc)
-                    fileoutp.write(strg)
-                print
-                print
-                print
-                print
-                print
-                print
-                print
-                print
-            fileobjt.close()
+def main():
+    path = os.environ.get('TDGU_PATH')
+    if not path:
+        raise RuntimeError('TDGU_PATH is not set; cannot run the legacy PCAT batch submission helper.')
 
-fileoutp.close()
+    with narr_open(os.path.join(path, 'pcatsubm.log'), 'w') as fileoutp:
+        for name in sorted(os.listdir(path)):
+            if not name.endswith('.py'):
+                continue
+            print(name)
+            with narr_open(os.path.join(path, name), 'r') as fileobjt:
+                for line in fileobjt:
+                    if line.startswith('def pcat_'):
+                        namefunc = line[4:-1].split('(')[0]
+                        cmnd = f'python {os.path.join(path, name)} {namefunc}'
+                        print(cmnd)
+                        try:
+                            os.system(cmnd)
+                        except Exception as excp:
+                            fileoutp.write(f'{namefunc} failed.\n')
+                            fileoutp.write(f'{excp}\n')
+
+
+if __name__ == '__main__':
+    main()
 

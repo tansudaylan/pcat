@@ -106,7 +106,7 @@ def _clear_forced_run_state(dictargs):
     if strgcnfg is None:
         return
 
-    pathbase = dictargs.get("pathbase") or oper.environ.get("PCAT_DATA_PATH") or "/Users/tdaylan/Documents/work/data/pcat"
+    pathbase = dictargs.get("pathbase") or oper.environ.get("PCAT_DATA_PATH") or oper.path.join(oper.getcwd(), "pcat-data")
     pathoutpcnfg = oper.path.join(pathbase, "data", "outp", strgcnfg)
     pathvisucnfg = oper.path.join(pathbase, "visuals", strgcnfg)
 

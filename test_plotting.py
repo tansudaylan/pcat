@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 """Quick test of plotting narration."""
 
+import pathlib
 import sys
-sys.path.insert(0, '/Users/tdaylan/Documents/work/git/pcat')
+
+ROOT = pathlib.Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import pcat.main as main
 

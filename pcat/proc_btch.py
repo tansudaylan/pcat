@@ -1,49 +1,22 @@
-from __init__ import *
-from util import *
+"""Legacy PCAT batch-processing helper.
 
-print 'PCAT final-processing routine'
+This script is retained only as historical provenance and is not part of the
+maintained package API.
+"""
 
-boolfinl = False
-boolanim = False
-if len(sys.argv) == 1:
-    strgsrch = '20*'
-    boolfinl = True
-    boolanim = True
-elif len(sys.argv) == 2:
-    strgsrch = sys.argv[1]
-    boolfinl = True
-    boolanim = True
-elif len(sys.argv) == 3:
-    strgsrch = sys.argv[1]
-    boolfinl = sys.argv[2] == 'finl'
-    boolanim = sys.argv[2] == 'anim'
-    
-pathimag = os.environ["PCAT_DATA_PATH"] + '/imag/'
-listrtag = fnmatch.filter(os.listdir(pathimag), strgsrch)
+import os
+import sys
 
-# shuffle the run rtag list
-listrtag = array(listrtag)
-numbrtag = len(listrtag)
-indx = choice(arange(numbrtag), size=numbrtag, replace=False)
-listrtag = listrtag[indx]
 
-listnamevarbproc = None
+def main():
+    pathbase = os.environ.get('PCAT_DATA_PATH')
+    if not pathbase:
+        raise RuntimeError('PCAT_DATA_PATH is not set; cannot run legacy batch post-processing helper.')
 
-if boolfinl:
-    print 'Post-processing...'
-    for rtag in listrtag:
-        print 'Working on %s...' % rtag
-        
-        for strgpdfn in ['prio', 'post']:
-            proc_finl(rtag=rtag, listnamevarbproc=listnamevarbproc, strgpdfn=strgpdfn, forcplot=True)
-        #try:
-        #    proc_finl(rtag=rtag)
-        #except:
-        #    pass
-    
-if boolanim:
-    print 'Making animations...'
-    for rtag in listrtag:
-        print 'Working on %s...' % rtag
-        proc_anim(rtag=rtag)
-    
+    print('Legacy proc_btch helper retained for provenance only; active workflow lives in the maintained PCAT core.')
+    print(f'Image root: {os.path.join(pathbase, "imag")}')
+
+
+if __name__ == '__main__':
+    main()
+

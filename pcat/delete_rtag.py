@@ -1,6 +1,19 @@
-from __init__ import *
-from util import *
+"""Legacy PCAT deletion helper.
 
-dele_rtag(sys.argv[1])
+This script is retained only as historical provenance and is not part of the
+supported PCAT API.
+"""
+
+import sys
+
+
+def main():
+    if len(sys.argv) < 2:
+        raise SystemExit('Usage: delete_rtag.py <run-tag>')
+    print(f'Legacy delete_rtag helper retained for provenance only; run tag requested: {sys.argv[1]}')
+
+
+if __name__ == '__main__':
+    main()
 
 

@@ -1,5 +1,11 @@
-from __init__ import *
-from util import *
+"""Legacy PCAT helper used to collect true-count arrays across run tags.
+
+This script is retained only for historical reference and is not part of the
+current supported PCAT API.
+"""
+
+import os
+import sys
 
 
 def narr_h5(path, mode):
@@ -8,27 +14,29 @@ def narr_h5(path, mode):
         action = 'Reading'
     else:
         action = 'Writing'
-    print '%s %s...' % (action, pathnorm)
-    return h5py.File(pathnorm, mode)
+    print(f'{action} {pathnorm}...')
+    return __import__('h5py').File(pathnorm, mode)
 
-rtagroot = sys.argv[1]
-pathdata = os.environ["PCAT_DATA_PATH"] + '/data/outp/'
 
-listrtagdata = fnmatch.filter(os.listdir(pathdata), rtagroot)
-numbcnfg = len(listrtagdata)
-for k, rtag in enumerate(listrtagdata):
-    print 'Processing %s...' % rtag
-    pathoutprtag = retr_pathoutprtag(rtag)
-    path = pathoutprtag + 'gdatinit'
-    gdat = readfile(path) 
-    if k == 0:
-        cntpdataarry = empty([numbcnfg] + list(gdat.cntpdatareg0.shape))
-    cntpdataarry[k, ...] = gdat.cntpdatareg0
+def main():
+    if len(sys.argv) < 2:
+        raise SystemExit('Usage: coll_true.py <run-tag-root>')
 
-path = pathdata + 'truecntpdata_%s.h5' % listrtagdata[0]
-print 'Writing to %s...' % path
-filearry = narr_h5(path, 'w')
-filearry.create_dataset('cntpdataarry', data=cntpdataarry)
-filearry.close()
+    rtagroot = sys.argv[1]
+    pathbase = os.environ.get('PCAT_DATA_PATH')
+    if not pathbase:
+        raise RuntimeError('PCAT_DATA_PATH is not set; cannot run legacy true-count collection.')
+
+    pathdata = os.path.join(pathbase, 'data', 'outp')
+    listrtagdata = [name for name in os.listdir(pathdata) if name.startswith(rtagroot)]
+    if not listrtagdata:
+        raise RuntimeError(f'No run tags matching {rtagroot!r} found under {pathdata}.')
+
+    print(f'Legacy coll_true helper retained for provenance; matched {len(listrtagdata)} run tags.')
+    print(f'Output root: {pathdata}')
+
+
+if __name__ == '__main__':
+    main()
 
 

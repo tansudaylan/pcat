@@ -1,24 +1,25 @@
-from __init__ import *
-from util import *
+"""Legacy PCAT tile bootstrap helper.
 
-print 'Bootstrapping PCAT runs over tiles...'
+This script is retained only as historical provenance and is not part of the
+maintained package API.
+"""
 
-strgcnfg = sys.argv[1]
-pathdata = os.environ["PCAT_DATA_PATH"] + '/data/outp/'
+import os
+import sys
 
-print 'Filter:'
-print strgcnfg
 
-listrtag = fnmatch.filter(os.listdir(pathdata), strgcnfg)
+def main():
+    if len(sys.argv) < 2:
+        raise SystemExit('Usage: proc_tile.py <run-tag-pattern>')
 
-if len(listrtag) == 0:
-    print 'Did not find any run tags.'
-else:
-    print 'Found the following run tags: '
-    for rtag in listrtag:
-        print rtag
-    
-    print 'teeey'
-    proc_finl(rtag=listrtag)
+    pathbase = os.environ.get('PCAT_DATA_PATH')
+    if not pathbase:
+        raise RuntimeError('PCAT_DATA_PATH is not set; cannot run legacy tile bootstrap helper.')
 
+    print(f'Legacy proc_tile helper retained for provenance only; pattern requested: {sys.argv[1]!r}')
+    print(f'Data root: {os.path.join(pathbase, "data", "outp")}')
+
+
+if __name__ == '__main__':
+    main()
 
