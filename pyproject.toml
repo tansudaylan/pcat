@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pcat"
+version = "0.1.0"
+description = "Transdimensional probabilistic cataloging for astronomical inference."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Tansu Daylan", email = "tansu.daylan@gmail.com" }
+]
+keywords = ["astronomy", "bayesian", "catalog", "mcmc", "transdimensional"]
+dependencies = [
+  "astropy",
+  "h5py",
+  "matplotlib",
+  "numba",
+  "numpy",
+  "scipy",
+  "seaborn",
+  "tdpy",
+]
+
+[tool.setuptools]
+packages = ["pcat"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = ["--import-mode=importlib"]

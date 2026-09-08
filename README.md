@@ -1,29 +1,86 @@
-# PCAT (Probabilistic Cataloger)
+# PCAT
 
-PCAT is a transdimensional, hierarchical, and Bayesian framework to sample from the posterior probability distribution of a metamodel (union of models with different dimensionality) given some Poisson-distributed data. 
+## Scientific purpose
 
-In addition to its previous use in the literature to sample from [the point source catalog space consistent with the Fermi-LAT gamma-ray data](http://iopscience.iop.org/article/10.3847/1538-4357/aa679e/meta), and [the dark matter subhalo catalog space consistent with an Hubble Space Telescope (HST) optical image](https://arxiv.org/abs/1706.06111), it can also be used as a general-purpose Poisson mixture sampler.
+PCAT is a transdimensional, hierarchical Bayesian framework for inferring a catalog-level posterior from Poisson-distributed data. It is designed for problems where the number of sources and their parameters are not fixed a priori, and where the model space itself is a mixture of competing catalog configurations.
 
-During burn-in, it adaptively optimizes its within-model proposal scale to minimize the autocorrelation time. Furthermore, it achieves parallelism through bypassing Python's Global Interpreter Lock (GIL). It is implemented in ```python2.7``` and its theoretical framework is introduced in [Daylan, Portillo & Finkbeiner (2016)](https://arxiv.org/abs/1607.04637). Refer to its [webpage](http://www.tansudaylan.com/pcat) for an introduction.
+The primary scientific use cases are:
 
-In inference problems the desired object is the posterior probability distribution of fitted and derived parameters. Towards this purpose, `tdpy.mcmc` offers a parallized and easy-to-use Metropolis-Hastings MCMC sampler. Given a likelihood function and prior probability distribution in a parameter space of interest, it makes heavy-tailed multi-variate Gaussian proposals to construct a Markovian chain of states, whose stationary distribution is the target probability density. It then visualizes the marginal posterior. The sampler takes steps in a transformed parameter space where the prior is uniform. Therefore, the prior is accounted for by asymmetric proposals rather than explicitly evaluating the prior ratio between the proposed and current states. Parallelism is accomplished via multiprocessing by gathering chains indepedently and simulataneously-sampled chains.
+- probabilistic source catalogs from image or photon-count data;
+- transdimensional inference over source populations;
+- membership or detection uncertainty in crowded fields;
+- forward modeling and posterior diagnostics for catalog-level summaries.
 
+The core method is introduced in Daylan, Portillo & Finkbeiner (2016) and extended for different image and catalog analysis workflows.
+
+## Repository role in the ecosystem
+
+This repository is the core probabilistic cataloging engine in the broader astrophysics software stack. It is intended to work with the shared numerical and plotting infrastructure in [tdpy](../tdpy), and it is conceptually adjacent to time-domain and imaging workflows in repositories such as [miletos](../miletos), [lygos](../lygos), and [assos](../assos).
 
 ## Installation
 
-You can install PCAT either by using ```pip```
-```
-pip install pcat
-```
+A modern installation path is:
 
-or, by running its `setup.py` script.
-
-```
-python setup.py install
+```bash
+cd /path/to/pcat
+pip install -e .
 ```
 
-Note that PCAT depends on [TDPY](https://github.com/tdaylan/tdpy), a library of MCMC and numerical routines. The pip installation will install PCAT along with its dependencies.
+This repository expects the shared library `tdpy` to be installed in the same Python environment. For local development, this is usually easiest with:
 
-## Usage
-PCAT user manual is on [ReadTheDocs](http://pcat.readthedocs.io/en/latest/).
+```bash
+cd /path/to/tdpy
+pip install -e .
+cd /path/to/pcat
+pip install -e .
+```
+
+## Minimal usage
+
+PCAT is still primarily a research framework rather than a turnkey black-box package. The normal workflow is to initialize a model configuration, define a likelihood and data product, and then call `pcat.main.init(...)` with a populated configuration dictionary.
+
+A minimal import smoke test should work as:
+
+```python
+import pcat
+from pcat import main
+
+print('PCAT import OK')
+print(hasattr(main, 'init'))
+```
+
+The exact sampler configuration depends on the scientific workflow; the repository’s existing `pcat.test` script and configuration patterns remain the most direct reference for active usage.
+
+## Output and visualization conventions
+
+PCAT is designed to write diagnostics into a project-specific output tree rooted at `PCAT_DATA_PATH` or a compatible fallback such as `TDGU_DATA_PATH`. The active code expects a directory structure with `data/` and `visuals/` subdirectories, and the plotting routines are designed to expose the main input, intermediate, and posterior-summary diagnostics rather than only final tables.
+
+## Important files
+
+- `pcat/main.py`: main scientific engine and workflow logic
+- `pcat/__init__.py`: package re-export shim for legacy compatibility
+- `pcat/test.py`: historical validation and configuration tests
+- `tests/`: modern import and path smoke checks
+
+## Current development status
+
+This repository is in a transition state:
+
+- stable: package importability and modern packaging compatibility
+- research-grade: core transdimensional sampling routines and model logic
+- legacy: some scripts and configuration patterns remain Python-2-era or repo-local in style
+
+The active strategy is to preserve scientifically useful functionality while making the package more portable, inspectable, and maintainable.
+
+## References
+
+- Daylan, Portillo, & Finkbeiner (2016), transdimensional Bayesian catalog inference
+- The project documentation previously described in the repository docs and older ReadTheDocs material
+
+## Related repositories
+
+- [tdpy](../tdpy): shared numerical utilities, plotting, and path handling
+- [miletos](../miletos): higher-level time-domain workflow orchestration
+- [lygos](../lygos): image-domain photometry and pipeline extraction
+- [assos](../assos): forward-modeling and imaging utilities
 

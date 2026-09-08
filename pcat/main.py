@@ -2950,10 +2950,17 @@ def setup_pcat(gdat):
     Routines common among sample() and wrappers()
     These should be made feedable to sample()
     '''
-    
+
     # folders
     if gdat.pathbase is None:
-        gdat.pathbase = os.environ["PCAT_DATA_PATH"]
+        for nameenv in ['PCAT_DATA_PATH', 'TDGU_DATA_PATH']:
+            if os.environ.get(nameenv):
+                gdat.pathbase = os.environ[nameenv]
+                break
+        if gdat.pathbase is None:
+            raise RuntimeError(
+                'No output data path is configured. Set PCAT_DATA_PATH or TDGU_DATA_PATH before running PCAT.'
+            )
     gdat.pathbase = os.path.normpath(gdat.pathbase)
 
     gdat.pathdata = os.path.join(gdat.pathbase, 'data') + '/'
