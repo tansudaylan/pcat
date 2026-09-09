@@ -4605,6 +4605,10 @@ def setp_modlemis_init(gdat, strgmodl='fitt'):
         gmod.typeemishost = 'sers' if gdat.typeexpr.startswith('HST_WFC3') else 'none'
     if not hasattr(gmod, 'indxsersfgrd'):
         gmod.indxsersfgrd = np.arange(1 if gdat.typeexpr.startswith('HST_WFC3') else 0, dtype=int)
+    if not hasattr(gmod, 'listnameback') or gmod.listnameback is None:
+        gmod.listnameback = ['isot']
+        if gdat.typeexpr == 'ferm':
+            gmod.listnameback.append('fdfm')
     if not hasattr(gmod, 'indxback'):
         gmod.indxback = np.arange(len(getattr(gmod, 'listnameback', ['isot'])), dtype=int)
     if not hasattr(gmod, 'typeevalpsfn'):

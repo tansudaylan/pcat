@@ -1,78 +1,51 @@
 #!/usr/bin/env python
-"""Generate a lensing-style illustration using the PCAT output layout."""
+"""Run a genuine HST lensing image example so the pipeline writes its own figures."""
 
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
-import types
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import numpy as np
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-import pcat
-
-ROOT = Path(__file__).resolve().parent
-OUTPUT_ROOT = ROOT / "pcat-output"
+OUTPUT_ROOT = Path(__file__).resolve().parent / "pcat-output"
 OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 os.environ["PCAT_DATA_PATH"] = str(OUTPUT_ROOT)
 
 
-def make_figure(path: Path) -> None:
-    x = np.linspace(-2.0, 2.0, 500)
-    y = np.linspace(-2.0, 2.0, 500)
-    xx, yy = np.meshgrid(x, y, indexing="xy")
-    radius = np.sqrt(xx**2 + yy**2)
-    field = np.exp(-0.5 * radius**2 / 0.35**2)
-    field += 0.35 * np.exp(-0.5 * ((xx + 0.7) ** 2 + (yy - 0.2) ** 2) / 0.18**2)
-
-    fig, ax = plt.subplots(figsize=(5.5, 5.5))
-    im = ax.imshow(field, cmap="magma", origin="lower", extent=(-2.0, 2.0, -2.0, 2.0))
-    ax.set_title("strong-lens style mock field")
-    ax.set_xlabel("x [arcsec]")
-    ax.set_ylabel("y [arcsec]")
-    fig.colorbar(im, ax=ax, label="relative surface brightness")
-    fig.tight_layout()
-    fig.savefig(path, dpi=180)
-    plt.close(fig)
-
-
 def main() -> None:
-    gdat = types.SimpleNamespace(
-        pathbase=str(OUTPUT_ROOT),
-        liststrgfeatparalist=["minm", "maxm", "scal"],
-        liststrgfeatpara=["minm", "maxm", "scal"],
-        listscaltype=["self", "logt"],
-        numbstdvgaus=4.0,
-    )
-    pcat.setup_pcat(gdat)
-    visuals_dir = Path(gdat.pathvisu)
-    visuals_dir.mkdir(parents=True, exist_ok=True)
+    from pcat import main as pcat_main
 
-    fig_path = visuals_dir / "hst_lens_demo.png"
-    make_figure(fig_path)
-    print(f"Wrote {fig_path}")
-
-    try:
-        from pcat import main as pcat_main
-        cfg = {
-            "typeexpr": "HST_WFC3_IR",
-            "typedata": "simu",
-            "booldiag": False,
-            "typeverb": 0,
-            "numbswep": 2,
-            "numbsamp": 1,
-            "boolmakeplot": True,
-            "boolmakeplotinit": True,
-            "pathbase": str(OUTPUT_ROOT),
-            "strgcnfg": "hst_lens_demo",
-        }
-        pcat_main.sample(**cfg)
-        print("PCAT sampling hook executed successfully.")
-    except Exception as exc:  # pragma: no cover - illustrative fallback
-        print(f"PCAT sampling hook skipped: {exc}")
+    cfg = {
+        "typeexpr": "HST_WFC3_IR",
+        "typedata": "simu",
+        "typepixl": "cart",
+        "boolbindspat": True,
+        "numbsidecart": 80,
+        "numbpixl": 80**2,
+        "numbpixlcart": 80**2,
+        "booldiag": False,
+        "typeverb": 0,
+        "numbswep": 2,
+        "numbsamp": 1,
+        "boolmakeplot": True,
+        "boolmakeplotinit": True,
+        "boolmakeplotfram": True,
+        "pathbase": str(OUTPUT_ROOT),
+        "strgcnfg": "hst_lens_demo",
+        "inittype": "refr",
+        "numbelempop0": 1,
+        "fittminmnumbelem": 1,
+        "fittminmnumbelempop0": 1,
+        "fittmaxmnumbelempop0": 1,
+        "fittminmdefs": 0.005 / (3600.0 * 180.0 / 3.141592653589793),
+        "minmdefs": 0.005 / (3600.0 * 180.0 / 3.141592653589793),
+    }
+    pcat_main.sample(**cfg)
+    print(f"PCAT wrote outputs under {OUTPUT_ROOT}")
 
 
 if __name__ == "__main__":
