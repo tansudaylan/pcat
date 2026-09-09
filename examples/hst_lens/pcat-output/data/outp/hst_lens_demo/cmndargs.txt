@@ -1,0 +1,344 @@
+PCAT call arguments
+dictglob = {'typeexpr': 'HST_WFC3_IR', 'boolbinsener': True, 'dicttrue': None, 'dictfitt': None, 'indxdqltincl': array([0]), 'indxenerincl': array([0]), 'listmask': None, 'anlytype': 'nomi', 'strgexprsbrt': None, 'typemaskexpo': 'ignr', 'typeexpo': 'cons', 'boolsimuonly': False, 'typesers': 'vauc', 'variasca': True, 'variacut': True, 'maxmangleval': None, 'expo': array([[[420.],
+        [420.],
+        [420.],
+        ...,
+        [420.],
+        [420.],
+        [420.]]], shape=(1, 10000, 1)), 'strgcnfgsimu': None, 'initpsfprefr': False, 'initpsfp': None, 'booldiag': False, 'boolinfe': True, 'boolmakeframcent': True, 'strgenerfull': ['F814W'], 'strgexprname': 'HST', 'strganglunit': None, 'strganglunittext': None, 'anglfact': 206264.80624709636, 'limtydathistfeat': None, 'typeseedelem': None, 'boolthindata': False, 'specfraceval': 0.1, 'numbangl': 1000, 'binsangltype': 'logt', 'numbsidepntsprob': 100, 'listprefsbrtsbrt': None, 'listprefsbrtener': None, 'listprefsbrtlabltotl': None, 'lablgangunit': '$^{\\prime\\prime}$', 'lablxpos': '\\theta_1', 'lablypos': '\\theta_2', 'lablfluxunit': None, 'lablflux': 'f', 'strgenerunit': 'erg', 'indxenerfull': array([0]), 'indxdqltfull': array([0]), 'binsenerfull': None, 'asymfluxprop': False, 'boolpriopsfninfo': False, 'margfactmodl': 1.0, 'maxmgangdata': 9.69627362219072e-06, 'stdvprophypr': 0.01, 'stdvproppsfp': 0.1, 'stdvpropbacp': 0.01, 'stdvproplenp': 0.0001, 'stdvxpos': 0.001, 'stdvypos': 0.001, 'stdvflux': 0.001, 'stdvspep': 0.001, 'stdvspmrsind': 0.2, 'varistdvlbhl': True, 'fittampldisttype': None, 'kernevaltype': 'ulip', 'typeseed': 0, 'boolpenalpridiff': False, 'loadvaripara': False, 'anglassc': 3.6361026083215197e-06, 'nameexpr': 'HST', 'xposprio': None, 'yposprio': None, 'minmcntpdata': None, 'strgexpo': None, 'liketype': 'pois', 'xposcntr': 0.0, 'yposcntr': 0.0, 'maxmangl': None, 'boolmakeshrtfram': False, 'typepixl': 'cart', 'boolforccart': False, 'numbsidecart': 100, 'numbsideheal': 256, 'allwfixdtrue': True, 'asscmetrtype': 'dist', 'boolmakeplot': True, 'boolmakeplotinit': True, 'boolmakeplotfram': True, 'boolmakeplotfinlprio': True, 'boolmakeplotfinlpost': True, 'boolplotelem': True, 'boolmakeplotintr': False, 'scalmaps': 'asnh', 'typefileplot': 'png', 'checprio': False, 'strgcnfg': 'hst_lens_demo', 'boolasscrefr': [True], 'typedata': 'simu', 'typeverb': 0, 'pathbase': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output', 'probtran': None, 'probspmr': None, 'fracproprand': 0.0, 'radispmr': 7.272205216643039e-07, 'factpriodoff': 1.0, 'boolrefeforc': False, 'indxrefrforc': None, 'dictpcat': {'numbswep': 2, 'numbsamp': 1}, 'numbswep': 2, 'numbsamp': 1, 'liststrgmodl': ['true', 'fitt'], 'this': <tdpy.util.gdatstrt object at 0x14d1df810>, 'next': <tdpy.util.gdatstrt object at 0x14d1d1290>, 'pathdata': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output/data/', 'pathvisu': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output/visuals/', 'pathoutp': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output/data/outp/', 'pathinpt': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output/data/inpt/', 'liststrgfeatparalist': ['minm', 'maxm', 'scal', 'lablroot', 'lablunit', 'labl', 'labltotl', 'name', 'mean', 'stdv'], 'liststrgfeatpara': ['minm', 'maxm', 'scal', 'lablroot', 'lablunit', 'labl', 'labltotl', 'name', 'mean', 'stdv', 'limt', 'numbbins', 'blim', 'delt', 'indxbins', 'cmap', 'bctr', 'tick', 'numbbins', 'valutickmajr', 'indx', 'labltickmajr', 'valutickminr', 'labltickminr'], 'listscaltype': ['self', 'logt', 'atan', 'gaus', 'pois', 'expo', 'drct'], 'numbstdvgaus': 4.0, 'true': <tdpy.util.gdatstrt object at 0x14d1df3d0>, 'fitt': <tdpy.util.gdatstrt object at 0x14d0d28d0>, 'refr': <tdpy.util.gdatstrt object at 0x14d0b8710>, 'minmpara': <tdpy.util.gdatstrt object at 0x14d0f6710>, 'maxmpara': <tdpy.util.gdatstrt object at 0x14d0f7310>, 'scalpara': <tdpy.util.gdatstrt object at 0x14d0f4d50>, 'lablrootpara': <tdpy.util.gdatstrt object at 0x14d0f6390>, 'lablunitpara': <tdpy.util.gdatstrt object at 0x14d0f5310>, 'lablpara': <tdpy.util.gdatstrt object at 0x14d0f5490>, 'labltotlpara': <tdpy.util.gdatstrt object at 0x14d0f4b50>, 'namepara': <tdpy.util.gdatstrt object at 0x14d0f6550>, 'meanpara': <tdpy.util.gdatstrt object at 0x14d0f4410>, 'stdvpara': <tdpy.util.gdatstrt object at 0x14d0e37d0>, 'limtpara': <tdpy.util.gdatstrt object at 0x14d0e1750>, 'numbbinspara': <tdpy.util.gdatstrt object at 0x14d0e9990>, 'blimpara': <tdpy.util.gdatstrt object at 0x14d0e1d50>, 'deltpara': <tdpy.util.gdatstrt object at 0x14d0e2810>, 'indxbinspara': <tdpy.util.gdatstrt object at 0x14d0e3490>, 'cmappara': <tdpy.util.gdatstrt object at 0x14d0e1ed0>, 'bctrpara': <tdpy.util.gdatstrt object at 0x14d0ebbd0>, 'tickpara': <tdpy.util.gdatstrt object at 0x14d0e8c50>, 'valutickmajrpara': <tdpy.util.gdatstrt object at 0x14d0f45d0>, 'indxpara': <tdpy.util.gdatstrt object at 0x14d0e9710>, 'labltickmajrpara': <tdpy.util.gdatstrt object at 0x14d0e2650>, 'valutickminrpara': <tdpy.util.gdatstrt object at 0x14d0e9550>, 'labltickminrpara': <tdpy.util.gdatstrt object at 0x14d0eaa90>, 'boolbinddqlt': True, 'numbdqlt': 1, 'numbdqltfull': 1, 'indxdqlt': array([0]), 'numbenerfull': 1, 'boolmodipsfn': False, 'typeemishost': 'sers', 'typeback': [1.0], 'numbsersfgrd': 1, 'typeelem': ['lens'], 'legdelem': ['Subhalo'], 'typemodlpsfn': 'singgaus', 'listnameback': ['isot'], 'numbgrid': 1, 'indxgrid': array([0]), 'numbdeflsubhplot': 2, 'boolcorrexpo': False, 'numbpixlfull': 10000, 'boolbindspat': True, 'numbsidecarthalf': 50, 'numbpixlcart': 10000, 'sizepixl': np.float64(0.13), 'apix': 0.016900000000000002, 'factylimtbrt': [0.0001, 1000.0], 'minmxposdata': -9.69627362219072e-06, 'maxmxposdata': 9.69627362219072e-06, 'minmyposdata': -9.69627362219072e-06, 'maxmyposdata': 9.69627362219072e-06, 'sdenunit': 'degr', 'factergskevv': 1.6e-09, 'listspecconvunit': [['en03', 'ergs']], 'enerdiff': False, 'numbener': 1, 'indxener': array([0]), 'indxenerinclbins': array([0, 1]), 'indxenerpivt': 0, 'numbenerplot': 100, 'strgener': ['F814W'], 'deltener': array([250.]), 'minmener': np.float64(750.0), 'maxmener': np.float64(1000.0), 'limtener': [np.float64(750.0), np.float64(1000.0)], 'indxenerinde': array([], dtype=int64), 'edis': None, 'edisintp': None, 'typemodltran': 'drct', 'boolspecback': [False], 'typeelemspateval': ['full'], 'typespatdist': [], 'typeprioflux': [], 'nameenerunit': 'ergs', 'numbrefr': 1, 'indxrefr': array([0]), 'listnamerefr': ['moc0'], 'boolinforefr': True, 'listpathwcss': [], 'numbpixlxposshft': [], 'numbpixlyposshft': [], 'refrindxpoplassc': [[]], 'boollenshost': True, 'boollenssubh': True, 'boollens': True, 'boolemishost': True, 'redsintp': array([0.1, 2. ]), 'adisintp': array([1000000., 2500000.]), 'adisobjt': <scipy.interpolate._interpolate.interp1d object at 0x14cbaac60>, 'redsfromdlosobjt': <scipy.interpolate._interpolate.interp1d object at 0x14d119770>, 'colr': 'b', 'numblablsbrt': 2, 'numblablsbrtspec': 6, 'scalmasshostisf0bein': 'logt', 'lablhistcntplowrdfncsubten00evt0': 'N_{pix,l}', 'lablhistcntphigrdfncsubten00evt0': 'N_{pix,h}', 'lablhistcntplowrdfncen00evt0': 'N_{pix,l}', 'lablhistcntphigrdfncen00evt0': 'N_{pix,h}', 'lablbooldfncsubt': 'H', 'lablfactpriodoff': '$\\alpha_{p}$', 'minmreds': 0.0, 'maxmreds': 1.5, 'minmmagt': 19.0, 'maxmmagt': 28.0, 'lablener': 'E', 'lablgwdt': '\\sigma_G', 'lablgang': '\\theta', 'lablaang': '\\phi', 'lablxposunit': '$^{\\prime\\prime}$', 'lablyposunit': '$^{\\prime\\prime}$', 'labldefs': '\\alpha_s', 'lablnobj': 'p', 'lablelin': '\\mathcal{E}', 'lablsbrt': '\\Sigma', 'labldeflprof': '\\alpha_a', 'labldeflprofunit': '$^{\\prime\\prime}$', 'strgenerkevv': 'keV', 'strgenergevv': 'GeV', 'strgenerergs': 'erg', 'strgenerimum': '\\mu m^{-1}', 'labldefsunit': '$^{\\prime\\prime}$', 'lablprat': 'cm$^{-2}$ s$^{-1}$', 'lablexpo': '$\\epsilon$', 'lablexpounit': 'cm$^2$ s', 'lablprvl': '$p$', 'lablreds': 'z', 'lablmagt': 'm_R', 'lablper0': 'P_0', 'labldglc': 'd_{gc}', 'labldlos': 'd_{los}', 'lablgeff': '\\eta_{\\gamma}', 'labllumiunit': 'erg s$^{-1}$', 'labllum0unit': 'erg s$^{-1}$', 'lablthet': '\\theta_{gc}', 'lablphii': '\\phi_{gc}', 'scalmagfplot': 'logt', 'scalper1plot': 'logt', 'scalflux0400plot': 'logt', 'lablsigm': '\\sigma_l', 'lablgamm': '\\gamma_l', 'lablbcom': '\\eta', 'lablinfopost': 'D_{KL}', 'lablinfopostunit': 'nat', 'lablinfoprio': 'D_{KL,pr}', 'lablinfopriounit': 'nat', 'labllevipost': '\\ln P(D)', 'labllevipostunit': 'nat', 'lablleviprio': '\\ln P_{pr}(D)', 'labllevipriounit': 'nat', 'lablsind': 's', 'lablexpcunit': 'erg', 'labllliktotl': '\\ln P(D|M)', 'labllpripena': '\\ln P(N)', 'lablasca': '\\theta_s', 'lablascaunit': '$^{\\prime\\prime}$', 'lablacut': '\\theta_c', 'lablacutunit': '$^{\\prime\\prime}$', 'lablmcut': 'M_{c,n}', 'lablmcutunit': '$M_{\\odot}$', 'lablmcutcorr': '\\bar{M}_{c,n}', 'lablmcutcorrunit': '$M_{\\odot}$', 'lablspec': 'f', 'lablspecunit': None, 'lablspecplot': 'f', 'lablspecplotunit': None, 'lablcnts': 'C', 'labldeltllik': '\\Delta_n \\ln P(D|M)', 'labldiss': '\\theta_{sa}', 'labldissunit': '$^{\\prime\\prime}$', 'lablrele': '\\langle|\\vec{\\alpha}_n \\cdot \\vec{\\nabla} k_l| \\rangle', 'lablrelc': '\\langle\\vec{\\alpha}_n \\cdot \\vec{\\nabla} k_l \\rangle', 'lablreld': '\\langle|\\vec{\\alpha}_n \\cdot \\vec{\\nabla} k_d| \\rangle', 'lablreln': '\\langle \\Delta \\theta_{pix} |\\hat{\\alpha}_n \\cdot \\vec{\\nabla} k_l| / \\alpha_{s,n} \\rangle', 'lablrelm': '\\langle |\\vec{\\nabla}_{\\hat{\\alpha}} k_l| / \\alpha_{s,n} \\rangle', 'lablrelk': '\\langle |\\vec{\\nabla}_{\\hat{\\alpha}} k_l| / \\alpha_{s,n} \\rangle', 'lablrelf': '\\langle |\\vec{\\nabla}_{\\hat{\\alpha}} k_l| / \\alpha_{s,n} \\rangle / k_m', 'minmspec': 1e-11, 'maxmspec': 1e-07, 'minmdlos': 6000.0, 'maxmdlos': 11000.0, 'minmcnts': 1.0, 'maxmcnts': 1000.0, 'minmspecplot': 1e-11, 'maxmspecplot': 1e-07, 'minmdeltllik': 1.0, 'maxmdeltllik': 1000.0, 'minmdiss': 0.0, 'maxmdiss': np.float64(1.3712601660982612e-05), 'minmrele': 0.001, 'maxmrele': 10.0, 'minmreln': 0.001, 'maxmreln': 1.0, 'minmrelk': 0.001, 'maxmrelk': 1.0, 'minmrelf': 1e-05, 'maxmrelf': 0.1, 'minmrelm': 0.001, 'maxmrelm': 10.0, 'minmreld': 0.001, 'maxmreld': 10.0, 'minmrelc': 0.001, 'maxmrelc': 1.0, 'minmmcut': 30000000.0, 'maxmmcut': 2000000000.0, 'minmmcutcorr': 30000000.0, 'maxmmcutcorr': 2000000000.0, 'minmbein': 0.0, 'maxmbein': 4.84813681109536e-06, 'minmdeflprof': 4.84813681109536e-09, 'maxmdeflprof': 4.84813681109536e-07, 'liststrgsgrppara': ['genrelem', 'elem', 'derielemodim', 'genrbase', 'scal', 'genrelemextd', 'derielemextd', 'genrelemflat', 'derielemflat', 'genrelemextdflat', 'derielemextdflat', 'elemflat', 'genrelemdefa', 'genrelemkind', 'deribase', 'base', 'kind', 'genrscalfull', 'para', 'glob', 'genr'], 'boolelempsfnanyy': False, 'listnamevarbstat': ['paragenrscalfull', 'paragenrunitfull', 'indxelemfull', 'lliktotl', 'llik', 'lpritotl', 'lpri', 'sbrtlens', 'deflhostisf0', 'sbrthostisf0'], 'pathpixlcnvt': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output/data/pixlcnvt/', 'pathprox': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output/data/prox/', 'pathplotcnfg': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output/visuals/hst_lens_demo/', 'pathinit': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output/visuals/hst_lens_demo/init/', 'pathinitintr': '/Users/tdaylan/Documents/work/git/pcat/examples/hst_lens/pcat-output/visuals/hst_lens_demo/init/intr/', 'ascaglob': 2.42406840554768e-07, 'acutglob': 4.84813681109536e-06, 'cutfdefs': 1.454441043328608e-08, 'lablsampdist': 'Posterior', 'lablparagenrscalfull': 'Sample', 'lablmlik': 'Maximum likelihood', 'lablmedi': 'Median', 'lablpmea': 'Mean', 'lablstdv': 'Std. dev.', 'numbsampcpct': 10, 'indxsampcpct': array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), 'pvalcont': [0.317, 0.0455, 0.0027, 6e-05, 1.3e-06], 'numbbinsplot': 20, 'indxbinsplot': array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+       17, 18, 19]), 'numbbinsplotprio': 100, 'dictglob': {}, 'listnamechro': ['totl', 'prop', 'diag', 'save', 'plot', 'proc', 'elem', 'modl', 'llik', 'sbrtmodl', 'spec', 'deflzero', 'deflhost', 'deflextr', 'sbrtlens', 'sbrthost', 'psfnconv', 'expo', 'lpri', 'tert'], 'listlablchro': ['Total', 'Proposal', 'Diagnostics', 'Save', 'Plot', 'Process', 'Parse', 'Model', 'Likelihood', 'Total emission', 'Spectrum calculation', 'Array initialization', 'Lens Host Deflection', 'External deflection', 'Lensed emission', 'Lens Host emission', 'Img for PSF Conv.', 'Exposure', 'Prior', 'Tertiary'], 'numbchro': 20, 'offstextimag': 4.84813681109536e-07, 'plotsize': 4.5, 'sizeimag': 5.8500000000000005, 'lablelem': ['Model Lens'], 'lablelemmiss': ['Model Lens miss'], 'lablelemhits': ['Model Lens hit'], 'lablhost': 'Model host', 'lablsour': 'Model sour', 'indxdqltplot': array([0]), 'numbenerdqlt': 1, 'boolintpanglcosi': False, 'strgfunctime': 'clck', 'functime': <built-in function perf_counter>, 'numbxpospntsprob': 100, 'numbypospntsprob': 100, 'indxxpospntsprob': array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+       17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+       34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+       51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
+       68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+       85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]), 'indxypospntsprob': array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+       17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+       34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+       51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
+       68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+       85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]), 'indxsidecart': array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+       17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+       34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+       51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
+       68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+       85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]), 'indxpixlrofi': array([   0,    1,    2, ..., 9997, 9998, 9999], shape=(10000,)), 'indxsidemesh': (array([[ 0,  0,  0, ...,  0,  0,  0],
+       [ 1,  1,  1, ...,  1,  1,  1],
+       [ 2,  2,  2, ...,  2,  2,  2],
+       ...,
+       [97, 97, 97, ..., 97, 97, 97],
+       [98, 98, 98, ..., 98, 98, 98],
+       [99, 99, 99, ..., 99, 99, 99]], shape=(100, 100)), array([[ 0,  1,  2, ..., 97, 98, 99],
+       [ 0,  1,  2, ..., 97, 98, 99],
+       [ 0,  1,  2, ..., 97, 98, 99],
+       ...,
+       [ 0,  1,  2, ..., 97, 98, 99],
+       [ 0,  1,  2, ..., 97, 98, 99],
+       [ 0,  1,  2, ..., 97, 98, 99]], shape=(100, 100))), 'xposgrid': array([-9.59931089e-06, -9.59931089e-06, -9.59931089e-06, ...,
+        9.59931089e-06,  9.59931089e-06,  9.59931089e-06], shape=(10000,)), 'yposgrid': array([-9.59931089e-06, -9.40538541e-06, -9.21145994e-06, ...,
+        9.21145994e-06,  9.40538541e-06,  9.59931089e-06], shape=(10000,)), 'shapcart': (100, 100), 'xposgridfull': array([-9.59931089e-06, -9.59931089e-06, -9.59931089e-06, ...,
+        9.59931089e-06,  9.59931089e-06,  9.59931089e-06], shape=(10000,)), 'yposgridfull': array([-9.59931089e-06, -9.40538541e-06, -9.21145994e-06, ...,
+        9.21145994e-06,  9.40538541e-06,  9.59931089e-06], shape=(10000,)), 'xposgridcart': array([[-9.59931089e-06, -9.59931089e-06, -9.59931089e-06, ...,
+        -9.59931089e-06, -9.59931089e-06, -9.59931089e-06],
+       [-9.40538541e-06, -9.40538541e-06, -9.40538541e-06, ...,
+        -9.40538541e-06, -9.40538541e-06, -9.40538541e-06],
+       [-9.21145994e-06, -9.21145994e-06, -9.21145994e-06, ...,
+        -9.21145994e-06, -9.21145994e-06, -9.21145994e-06],
+       ...,
+       [ 9.21145994e-06,  9.21145994e-06,  9.21145994e-06, ...,
+         9.21145994e-06,  9.21145994e-06,  9.21145994e-06],
+       [ 9.40538541e-06,  9.40538541e-06,  9.40538541e-06, ...,
+         9.40538541e-06,  9.40538541e-06,  9.40538541e-06],
+       [ 9.59931089e-06,  9.59931089e-06,  9.59931089e-06, ...,
+         9.59931089e-06,  9.59931089e-06,  9.59931089e-06]],
+      shape=(100, 100)), 'yposgridcart': array([[-9.59931089e-06, -9.40538541e-06, -9.21145994e-06, ...,
+         9.21145994e-06,  9.40538541e-06,  9.59931089e-06],
+       [-9.59931089e-06, -9.40538541e-06, -9.21145994e-06, ...,
+         9.21145994e-06,  9.40538541e-06,  9.59931089e-06],
+       [-9.59931089e-06, -9.40538541e-06, -9.21145994e-06, ...,
+         9.21145994e-06,  9.40538541e-06,  9.59931089e-06],
+       ...,
+       [-9.59931089e-06, -9.40538541e-06, -9.21145994e-06, ...,
+         9.21145994e-06,  9.40538541e-06,  9.59931089e-06],
+       [-9.59931089e-06, -9.40538541e-06, -9.21145994e-06, ...,
+         9.21145994e-06,  9.40538541e-06,  9.59931089e-06],
+       [-9.59931089e-06, -9.40538541e-06, -9.21145994e-06, ...,
+         9.21145994e-06,  9.40538541e-06,  9.59931089e-06]],
+      shape=(100, 100)), 'indxpent': (array([[[[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        ...,
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]]]], shape=(1, 100, 100, 1)), array([[[[ 0],
+         [ 0],
+         [ 0],
+         ...,
+         [ 0],
+         [ 0],
+         [ 0]],
+
+        [[ 1],
+         [ 1],
+         [ 1],
+         ...,
+         [ 1],
+         [ 1],
+         [ 1]],
+
+        [[ 2],
+         [ 2],
+         [ 2],
+         ...,
+         [ 2],
+         [ 2],
+         [ 2]],
+
+        ...,
+
+        [[97],
+         [97],
+         [97],
+         ...,
+         [97],
+         [97],
+         [97]],
+
+        [[98],
+         [98],
+         [98],
+         ...,
+         [98],
+         [98],
+         [98]],
+
+        [[99],
+         [99],
+         [99],
+         ...,
+         [99],
+         [99],
+         [99]]]], shape=(1, 100, 100, 1)), array([[[[ 0],
+         [ 1],
+         [ 2],
+         ...,
+         [97],
+         [98],
+         [99]],
+
+        [[ 0],
+         [ 1],
+         [ 2],
+         ...,
+         [97],
+         [98],
+         [99]],
+
+        [[ 0],
+         [ 1],
+         [ 2],
+         ...,
+         [97],
+         [98],
+         [99]],
+
+        ...,
+
+        [[ 0],
+         [ 1],
+         [ 2],
+         ...,
+         [97],
+         [98],
+         [99]],
+
+        [[ 0],
+         [ 1],
+         [ 2],
+         ...,
+         [97],
+         [98],
+         [99]],
+
+        [[ 0],
+         [ 1],
+         [ 2],
+         ...,
+         [97],
+         [98],
+         [99]]]], shape=(1, 100, 100, 1)), array([[[[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        ...,
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]],
+
+        [[0],
+         [0],
+         [0],
+         ...,
+         [0],
+         [0],
+         [0]]]], shape=(1, 100, 100, 1))), 'indxpixlfull': array([   0,    1,    2, ..., 9997, 9998, 9999], shape=(10000,)), 'indxpixlcart': array([   0,    1,    2, ..., 9997, 9998, 9999], shape=(10000,)), 'strgdqlt': ['PSF0'], 'numbmpolodim': 10, 'indxmpolodim': array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), 'numbwvecodim': 100, 'indxcubeincl': (array([[[0],
+        [0],
+        [0],
+        ...,
+        [0],
+        [0],
+        [0]]], shape=(1, 10000, 1)), array([[[   0],
+        [   1],
+        [   2],
+        ...,
+        [9997],
+        [9998],
+        [9999]]], shape=(1, 10000, 1)), array([[[0],
+        [0],
+        [0],
+        ...,
+        [0],
+        [0],
+        [0]]], shape=(1, 10000, 1))), 'exttrofi': array([-2.,  2., -2.,  2.]), 'frambndrdata': 2.0, 'minmmrkrsize': 100, 'maxmmrkrsize': 500, 'mrkrlinewdth': 3, 'alphhist': 0.5, 'alphline': 0.5, 'alphbndr': 0.5, 'alphelem': 1.0, 'alphmaps': 1.0, 'numbtickcbar': 11, 'minmlpdfspatpriointp': np.float64(0.8506217283651214), 'maxmlpdfspatpriointp': np.float64(20.85062172836512), 'cmaplpdfspatpriointp': 'PuBu', 'minmllikmaps': -10.0, 'maxmllikmaps': 0.0, 'cmapllikmaps': 'YlGn', 'minmperc': 0.0, 'maxmperc': 100.0, 'scalperc': 'asnh', 'cmapperc': 'afmhot', 'minmpercresi': -100.0, 'maxmpercresi': 100.0, 'scalpercresi': 'asnh', 'cmappercresi': 'coolwarm', 'minmdeflresiperc': -100.0, 'maxmdeflresiperc': 100.0, 'cmapdeflresiperc': 'Oranges', 'minmmagnresi': -10.0, 'maxmmagnresi': 10.0, 'cmapmagnresi': 'PRGn', 'minmmagnresiperc': -100.0, 'maxmmagnresiperc': 100.0, 'cmapmagnresiperc': 'PRGn', 'indxcuberofi': (array([[[0],
+        [0],
+        [0],
+        ...,
+        [0],
+        [0],
+        [0]]], shape=(1, 10000, 1)), array([[[   0],
+        [   1],
+        [   2],
+        ...,
+        [9997],
+        [9998],
+        [9999]]], shape=(1, 10000, 1)), array([[[0],
+        [0],
+        [0],
+        ...,
+        [0],
+        [0],
+        [0]]], shape=(1, 10000, 1))), 'numbpixl': 10000, 'indxpixl': array([   0,    1,    2, ..., 9997, 9998, 9999], shape=(10000,)), 'numbdata': 10000, 'stdvhostsour': 1.939254724438144e-07, 'minmgangpop0': 4.84813681109536e-08, 'minmdefs': 1.454441043328608e-08, 'maxmdefs': 4.84813681109536e-06, 'gangdisttype': ['self'], 'spatdistconspop0': 0.001, 'gangsloppop0': 1.1, 'yposdistscalpop0': 9.69627362219072e-06, 'meanprioascapop0': 2.42406840554768e-07, 'stdvprioascapop0': 1.939254724438144e-07, 'meanprioacutpop0': 4.84813681109536e-06, 'stdvprioacutpop0': 1.939254724438144e-07, 'sinddistmeanpop0': 1.0, 'sinddiststdvpop0': 0.5, 'curvdistmeanpop0': 2.0, 'curvdiststdvpop0': 0.2, 'expcdistmeanpop0': 2.0, 'expcdiststdvpop0': 0.2, 'liststrgcalcmasssubh': ['delt', 'intg']}
+strgpdfn = post
+booldiag = True
+boolsqzeexpo = False
+boolexplexpo = False
+boolsqzeprop = False
+boolexplprop = False
+factthin = None
+typefileplot = png
+listnamefeatsele = None
+numbproc = None
+refrlabltotl = None
+refrlablpopl = None
+fittlablpopl = None
+boolburntmpr = False
+numbswep = 100000
+numbsamp = None
+numbburn = None
+numbsampboot = None
+boolcondcatl = True
+numbswepplot = None
+typeseed = 0
+boolseedchan = True
+typeseedelem = None
+boolrefeforc = False
+indxrefrforc = None
+numbspatdims = 2
+inittype = None
+priotype = logt
+boolsavestat = False
+namesavestat = None
+namerecostat = None
+forcsavestat = False
+namestattrue = None
+plot_func = None
+boolpropcomp = True
+boolpropcova = True
+propwithsing = True
+typeopti = none
+retr_llik = None
+checprio = False
+strgcnfg = None
+boolasscrefr = None
+typedata = None
+typeverb = 1
+pathbase = None
+probtran = None
+probspmr = None
+fracproprand = 0.0
+radispmr = None
+factpriodoff = None

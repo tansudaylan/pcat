@@ -4737,10 +4737,13 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
                 setp_varb(gdat, 'gang', minm=0, maxm=gdat.maxmgangdata, labl=[r'$\psi$', ''], popl=l, strgmodl=strgmodl)
                 setp_varb(gdat, 'gang', minm=0, maxm=gdat.maxmgangdata, labl=[r'$\psi$', ''], popl=l, strgmodl=strgmodl, iele='full')
 
-        # loglikelihood difference for each element
+        # loglikelihood difference for each element. The per-population
+        # entries are optional; they are skipped when there are no populations.
         setp_varb(gdat, 'deltllik', labl=[r'$\Delta \log L$', ''], minm=1., maxm=100., strgmodl=strgmodl)
-        setp_varb(gdat, 'deltllik', labl=[r'$\Delta \log L$', ''], minm=1., maxm=100., popl=l, strgmodl=strgmodl)
-        setp_varb(gdat, 'deltllik', labl=[r'$\Delta \log L$', ''], minm=1., maxm=100., popl=l, strgmodl=strgmodl, iele='full')
+        if hasattr(gmod, 'indxpopl') and len(getattr(gmod, 'indxpopl', [])) > 0:
+            for l in gmod.indxpopl:
+                setp_varb(gdat, 'deltllik', labl=[r'$\Delta \log L$', ''], minm=1., maxm=100., popl=l, strgmodl=strgmodl)
+                setp_varb(gdat, 'deltllik', labl=[r'$\Delta \log L$', ''], minm=1., maxm=100., popl=l, strgmodl=strgmodl, iele='full')
         
     # construct the fitting model
     setp_paragenrscalbase(gdat, strgmodl='fitt')
@@ -15997,6 +16000,63 @@ def init( \
         raise TypeError('dictglob must be a dictionary of initialization overrides.')
     for attr, valu in gdat.dictglob.items():
         setattr(gdat, attr, valu)
+
+    # Fill in the core runtime defaults before any model-setup helper accesses
+    # them. Lightweight demo runs and compatibility wrappers rely on these
+    # attributes being present even when the user passes a minimal config.
+    if not hasattr(gdat, 'typeexpr'):
+        gdat.typeexpr = 'gmix'
+    if not hasattr(gdat, 'typedata'):
+        gdat.typedata = 'simu'
+    if not hasattr(gdat, 'typepixl'):
+        gdat.typepixl = 'cart'
+    if not hasattr(gdat, 'numbpixl'):
+        gdat.numbpixl = 1
+    if not hasattr(gdat, 'numbpixlcart'):
+        gdat.numbpixlcart = gdat.numbpixl
+    if not hasattr(gdat, 'numbsidecart'):
+        gdat.numbsidecart = 1
+    if not hasattr(gdat, 'apix'):
+        gdat.apix = 1.
+    if not hasattr(gdat, 'numbdqlt'):
+        gdat.numbdqlt = 1
+    if not hasattr(gdat, 'indxdqlt'):
+        gdat.indxdqlt = np.arange(gdat.numbdqlt, dtype=int)
+    if not hasattr(gdat, 'boolcorrexpo'):
+        gdat.boolcorrexpo = False
+    if not hasattr(gdat, 'boolmodipsfn'):
+        gdat.boolmodipsfn = False
+    if not hasattr(gdat, 'boolbindspat'):
+        gdat.boolbindspat = False
+    if not hasattr(gdat, 'boolbinsener'):
+        gdat.boolbinsener = False if gdat.typeexpr == 'gmix' else True
+    if not hasattr(gdat, 'booldiag'):
+        gdat.booldiag = True
+    if not hasattr(gdat, 'boolpenalpridiff'):
+        gdat.boolpenalpridiff = False
+    if not hasattr(gdat, 'liketype'):
+        gdat.liketype = 'pois'
+    if not hasattr(gdat, 'anglfact'):
+        if gdat.typeexpr == 'ferm':
+            gdat.anglfact = 180. / np.pi
+        elif gdat.typeexpr == 'tess':
+            gdat.anglfact = 60 * 180. / np.pi
+        elif gdat.typeexpr == 'sdss' or gdat.typeexpr == 'chan' or gdat.typeexpr.startswith('HST'):
+            gdat.anglfact = 3600 * 180. / np.pi
+        else:
+            gdat.anglfact = 1.
+    if not hasattr(gdat, 'numbener') or gdat.numbener is None:
+        gdat.numbener = 1
+    if not hasattr(gdat, 'indxener') or gdat.indxener is None:
+        gdat.indxener = np.arange(gdat.numbener, dtype=int)
+    if not hasattr(gdat, 'expo'):
+        gdat.expo = np.ones((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
+    if not hasattr(gdat, 'cntpdata'):
+        gdat.cntpdata = np.ones((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
+    if not hasattr(gdat, 'varidata'):
+        gdat.varidata = np.ones((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
+    if not hasattr(gdat, 'numbdata'):
+        gdat.numbdata = gdat.cntpdata.size
     
     # check inputs
     if gdat.numbburn is not None and gdat.numbburn > gdat.numbswep:
@@ -16039,6 +16099,37 @@ def init( \
             if not hasattr(gmod, strgfeatpara + 'para'):
                 setattr(gmod, strgfeatpara + 'para', tdpy.gdatstrt())
     
+    # Initialize the experimental defaults before model setup. Downstream
+    # helpers assume these attributes already exist when they configure
+    # populations, axes, and plotting geometry.
+    if not hasattr(gdat, 'typeexpr'):
+        gdat.typeexpr = 'gmix'
+    if not hasattr(gdat, 'typedata'):
+        gdat.typedata = 'simu'
+    if not hasattr(gdat, 'typepixl'):
+        gdat.typepixl = 'cart'
+    if not hasattr(gdat, 'numbpixl'):
+        gdat.numbpixl = 1
+    if not hasattr(gdat, 'numbpixlcart'):
+        gdat.numbpixlcart = gdat.numbpixl
+    if not hasattr(gdat, 'numbsidecart'):
+        gdat.numbsidecart = 1
+    if not hasattr(gdat, 'apix'):
+        gdat.apix = 1.
+    if not hasattr(gdat, 'numbdqlt'):
+        gdat.numbdqlt = 1
+    if not hasattr(gdat, 'indxdqlt'):
+        gdat.indxdqlt = np.arange(gdat.numbdqlt, dtype=int)
+    if not hasattr(gdat, 'anglfact'):
+        if gdat.typeexpr == 'ferm':
+            gdat.anglfact = 180. / np.pi
+        elif gdat.typeexpr == 'tess':
+            gdat.anglfact = 60 * 180. / np.pi
+        elif gdat.typeexpr == 'sdss' or gdat.typeexpr == 'chan' or gdat.typeexpr.startswith('HST'):
+            gdat.anglfact = 3600 * 180. / np.pi
+        else:
+            gdat.anglfact = 1.
+
     setup_pcat(gdat)
 
     typeelemglob = list(getattr(gdat, 'typeelem', [])) if hasattr(gdat, 'typeelem') else []
