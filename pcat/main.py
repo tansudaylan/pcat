@@ -3929,6 +3929,8 @@ def init_image( \
             gdat.lablgangunit = ''
         if gdat.typeexpr == 'sdss' or gdat.typeexpr == 'chan' or gdat.typeexpr.startswith('HST'):
             gdat.lablgangunit = r'$^{\prime\prime}$'
+    if not hasattr(gdat, 'lablgangunit') or gdat.lablgangunit is None:
+        gdat.lablgangunit = ''
     
     if gdat.lablxpos is None:
         if gdat.typeexpr == 'gmix':
@@ -4034,7 +4036,19 @@ def init_image( \
         else:
             gdat.specfraceval = 0.1
 
-    if gdat.boolbindspat:
+    if not hasattr(gdat.blimpara, 'xposcart') or not hasattr(gdat.bctrpara, 'xposcart'):
+        if not hasattr(gdat, 'maxmgangdata') or gdat.maxmgangdata is None:
+            gdat.maxmgangdata = 1.
+        if not hasattr(gdat, 'numbsidecart') or gdat.numbsidecart is None:
+            gdat.numbsidecart = int(np.sqrt(max(getattr(gdat, 'numbpixl', 1), 1)))
+        if not hasattr(gdat, 'minmxposdata'):
+            gdat.minmxposdata = -gdat.maxmgangdata
+        if not hasattr(gdat, 'maxmxposdata'):
+            gdat.maxmxposdata = gdat.maxmgangdata
+        if not hasattr(gdat, 'minmyposdata'):
+            gdat.minmyposdata = -gdat.maxmgangdata
+        if not hasattr(gdat, 'maxmyposdata'):
+            gdat.maxmyposdata = gdat.maxmgangdata
         gdat.blimpara.xposcart = np.linspace(gdat.minmxposdata, gdat.maxmxposdata, gdat.numbsidecart + 1)
         gdat.blimpara.yposcart = np.linspace(gdat.minmyposdata, gdat.maxmyposdata, gdat.numbsidecart + 1)
         gdat.bctrpara.xposcart = (gdat.blimpara.xposcart[0:-1] + gdat.blimpara.xposcart[1:]) / 2.
@@ -4606,13 +4620,28 @@ def setp_modlemis_init(gdat, strgmodl='fitt'):
     if not hasattr(gmod, 'indxsersfgrd'):
         gmod.indxsersfgrd = np.arange(1 if gdat.typeexpr.startswith('HST_WFC3') else 0, dtype=int)
     if not hasattr(gmod, 'listnameback') or gmod.listnameback is None:
-        gmod.listnameback = ['isot']
-        if gdat.typeexpr == 'ferm':
-            gmod.listnameback.append('fdfm')
-    if not hasattr(gmod, 'indxback'):
+        base_list = getattr(gdat, 'listnameback', None)
+        if base_list is None:
+            base_list = ['isot']
+            if gdat.typeexpr == 'ferm':
+                base_list.append('fdfm')
+        gmod.listnameback = list(base_list)
+    if not hasattr(gmod, 'indxback') or gmod.indxback is None:
         gmod.indxback = np.arange(len(getattr(gmod, 'listnameback', ['isot'])), dtype=int)
+    if not hasattr(gmod, 'boolspecback') or len(getattr(gmod, 'boolspecback', [])) != len(gmod.indxback):
+        gmod.boolspecback = [False] * len(gmod.indxback)
+    if not hasattr(gmod, 'boolelemsbrt') or len(getattr(gmod, 'boolelemsbrt', [])) != getattr(gmod, 'numbpopl', 0):
+        gmod.boolelemsbrt = [False] * getattr(gmod, 'numbpopl', 0)
+    if not hasattr(gmod, 'lablpopl'):
+        gmod.lablpopl = [''] * getattr(gmod, 'numbpopl', 0)
     if not hasattr(gmod, 'typeevalpsfn'):
         gmod.typeevalpsfn = 'none'
+    if not hasattr(gmod, 'boollens'):
+        gmod.boollens = False
+    if not hasattr(gmod, 'boollenssubh'):
+        gmod.boollenssubh = False
+    if not hasattr(gmod, 'typeemishost'):
+        gmod.typeemishost = 'none'
     if not hasattr(gmod, 'nameparagenrelemampl'):
         if gdat.typeexpr.startswith('HST_WFC3'):
             gmod.nameparagenrelemampl = ['defs'] * gmod.numbpopl
@@ -4833,6 +4862,33 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
         gmod.boolelemdeflsubhanyy = False
     if not hasattr(gmod, 'convdiffanyy'):
         gmod.convdiffanyy = False
+    if not hasattr(gmod, 'typeevalpsfn'):
+        gmod.typeevalpsfn = 'none'
+    if not hasattr(gdat, 'boolthindata'):
+        gdat.boolthindata = False
+    if not hasattr(gdat, 'numbsidepntsprob'):
+        gdat.numbsidepntsprob = 100
+    if not hasattr(gdat, 'blimpara'):
+        gdat.blimpara = tdpy.gdatstrt()
+    if not hasattr(gdat, 'bctrpara'):
+        gdat.bctrpara = tdpy.gdatstrt()
+    if not hasattr(gdat.blimpara, 'xposcart'):
+        if not hasattr(gdat, 'maxmgangdata') or gdat.maxmgangdata is None:
+            gdat.maxmgangdata = 1. / getattr(gdat, 'anglfact', 1.)
+        if not hasattr(gdat, 'numbsidecart') or gdat.numbsidecart is None:
+            gdat.numbsidecart = int(np.sqrt(max(getattr(gdat, 'numbpixl', 1), 1)))
+        if not hasattr(gdat, 'minmxposdata'):
+            gdat.minmxposdata = -gdat.maxmgangdata
+        if not hasattr(gdat, 'maxmxposdata'):
+            gdat.maxmxposdata = gdat.maxmgangdata
+        if not hasattr(gdat, 'minmyposdata'):
+            gdat.minmyposdata = -gdat.maxmgangdata
+        if not hasattr(gdat, 'maxmyposdata'):
+            gdat.maxmyposdata = gdat.maxmgangdata
+        gdat.blimpara.xposcart = np.linspace(gdat.minmxposdata, gdat.maxmxposdata, gdat.numbsidecart + 1)
+        gdat.blimpara.yposcart = np.linspace(gdat.minmyposdata, gdat.maxmyposdata, gdat.numbsidecart + 1)
+        gdat.bctrpara.xposcart = (gdat.blimpara.xposcart[0:-1] + gdat.blimpara.xposcart[1:]) / 2.
+        gdat.bctrpara.yposcart = (gdat.blimpara.yposcart[0:-1] + gdat.blimpara.yposcart[1:]) / 2.
     gdat.listnamevarbstat = ['paragenrscalfull', 'paragenrunitfull', 'indxelemfull', 'lliktotl', 'llik', 'lpritotl', 'lpri']
     if gdat.typepixl == 'cart' and (gmod.typeevalpsfn == 'conv' or gmod.typeevalpsfn == 'full'):
         gdat.listnamevarbstat += ['psfnconv']
@@ -6159,6 +6215,46 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
     
     print('setp_paragenrscalbase(): Building the %s model base paremeter names and scales...' % strgmodl)
     gmod = getattr(gdat, strgmodl)
+    if not hasattr(gdat, 'indxrefr') or gdat.indxrefr is None:
+        gdat.indxrefr = np.arange(0, dtype=int)
+    if not hasattr(gdat, 'listnamerefr') or gdat.listnamerefr is None:
+        gdat.listnamerefr = []
+    if not hasattr(gmod, 'boollens'):
+        gmod.boollens = bool('lens' in getattr(gmod, 'typeelem', [])) or gdat.typeexpr.startswith('HST_WFC3')
+    if not hasattr(gmod, 'typeemishost'):
+        gmod.typeemishost = 'sers' if gdat.typeexpr.startswith('HST_WFC3') else 'none'
+    if not hasattr(gmod, 'indxsersfgrd'):
+        gmod.indxsersfgrd = np.arange(1 if gdat.typeexpr.startswith('HST_WFC3') else 0, dtype=int)
+    if not hasattr(gmod, 'listnameback') or gmod.listnameback is None:
+        gmod.listnameback = list(getattr(gdat, 'listnameback', ['isot']))
+    if not hasattr(gmod, 'indxback') or gmod.indxback is None:
+        gmod.indxback = np.arange(len(getattr(gmod, 'listnameback', ['isot'])), dtype=int)
+    if not hasattr(gmod, 'numbpopl') or gmod.numbpopl is None:
+        gmod.numbpopl = int(len(getattr(gmod, 'indxpopl', [])))
+    if not hasattr(gmod, 'indxpopl') or gmod.indxpopl is None:
+        gmod.indxpopl = np.arange(gmod.numbpopl, dtype=int)
+    if not hasattr(gmod, 'typeelem'):
+        gmod.typeelem = []
+    if not hasattr(gmod, 'namepara'):
+        gmod.namepara = tdpy.gdatstrt()
+    if not hasattr(gmod.namepara, 'genrelem') or len(getattr(gmod.namepara, 'genrelem', [])) != gmod.numbpopl:
+        gmod.namepara.genrelem = [[] for _ in range(gmod.numbpopl)]
+    if not hasattr(gmod.namepara, 'elem') or len(getattr(gmod.namepara, 'elem', [])) != gmod.numbpopl:
+        gmod.namepara.elem = [list(names) for names in gmod.namepara.genrelem]
+    if not hasattr(gmod, 'indxparagenrelemsing') or len(getattr(gmod, 'indxparagenrelemsing', [])) != gmod.numbpopl:
+        gmod.indxparagenrelemsing = [np.array([], dtype=int) for _ in range(gmod.numbpopl)]
+    if not hasattr(gmod, 'indxparaderielemsing') or len(getattr(gmod, 'indxparaderielemsing', [])) != gmod.numbpopl:
+        gmod.indxparaderielemsing = [np.array([], dtype=int) for _ in range(gmod.numbpopl)]
+    if not hasattr(gmod, 'numbparagenrelemsing') or len(np.atleast_1d(getattr(gmod, 'numbparagenrelemsing', np.zeros(gmod.numbpopl, dtype=int)))) != gmod.numbpopl:
+        gmod.numbparagenrelemsing = np.zeros(gmod.numbpopl, dtype=int)
+    if not hasattr(gmod, 'numbparaderielemsing') or len(np.atleast_1d(getattr(gmod, 'numbparaderielemsing', np.zeros(gmod.numbpopl, dtype=int)))) != gmod.numbpopl:
+        gmod.numbparaderielemsing = np.zeros(gmod.numbpopl, dtype=int)
+    if not hasattr(gmod, 'numbparagenrelemcuml') or len(np.atleast_1d(getattr(gmod, 'numbparagenrelemcuml', np.zeros(gmod.numbpopl, dtype=int)))) != gmod.numbpopl:
+        gmod.numbparagenrelemcuml = np.zeros(gmod.numbpopl, dtype=int)
+    if not hasattr(gmod, 'numbparagenrelempopl') or len(np.atleast_1d(getattr(gmod, 'numbparagenrelempopl', np.zeros(gmod.numbpopl, dtype=int)))) != gmod.numbpopl:
+        gmod.numbparagenrelempopl = np.zeros(gmod.numbpopl, dtype=int)
+    if not hasattr(gmod, 'numbparagenrelem'):
+        gmod.numbparagenrelem = int(np.sum(gmod.numbparagenrelempopl))
     liststrgcalcmasssubh = list(getattr(gdat, 'liststrgcalcmasssubh', []))
     liststrgfeatparalist = list(getattr(gdat, 'liststrgfeatparalist', ['minm', 'maxm', 'scal', 'lablroot', 'lablunit', 'labl', 'labltotl', 'name', 'mean', 'stdv']))
     if not hasattr(gmod, 'indxpara'):
@@ -6868,13 +6964,17 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
     #                raise Exception('')
     #            setattr(gmod.factpara, name, fact)
 
+    if not hasattr(gmod.indxpara, 'genrelem'):
+        gmod.indxpara.genrelem = np.arange(0, dtype=int)
     if gmod.numbpopl > 0:
         gmod.indxpara.genrelem = gmod.numbparagenrbase + np.arange(gmod.numbparagenrelem)
-    
+    else:
+        gmod.indxpara.genrelem = np.arange(0, dtype=int)
+
     print('gmod.namepara.genrelem')
     print(gmod.namepara.genrelem)
     gmod.namepara.genr = np.concatenate((gmod.namepara.genrbase, gmod.namepara.genrelemextdflat))
-    
+
     # array of indices of all (base and transdimensional) generative parameters
     gmod.indxpara.genr = np.concatenate((gmod.indxpara.genrbase, gmod.indxpara.genrelem))
 
@@ -6937,7 +7037,12 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
                 continue
 
             listtemp = getattr(gmod.namepara, strgsgrppara)
-                
+            if listtemp is None:
+                listtemp = []
+            if len(listtemp) == 0:
+                setattr(gmodtypefeat, strgsgrppara, np.array([], dtype=object))
+                continue
+
             if isinstance(listtemp[0], list):
                 numbiter = len(listtemp)
                 listname = listtemp
@@ -7009,6 +7114,10 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
     gmod.indxpara.prioelem = np.array(gmod.indxpara.prioelem) 
     
     ### hyperparameters
+    if not hasattr(gmod, 'typemodltran') or gmod.typemodltran is None:
+        gmod.typemodltran = 'pois'
+    if not hasattr(gmod.indxpara, 'meanelem'):
+        gmod.indxpara.meanelem = np.array([], dtype=int)
     if gmod.typemodltran == 'pois':
         gmod.indxpara.hypr = np.array(list(gmod.indxpara.prioelem) + list(gmod.indxpara.meanelem))
     else:
@@ -16016,28 +16125,68 @@ def init( \
         gdat.typepixl = 'cart'
     if not hasattr(gdat, 'numbpixl'):
         gdat.numbpixl = 1
+    if not hasattr(gdat, 'numbpixlfull') or gdat.numbpixlfull is None:
+        gdat.numbpixlfull = max(int(getattr(gdat, 'numbpixl', 1)), 1)
     if not hasattr(gdat, 'numbpixlcart'):
         gdat.numbpixlcart = gdat.numbpixl
     if not hasattr(gdat, 'numbsidecart'):
         gdat.numbsidecart = 1
+    if not hasattr(gdat, 'numbsidepntsprob'):
+        gdat.numbsidepntsprob = 100
+    if not hasattr(gdat, 'indxpixlfull'):
+        gdat.indxpixlfull = np.arange(int(getattr(gdat, 'numbpixlfull', max(int(getattr(gdat, 'numbpixl', 1)), 1))), dtype=int)
+    if not hasattr(gdat, 'blimpara'):
+        gdat.blimpara = tdpy.gdatstrt()
+    if not hasattr(gdat, 'bctrpara'):
+        gdat.bctrpara = tdpy.gdatstrt()
     if not hasattr(gdat, 'apix'):
         gdat.apix = 1.
     if not hasattr(gdat, 'numbdqlt'):
         gdat.numbdqlt = 1
+    if not hasattr(gdat, 'numbdqltfull'):
+        gdat.numbdqltfull = gdat.numbdqlt
     if not hasattr(gdat, 'indxdqlt'):
         gdat.indxdqlt = np.arange(gdat.numbdqlt, dtype=int)
+    if not hasattr(gdat, 'indxdqltfull'):
+        gdat.indxdqltfull = np.arange(gdat.numbdqlt, dtype=int)
+    if not hasattr(gdat, 'indxdqltincl'):
+        gdat.indxdqltincl = np.arange(gdat.numbdqlt, dtype=int)
     if not hasattr(gdat, 'boolcorrexpo'):
         gdat.boolcorrexpo = False
     if not hasattr(gdat, 'boolmodipsfn'):
         gdat.boolmodipsfn = False
     if not hasattr(gdat, 'boolbindspat'):
         gdat.boolbindspat = False
+    if not hasattr(gdat, 'boolbinddqlt'):
+        gdat.boolbinddqlt = False
     if not hasattr(gdat, 'boolbinsener'):
         gdat.boolbinsener = False if gdat.typeexpr == 'gmix' else True
     if not hasattr(gdat, 'booldiag'):
         gdat.booldiag = True
+    if not hasattr(gdat, 'boolinfe'):
+        gdat.boolinfe = True
     if not hasattr(gdat, 'boolpenalpridiff'):
         gdat.boolpenalpridiff = False
+    if not hasattr(gdat, 'boolsimuonly'):
+        gdat.boolsimuonly = False
+    if not hasattr(gdat, 'boolmakeplot'):
+        gdat.boolmakeplot = True
+    if not hasattr(gdat, 'boolmakeplotinit'):
+        gdat.boolmakeplotinit = True
+    if not hasattr(gdat, 'boolmakeplotfram'):
+        gdat.boolmakeplotfram = True
+    if not hasattr(gdat, 'boolmakeplotfinlprio'):
+        gdat.boolmakeplotfinlprio = True
+    if not hasattr(gdat, 'boolmakeplotfinlpost'):
+        gdat.boolmakeplotfinlpost = True
+    if not hasattr(gdat, 'boolmakeplotintr'):
+        gdat.boolmakeplotintr = False
+    if not hasattr(gdat, 'boolmakeplotopti'):
+        gdat.boolmakeplotopti = False
+    if not hasattr(gdat, 'listmask'):
+        gdat.listmask = None
+    if not hasattr(gdat, 'typemaskexpo'):
+        gdat.typemaskexpo = 'ignr'
     if not hasattr(gdat, 'liketype'):
         gdat.liketype = 'pois'
     if not hasattr(gdat, 'anglfact'):
@@ -16049,10 +16198,37 @@ def init( \
             gdat.anglfact = 3600 * 180. / np.pi
         else:
             gdat.anglfact = 1.
+    if not hasattr(gdat, 'numbpixlfull') or gdat.numbpixlfull is None:
+        gdat.numbpixlfull = max(int(getattr(gdat, 'numbpixl', 1)), 1)
+    if not hasattr(gdat, 'boolbindspat') or gdat.boolbindspat is None:
+        gdat.boolbindspat = gdat.numbpixlfull != 1
+    if not hasattr(gdat, 'maxmgangdata') or gdat.maxmgangdata is None:
+        if gdat.typeexpr == 'chan':
+            gdat.maxmgangdata = 0.492 / gdat.anglfact * max(int(getattr(gdat, 'numbsidecart', 1) / 2), 1)
+        elif gdat.typeexpr == 'ferm':
+            gdat.maxmgangdata = 15. / gdat.anglfact
+        elif gdat.typeexpr == 'tess':
+            gdat.maxmgangdata = 20. / gdat.anglfact
+        elif gdat.typeexpr.startswith('HST_WFC3'):
+            gdat.maxmgangdata = 2. / gdat.anglfact
+        elif gdat.typeexpr == 'gmix':
+            gdat.maxmgangdata = 1. / gdat.anglfact
+        else:
+            gdat.maxmgangdata = 1. / gdat.anglfact
     if not hasattr(gdat, 'numbener') or gdat.numbener is None:
         gdat.numbener = 1
+    if not hasattr(gdat, 'numbenerfull'):
+        gdat.numbenerfull = gdat.numbener
     if not hasattr(gdat, 'indxener') or gdat.indxener is None:
         gdat.indxener = np.arange(gdat.numbener, dtype=int)
+    if not hasattr(gdat, 'indxenerincl'):
+        gdat.indxenerincl = np.arange(gdat.numbener, dtype=int)
+    if not hasattr(gdat, 'indxenerfull'):
+        gdat.indxenerfull = np.arange(gdat.numbener, dtype=int)
+    if not hasattr(gdat, 'listmask'):
+        gdat.listmask = None
+    if not hasattr(gdat, 'typemaskexpo'):
+        gdat.typemaskexpo = 'zero'
     if not hasattr(gdat, 'expo'):
         gdat.expo = np.ones((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
     if not hasattr(gdat, 'cntpdata'):
@@ -16095,6 +16271,8 @@ def init( \
             gmod.indxpopl = np.arange(0)
         if not hasattr(gmod, 'namepara'):
             gmod.namepara = tdpy.gdatstrt()
+        if not hasattr(gmod, 'listnameback') or gmod.listnameback is None:
+            gmod.listnameback = list(getattr(gdat, 'listnameback', ['isot']))
         if strgmodl in gdat.liststrgmodl and hasattr(gdat, 'typeelem') and gdat.typeelem is not None and 'typeelem' not in gmod.__dict__:
             gmod.typeelem = list(gdat.typeelem)
             gmod.indxpopl = np.arange(len(gmod.typeelem), dtype=int)
@@ -16133,6 +16311,36 @@ def init( \
             gdat.anglfact = 3600 * 180. / np.pi
         else:
             gdat.anglfact = 1.
+    if not hasattr(gdat, 'strgexprname'):
+        if gdat.typeexpr == 'chan':
+            gdat.strgexprname = 'Chandra'
+        elif gdat.typeexpr == 'ferm':
+            gdat.strgexprname = 'Fermi-LAT'
+        elif gdat.typeexpr.startswith('HST_WFC3'):
+            gdat.strgexprname = 'HST'
+        elif gdat.typeexpr == 'gmix':
+            gdat.strgexprname = 'TGAS-RAVE'
+        else:
+            gdat.strgexprname = ''
+    if not hasattr(gdat, 'lablgangunit') or gdat.lablgangunit is None:
+        if gdat.typeexpr == 'ferm':
+            gdat.lablgangunit = '$^o$'
+        elif gdat.typeexpr == 'gmix':
+            gdat.lablgangunit = ''
+        elif gdat.typeexpr == 'sdss' or gdat.typeexpr == 'chan' or gdat.typeexpr.startswith('HST'):
+            gdat.lablgangunit = r'$^{\prime\prime}$'
+        else:
+            gdat.lablgangunit = ''
+    if not hasattr(gdat, 'lablxpos') or gdat.lablxpos is None:
+        gdat.lablxpos = r'L_{z}' if gdat.typeexpr == 'gmix' else r'\theta_1'
+    if not hasattr(gdat, 'lablypos') or gdat.lablypos is None:
+        gdat.lablypos = r'E_k' if gdat.typeexpr == 'gmix' else r'\theta_2'
+    if not hasattr(gdat, 'lablflux') or gdat.lablflux is None:
+        gdat.lablflux = 'f'
+    if not hasattr(gdat, 'lablfluxunit') or gdat.lablfluxunit is None:
+        gdat.lablfluxunit = ''
+    if not hasattr(gdat, 'strgenerunit') or gdat.strgenerunit is None:
+        gdat.strgenerunit = ''
 
     setup_pcat(gdat)
 
@@ -16236,6 +16444,10 @@ def init( \
         gdat.typepixl = 'cart'  # Pixel type
     if not hasattr(gdat, 'boolbindspat'):
         gdat.boolbindspat = False  # Spatial binding flag
+    if not hasattr(gdat, 'blimpara'):
+        gdat.blimpara = tdpy.gdatstrt()
+    if not hasattr(gdat, 'bctrpara'):
+        gdat.bctrpara = tdpy.gdatstrt()
     if not hasattr(gdat, 'boolbinsener'):
         gdat.boolbinsener = False  # Energy binning flag
     if not hasattr(gdat, 'enerdiff'):

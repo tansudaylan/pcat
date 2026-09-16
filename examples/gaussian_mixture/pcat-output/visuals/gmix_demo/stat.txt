@@ -1,0 +1,1 @@
+/Users/tdaylan/Documents/work/git/pcat/examples/gaussian_mixture/pcat-output/data/outp/gmix_demo/stat.txt
