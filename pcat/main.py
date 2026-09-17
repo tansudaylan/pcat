@@ -16155,6 +16155,11 @@ def init( \
         gdat.numbenerfull = gdat.numbener
     if not hasattr(gdat, 'indxener') or gdat.indxener is None:
         gdat.indxener = np.arange(gdat.numbener, dtype=int)
+    if gdat.boolbinsener:
+        if not hasattr(gdat, 'indxenerpivt'):
+            gdat.indxenerpivt = 0
+        if not hasattr(gdat, 'indxenerinde'):
+            gdat.indxenerinde = np.setdiff1d(gdat.indxener, gdat.indxenerpivt)
     if not hasattr(gdat, 'indxenerincl'):
         gdat.indxenerincl = np.arange(gdat.numbener, dtype=int)
     if not hasattr(gdat, 'indxenerfull'):
