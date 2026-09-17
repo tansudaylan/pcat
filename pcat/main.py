@@ -12395,31 +12395,9 @@ def make_fold(gdat):
             os.system('mkdir -p %s' % valu)
 
 
-def make_cmapdivg(strgcolrloww, strgcolrhigh):
-    
-    funccolr = mpl.colors.ColorConverter().to_rgb
-    
-    colrloww = funccolr(strgcolrloww)
-    colrhigh = funccolr(strgcolrhigh)
-    
-    cmap = make_cmap([colrloww, funccolr('white'), 0.5, funccolr('white'), colrhigh])
-
-    return cmap
-
-
-def make_cmap(seq):
-    
-    seq = [(None,) * 3, 0.0] + list(seq) + [1.0, (None,) * 3]
-    cdict = {'red': [], 'green': [], 'blue': []}
-    for i, item in enumerate(seq):
-        if isinstance(item, float):
-            r1, g1, b1 = seq[i - 1]
-            r2, g2, b2 = seq[i + 1]
-            cdict['red'].append([item, r1, r2])
-            cdict['green'].append([item, g1, g2])
-            cdict['blue'].append([item, b1, b2])
-    
-    return mpl.colors.LinearSegmentedColormap('CustomMap', cdict)
+make_cmap = tdpy.make_cmap
+make_cmapdivg = tdpy.make_cmapdivg
+retr_xposypos = tdpy.retr_xposypos
 
 
 def setp_pdfnvarb(gdat, strgpdfn, name, namefull, nameseco=None):
