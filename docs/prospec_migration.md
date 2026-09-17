@@ -1,8 +1,9 @@
 # Prospec migration
 
-PCAT is the intended active implementation of probabilistic line cataloging.
-The legacy `prospec_tobedistilledintopcat` repository is not yet safe to
-delete because its complete workflow has not been reproduced in PCAT.
+PCAT is the active implementation of probabilistic cataloging. The reusable
+content from `prospec_tobedistilledintopcat` has been migrated or classified
+below. The legacy working tree may be removed after the current changes are
+committed or otherwise preserved.
 
 ## Migrated functionality
 
@@ -16,30 +17,35 @@ delete because its complete workflow has not been reproduced in PCAT.
   catalog inference.
 - PCAT's catalog post-processing provides posterior and condensed catalogs.
 
-## Candidates for retirement
+## Retired functionality
 
-- The Python 2 sampler duplicated PCAT's inference machinery.
+- The Python 2 line sampler is retired. It duplicates PCAT's maintained
+  transdimensional inference machinery and depends on an obsolete runtime.
 - `blas.so` and `blas.c` provided a platform-specific model evaluator. PCAT's
-  maintained NumPy and Numba paths replace it.
-- `plot_pcat.py` and `m2plots.py` duplicated plotting and association tools.
-- `make_mock.py` depended on local `LION_PATH` data and an incompatible image
-  model signature. New mock workflows belong in PCAT tests or examples with
-  explicit input data.
+  maintained NumPy and Numba paths replace it. The C source also contains
+  undefined indices and is not retained as a reference implementation.
+- The dataset-specific plotting in `plot_pcat.py` and `m2plots.py` is retired.
+  PCAT provides completeness and false-discovery diagnostics, and the reusable
+  many-to-many matcher has been migrated.
+- The time-series imaging prototype in `make_mock.py` is retired. It depends on
+  untracked local `LION_PATH` data, Python 2 behavior, and an incompatible model
+  signature. It has no reproducible inputs or tests.
+- `coll_garb.py`, `sh/down.sh`, and `sh/load.sh` are environment-specific file
+  deletion, download, and module-loading wrappers with no reusable logic.
 
-Tests for migrated utilities live in `tests/test_psf.py`.
+Tests for migrated utilities live in `tests/test_psf.py` and
+`tests/test_associate.py`.
 
-## Deletion gates
+## Removal checklist
 
-- Repair and validate a PCAT example for the legacy one-dimensional line-catalog
-  workflow, including mock generation, sampling, and catalog condensation. A
-  minimal `typeexpr='fire'` run currently either initializes zero fitted
-  populations or fails while expanding per-element `deltllik` names because
-  `gmod.maxmpara.numbelemtotl` is unavailable.
-- Decide whether the time-series imaging prototype in `make_mock.py` has
-  scientific value. Migrate it or record its explicit retirement.
-- Decide whether the M2 catalog-comparison analyses in `m2plots.py` and
-  `plot_pcat.py` must remain reproducible. Their general completeness and
-  false-discovery calculations exist in PCAT, but the dataset-specific
-  analyses do not.
-- Preserve the legacy Git history and any uncommitted work before removing a
-  working tree.
+- Commit or otherwise preserve the PCAT migration changes.
+- Preserve the legacy Git history. The repository currently has an `origin`
+  remote and two historical commits.
+- Resolve or intentionally discard the uncommitted migration edits in the
+  legacy working tree before deleting its local directory.
+
+The dormant PCAT `typeexpr='fire'` path is not the replacement criterion for
+the retired Python 2 application. A repair attempt showed that its absorption
+line population lacks a complete generative parameter definition. It should be
+treated as separate future PCAT work, not as a reason to retain the legacy
+working tree indefinitely.

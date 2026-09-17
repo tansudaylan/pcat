@@ -1263,7 +1263,8 @@ def show_paragenrscalfull(gdat, gdatmodi, strgstat='this', strgmodl='fitt', indx
             
             booltemp = False
             for l in gmod.indxpopl:
-                if k == gmod.indxparagenrelemsing[l][0]:
+                indxelem = gmod.indxparagenrelemsing[l]
+                if len(indxelem) > 0 and k == indxelem[0]:
                     booltemp = True
             if booltemp:
                 print('')
@@ -1487,14 +1488,15 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             thisindxstdp[:thisindxstdptemp.size] = thisindxstdptemp
         thisstdp = np.empty(thisindxsampfull.size, dtype=float)
         stdpfallback = 5e-2
-        if hasattr(gdatmodi, 'stdp') and np.size(gdatmodi.stdp) > 0:
-            stdpvalid = np.asarray(gdatmodi.stdp, dtype=float)
+        stdp = np.asarray(getattr(gdatmodi, 'stdp', []), dtype=float)
+        if stdp.size > 0:
+            stdpvalid = stdp
             stdpvalid = stdpvalid[np.where(np.isfinite(stdpvalid) & (stdpvalid > 0.))[0]]
             if stdpvalid.size > 0:
                 stdpfallback = float(np.median(stdpvalid))
         for k, indxstdp in enumerate(thisindxstdp):
-            if 0 <= indxstdp < gdatmodi.stdp.size and np.isfinite(gdatmodi.stdp[indxstdp]) and gdatmodi.stdp[indxstdp] > 0.:
-                thisstdp[k] = float(gdatmodi.stdp[indxstdp])
+            if 0 <= indxstdp < stdp.size and np.isfinite(stdp[indxstdp]) and stdp[indxstdp] > 0.:
+                thisstdp[k] = float(stdp[indxstdp])
             else:
                 thisstdp[k] = stdpfallback
         if boolforceimag:
@@ -2743,6 +2745,8 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
                 namevarb = strgmome + strgpdfn + strgvarb
                 if hasattr(gdat, namevarb):
                     varb = getattr(gdat, namevarb)
+                elif strgmome == 'errr':
+                    varb = _retr_default_missing(strgvarb)
                 elif strgvarb == 'cntpresi':
                     namecntpdata = strgmome + strgpdfn + 'cntpdata'
                     namecntpmodl = strgmome + strgpdfn + 'cntpmodl'
@@ -2773,10 +2777,10 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
         varb = varb[indxlist]
 
     if indxvarb is not None:
-        if strgmome == 'errr':
+        if strgmome == 'errr' and np.ndim(varb) > len(indxvarb):
             varb = varb[tuple([slice(None)] + list(indxvarb))]
         else:
-            varb = varb[indxvarb]
+            varb = varb[tuple(indxvarb)]
 
     return np.copy(varb)
 
@@ -6226,7 +6230,7 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
                     hstparanames.append(name)
         for k, name in enumerate(hstparanames):
             setattr(gmod.indxpara, name, k)
-    if gdat.typeexpr.startswith('HST_WFC3') and not hasattr(gmod, 'indxparagenrelemsing'):
+    if gdat.typeexpr.startswith('HST_WFC3') and gmod.numbpopl > 0 and all(len(indx) == 0 for indx in gmod.indxparagenrelemsing):
         if not hasattr(gmod, 'namepara'):
             gmod.namepara = tdpy.gdatstrt()
         gmod.namepara.genrelem = [['xpos', 'ypos', 'defs', 'asca', 'acut'] for _ in gmod.indxpopl]
@@ -7151,8 +7155,10 @@ def setp_namevarbsing(gdat, gmod, strgmodl, strgvarb, popl, ener, dqlt, back, is
             if iele == 'full':
                 if hasattr(gmod.maxmpara, 'numbelemtotl'):
                     numbelemmaxm = gmod.maxmpara.numbelemtotl
-                else:
+                elif hasattr(gmod.maxmpara, 'numbelem'):
                     numbelemmaxm = gmod.maxmpara.numbelem[l]
+                else:
+                    numbelemmaxm = getattr(gmod.maxmpara, 'numbelempop%d' % l, 3)
                 listiele = np.arange(numbelemmaxm)
             else:
                 listiele = [iele]
@@ -9256,8 +9262,9 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         ### sort with respect to deflection at scale radius
         if gmod.numbpopl > 0:
             for l in gmod.indxpopl:
-                if gmodstat.numbelem[l] > 0:
-                    indxelemsortampl = np.argsort(gmodstat.dictelem[l][gmod.nameparaelemsort[l]])[::-1]
+                nameparaelemsort = gmod.nameparaelemsort[l]
+                if gmodstat.numbelem[l] > 0 and nameparaelemsort in gmodstat.dictelem[l]:
+                    indxelemsortampl = np.argsort(gmodstat.dictelem[l][nameparaelemsort])[::-1]
                     for nameparagenrelem in gmod.namepara.genrelem[l]:
                         gmodstat.dictelem[l][nameparagenrelem + 'sort'] = gmodstat.dictelem[l][nameparagenrelem][indxelemsortampl]
 
@@ -9345,7 +9352,11 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                         xpossubh = _lens_val('xpos', 0.)
                         ypossubh = _lens_val('ypos', 0.)
                         defssubh = _lens_val('defs', 0.)
-                        indxpixlsubh = listindxpixlelem[gmod.indxpopllens][min(max(k, 0), len(listindxpixlelem[gmod.indxpopllens]) - 1)]
+                        listindxpixlsubh = listindxpixlelem[gmod.indxpopllens]
+                        if len(listindxpixlsubh) > 0:
+                            indxpixlsubh = listindxpixlsubh[min(indxlens, len(listindxpixlsubh) - 1)]
+                        else:
+                            indxpixlsubh = gdat.indxpixlcart
                         deflsing[indxpixlsubh, :, k] = chalcedon_mod.retr_defl(gdat.xposgrid, gdat.yposgrid, indxpixlsubh, \
                                                                                 xpossubh, ypossubh, defssubh, asca=asca, acut=acut)
 
@@ -12200,10 +12211,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
             gdatprio = None
 
         if (gdatfinl.boolmakeplot and getattr(gdatfinl, 'boolmakeplotfinl' + strgpdfn, True)) or forcplot:
-            try:
-                plot_finl(gdatfinl, gdatprio=gdatprio, strgpdfn=strgpdfn, gdatsimu=gdatsimu, booltile=booltile)
-            except Exception as excp:
-                print('Warning: skipping final plotting due to compatibility error: %s' % str(excp))
+            plot_finl(gdatfinl, gdatprio=gdatprio, strgpdfn=strgpdfn, gdatsimu=gdatsimu, booltile=booltile)
             try:
                 _plot_finl_lpdf_fallback(gdatfinl, strgpdfn)
             except Exception as excp:
@@ -13211,10 +13219,10 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                             
                                 if getattr(gmod, 'boolelemdeflsubhanyy', False):
                                     # subhalo masses
-                                    limtydat = [gdat.minmmcut, getattr(gdat.maxmpara, 'masssubh%s' % strgsersfgrd + strgcalcmasssubh)]
-                                    lablydat = getattr(gmod.labltotlpara, 'masssubh%s' % strgsersfgrd + strgcalcmasssubh)
                                     name = 'masssubh%s' % (strgcalcmasssubh)
                                     try:
+                                        limtydat = [gdat.minmmcut, getattr(gdat.maxmpara, 'masssubh%s' % strgsersfgrd + strgcalcmasssubh)]
+                                        lablydat = getattr(gmod.labltotlpara, 'masssubh%s' % strgsersfgrd + strgcalcmasssubh)
                                         plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, name, 'bctranglhalf', scalydat='logt', \
                                                                                   lablxdat=lablxdat, lablydat=lablydat, limtydat=limtydat)
                                     except Exception as excp:
@@ -13222,9 +13230,9 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
 
                                     # subhalo mass fraction
                                     limtydat = [1e-3, 0.1]
-                                    lablydat = getattr(gmod.labltotlpara, 'fracsubh%s' % strgsersfgrd + strgcalcmasssubh)
                                     name = 'fracsubh%s' % (strgcalcmasssubh)
                                     try:
+                                        lablydat = getattr(gmod.labltotlpara, 'fracsubh%s' % strgsersfgrd + strgcalcmasssubh)
                                         plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, name, 'bctranglhalf', scalydat='logt', \
                                                                     lablxdat=lablxdat, lablydat=lablydat, limtydat=limtydat)
                                     except Exception as excp:
@@ -13903,6 +13911,9 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
     # scalar variables
     ## trace and marginal distribution of each parameter
     for name in gmod.namepara.scal:
+        namereqr = ['scal' + name, 'corr' + name, 'list' + strgpdfn + name, 'mlik' + name]
+        if not all(hasattr(gdat, nametemp) for nametemp in namereqr):
+            continue
         
         if gdat.typeverb > 0:
             print('Working on %s...' % name)
@@ -14907,7 +14918,17 @@ def plot_scatcntp(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, indxdqltplot, in
         axis.errorbar(xdat, ydat, yerr=yerr, marker='o', ls='', markersize=5, color=gmod.colr, capsize=5)
     else:
         axis.plot(xdat, ydat, marker='o', ls='', markersize=5, color=gmod.colr)
-    gdat.limtcntpdata = [gdat.blimpara.cntpdata[0], gdat.blimpara.cntpdata[-1]]
+    if hasattr(gdat.blimpara, 'cntpdata'):
+        gdat.limtcntpdata = [gdat.blimpara.cntpdata[0], gdat.blimpara.cntpdata[-1]]
+    else:
+        cntpplot = np.concatenate((np.ravel(xdat), np.ravel(ydat)))
+        cntpplot = cntpplot[np.isfinite(cntpplot) & (cntpplot > 0.)]
+        if cntpplot.size > 0:
+            gdat.limtcntpdata = [0.8 * np.amin(cntpplot), 1.2 * np.amax(cntpplot)]
+        else:
+            gdat.limtcntpdata = [1e-3, 1.]
+        if gdat.limtcntpdata[0] == gdat.limtcntpdata[1]:
+            gdat.limtcntpdata = [0.8 * gdat.limtcntpdata[0], 1.2 * gdat.limtcntpdata[1]]
     axis.set_xlim(gdat.limtcntpdata)
     axis.set_ylim(gdat.limtcntpdata)
     axis.set_ylabel('$k^{modl}$')
@@ -16055,6 +16076,11 @@ def init( \
         gdat.typeexpr = 'gmix'
     if not hasattr(gdat, 'typedata'):
         gdat.typedata = 'simu'
+    if not hasattr(gdat, 'anlytype'):
+        gdat.anlytype = None
+    if not hasattr(gdat, 'listspecconvunit') and gdat.typeexpr == 'chan':
+        gdat.listspecconvunit = [['en00', 'kevv'], ['en02', 'kevv'], ['en02', 'ergs'],
+                                 ['en03', 'ergs', '0520', 0.5, 2.]]
     if not hasattr(gdat, 'typepixl'):
         gdat.typepixl = 'cart'
     if not hasattr(gdat, 'numbpixl'):
@@ -16220,6 +16246,13 @@ def init( \
             if not hasattr(gmod, strgfeatpara + 'para'):
                 setattr(gmod, strgfeatpara + 'para', tdpy.gdatstrt())
 
+    for strgmodl in gdat.liststrgmodl:
+        dictmodl = getattr(gdat, 'dict' + strgmodl, None)
+        if dictmodl is not None:
+            gmod = getattr(gdat, strgmodl)
+            for name, valu in dictmodl.items():
+                setattr(gmod, name, valu)
+
     # Initialize the experimental defaults before model setup. Downstream
     # helpers assume these attributes already exist when they configure
     # populations, axes, and plotting geometry.
@@ -16286,12 +16319,11 @@ def init( \
     typeelemglob = list(getattr(gdat, 'typeelem', [])) if hasattr(gdat, 'typeelem') else []
     for strgmodl in getattr(gdat, 'liststrgmodl', []):
         gmod = getattr(gdat, strgmodl)
-        if 'typeelem' not in gmod.__dict__ and typeelemglob:
+        if ('typeelem' not in gmod.__dict__ or len(getattr(gmod, 'typeelem', [])) == 0) and typeelemglob:
             gmod.typeelem = list(typeelemglob)
         if 'indxpopl' not in gmod.__dict__ or len(np.asarray(getattr(gmod, 'indxpopl', np.array([], dtype=int)))) == 0:
             gmod.indxpopl = np.arange(len(getattr(gmod, 'typeelem', [])), dtype=int)
-        if 'numbpopl' not in gmod.__dict__:
-            gmod.numbpopl = int(len(getattr(gmod, 'indxpopl', [])))
+        gmod.numbpopl = int(len(getattr(gmod, 'indxpopl', [])))
         setp_modlemis_init(gdat, strgmodl=strgmodl)
         setp_modlemis_finl(gdat, strgmodl=strgmodl)
     
@@ -16301,7 +16333,7 @@ def init( \
     #for strgfeatpara in gdat.liststrgfeatpara:
     #    setattr(gdat.fitt, strgfeatpara + 'para', tdpy.gdatstrt())
     #    setattr(gdat, strgfeatpara + 'para', tdpy.gdatstrt())
-    
+
     gdat.strgswep = '%d' % (gdat.numbswep)
     
     if gdat.typeverb > 0:

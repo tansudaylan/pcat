@@ -28,6 +28,6 @@ dependencies = [
 packages = ["pcat"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "test_narration.py", "test_plotting.py"]
 python_files = ["test_*.py"]
 addopts = ["--import-mode=importlib"]

@@ -30,6 +30,7 @@ def main() -> None:
         "typeverb": 0,
         "numbswep": 2,
         "numbsamp": 1,
+        "boolcondcatl": False,
         "boolmakeplot": True,
         "boolmakeplotinit": True,
         "boolmakeplotfram": True,
