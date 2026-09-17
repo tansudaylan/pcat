@@ -967,54 +967,6 @@ def retr_psfpsdyn(gmod):
     gmod.psfpexpr = np.array([0.05])
    
 
-def retr_psfpferm(gmod):
-   
-    if gdat.anlytype.startswith('rec8'):
-        path = gdat.pathdata + 'expr/irfn/psf_P8R2_SOURCE_V6_PSF.fits'
-    else:
-        path = gdat.pathdata + 'expr/irfn/psf_P7REP_SOURCE_V15_back.fits'
-    irfn = astropy.io.fits.getdata(path, 1)
-    minmener = irfn['energ_lo'].squeeze() * 1e-3 # [GeV]
-    maxmener = irfn['energ_hi'].squeeze() * 1e-3 # [GeV]
-    enerirfn = np.sqrt(minmener * maxmener)
-
-    numbpsfpscal = 3
-    numbpsfpform = 5
-    
-    fermscal = np.zeros((gdat.numbdqlt, numbpsfpscal))
-    fermform = np.zeros((gdat.numbener, gdat.numbdqlt, numbpsfpform))
-    
-    strgpara = ['score', 'gcore', 'stail', 'gtail', 'ntail']
-    for m in gdat.indxdqlt:
-        if gdat.anlytype.startswith('rec8'):
-            irfn = astropy.io.fits.getdata(path, 1 + 3 * gdat.indxdqltincl[m])
-            fermscal[m, :] = astropy.io.fits.getdata(path, 2 + 3 * gdat.indxdqltincl[m])['PSFSCALE']
-        else:
-            if m == 1:
-                path = gdat.pathdata + 'expr/irfn/psf_P7REP_SOURCE_V15_front.fits'
-            elif m == 0:
-                path = gdat.pathdata + 'expr/irfn/psf_P7REP_SOURCE_V15_back.fits'
-            else:
-                continue
-            irfn = astropy.io.fits.getdata(path, 1)
-            fermscal[m, :] = astropy.io.fits.getdata(path, 2)['PSFSCALE']
-        for k in range(numbpsfpform):
-            fermform[:, m, k] = sp.interpolate.interp1d(enerirfn, np.mean(irfn[strgpara[k]].squeeze(), axis=0), fill_value='extrapolate')(gdat.bctrpara.ener)
-    # convert N_tail to f_core
-    for m in gdat.indxdqlt:
-        for i in gdat.indxener:
-            fermform[i, m, 4] = 1. / (1. + fermform[i, m, 4] * fermform[i, m, 2]**2 / fermform[i, m, 0]**2)
-
-    if gdat.typeexpr == 'ferm':
-        # calculate the scale factor
-        gdat.fermscalfact = np.sqrt((fermscal[None, :, 0] * (10. * gdat.bctrpara.ener[:, None])**fermscal[None, :, 2])**2 + fermscal[None, :, 1]**2)
-        
-        # store the fermi PSF parameters
-        gmod.psfpexpr = np.zeros(gdat.numbener * gdat.numbdqlt * numbpsfpform)
-        for m in gdat.indxdqlt:
-            for k in range(numbpsfpform):
-                indxfermpsfptemp = m * numbpsfpform * gdat.numbener + gdat.indxener * numbpsfpform + k
-                gmod.psfpexpr[indxfermpsfptemp] = fermform[:, m, k]
 def retr_refrchaninit(gdat):
     
     gdat.indxrefr = np.arange(gdat.numbrefr)
@@ -4015,7 +3967,7 @@ def init_image( \
             if gdat.typeexpr == 'chan':
                 retr_psfpchan(gmod)
             if gdat.typeexpr == 'ferm':
-                retr_psfpferm(gmod)
+                tdpy.retr_psfpferm(gdat, gmod)
             if gdat.typeexpr == 'sdss':
                 retr_psfpsdss(gmod)
             if gdat.typeexpr.startswith('HST_WFC3'):
@@ -7197,7 +7149,11 @@ def setp_namevarbsing(gdat, gmod, strgmodl, strgvarb, popl, ener, dqlt, back, is
     if iele != 'none':
         for l in gmod.indxpopl:
             if iele == 'full':
-                listiele = np.arange(gmod.maxmpara.numbelemtotl)
+                if hasattr(gmod.maxmpara, 'numbelemtotl'):
+                    numbelemmaxm = gmod.maxmpara.numbelemtotl
+                else:
+                    numbelemmaxm = gmod.maxmpara.numbelem[l]
+                listiele = np.arange(numbelemmaxm)
             else:
                 listiele = [iele]
             for k in listiele:
@@ -16258,7 +16214,7 @@ def init( \
         for strgfeatpara in gdat.liststrgfeatpara:
             if not hasattr(gmod, strgfeatpara + 'para'):
                 setattr(gmod, strgfeatpara + 'para', tdpy.gdatstrt())
-    
+
     # Initialize the experimental defaults before model setup. Downstream
     # helpers assume these attributes already exist when they configure
     # populations, axes, and plotting geometry.
@@ -16450,6 +16406,11 @@ def init( \
         gdat.numbener = 1
     if not hasattr(gdat, 'indxener') or gdat.indxener is None:
         gdat.indxener = np.arange(gdat.numbener, dtype=int)
+    if gdat.boolbinsener:
+        if not hasattr(gdat, 'indxenerpivt'):
+            gdat.indxenerpivt = 0
+        if not hasattr(gdat, 'indxenerinde'):
+            gdat.indxenerinde = np.setdiff1d(gdat.indxener, gdat.indxenerpivt)
     if not hasattr(gdat, 'expo'):
         gdat.expo = np.ones((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
     if not hasattr(gdat, 'cntpdata'):

@@ -14,3 +14,5 @@ if not hasattr(tdpy, 'retr_labltotlsing') and hasattr(tdpy, 'retr_labltotl'):
     tdpy.retr_labltotlsing = tdpy.retr_labltotl
 
 from .main import *
+from .associate import associate_catalogs
+from .psf import psf_poly_fit
