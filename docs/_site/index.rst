@@ -27,7 +27,7 @@ To install PCAT you can use pip
 
     pip install pcat
 
-or download `the latest release <https://github.com/tdaylan/pcat/releases/>`_ and run
+or download `the latest release <https://github.com/tansudaylan/pcat/releases/>`_ and run
 
 .. code::
 
