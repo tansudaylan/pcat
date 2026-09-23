@@ -24,7 +24,10 @@ A modern installation path is:
 ```bash
 cd /path/to/pcat
 pip install -e .
+export PCAT_PATH=/path/to/pcat
 ```
+
+`PCAT_PATH` identifies the Git repository root. Its `data/` and `visuals/` directories are ignored by Git. The separate `PCAT_DATA_PATH` variable remains the working-data and pipeline-output root used by scientific runs.
 
 This repository expects the shared library `tdpy` to be installed in the same Python environment. For local development, this is usually easiest with:
 
