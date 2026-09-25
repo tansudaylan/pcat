@@ -32,7 +32,7 @@ import multiprocessing as mp
 from copy import deepcopy
 
 # utilities
-import os, time, sys, glob, fnmatch, inspect, traceback, functools
+import os, time, sys, glob, fnmatch, inspect, traceback, functools, shutil
 
 # HealPix
 #import healpy as hp
@@ -73,6 +73,24 @@ try:
     import aspendos
 except ImportError:
     aspendos = None
+
+
+def make_directory(path):
+    print('Writing to %s...' % path)
+    os.makedirs(path, exist_ok=True)
+
+
+def make_symlink(pathorig, pathlink):
+    print('Writing to %s...' % pathlink)
+    if os.path.lexists(pathlink):
+        os.unlink(pathlink)
+    os.symlink(pathorig, pathlink)
+
+
+def retr_pathcnfg(pathroot, strgcnfg):
+    if not strgcnfg or os.path.basename(strgcnfg) != strgcnfg or strgcnfg in ['.', '..']:
+        raise ValueError('Invalid run tag %r.' % strgcnfg)
+    return os.path.join(pathroot, strgcnfg)
 
 
 def _ensure_chalcedon_compat():
@@ -142,35 +160,41 @@ class _PCATMCMCCompat(object):
 
     @staticmethod
     def gmrb_test(griddata):
-        arr = np.asarray(griddata)
-        if arr.ndim < 2 or arr.shape[0] < 2:
-            return 1.
-        withvari = np.mean(np.var(arr, axis=0))
-        if withvari <= 0.:
-            return 1.
-        btwnvari = arr.shape[0] * np.var(np.mean(arr, axis=0))
-        wgthvari = (1. - 1. / arr.shape[0]) * withvari + btwnvari / arr.shape[0]
-        psrf = np.sqrt(wgthvari / withvari)
-        if not np.isfinite(psrf):
-            return 1.
-        return float(psrf)
+        arr = np.asarray(griddata, dtype=float)
+        if arr.ndim != 2 or min(arr.shape) < 2:
+            return np.nan
+        numbsamp = arr.shape[0]
+        withvari = np.mean(np.var(arr, axis=0, ddof=1))
+        btwnvari = numbsamp * np.var(np.mean(arr, axis=0), ddof=1)
+        if withvari == 0.:
+            return np.inf if btwnvari > 0. else np.nan
+        vari = (numbsamp - 1.) / numbsamp * withvari + btwnvari / numbsamp
+        return float(np.sqrt(vari / withvari))
 
     @staticmethod
     def retr_timeatcr(listpara, typeverb=0, atcrtype='maxm'):
-        arr = np.asarray(listpara)
-        if arr.ndim < 2 or arr.shape[0] < 2:
-            return np.zeros((1, 1)), 0.
-        if arr.ndim == 2:
-            numbvarb = arr.shape[1]
-            numblag = max(1, int(numbvarb / 2))
-            atcr = np.ones((numbvarb, numblag))
-            timeatcr = np.zeros(numbvarb)
-            return atcr, timeatcr
-        orig = arr.shape[1:]
-        numblag = 1
-        atcr = np.ones(orig + (numblag,))
-        timeatcr = np.zeros(orig)
-        return atcr, timeatcr
+        arr = np.asarray(listpara, dtype=float)
+        if arr.ndim < 1 or arr.shape[0] < 2:
+            return np.full(arr.shape[1:] + (1,), np.nan), np.full(arr.shape[1:], np.nan)
+        shapvarb = arr.shape[1:]
+        listflat = arr.reshape(arr.shape[0], -1)
+        numblag = max(1, arr.shape[0] // 2)
+        atcr = np.empty((listflat.shape[1], numblag))
+        timeatcr = np.empty(listflat.shape[1])
+        for indxvarb, valu in enumerate(listflat.T):
+            valucent = valu - np.mean(valu)
+            vari = np.dot(valucent, valucent)
+            if vari == 0.:
+                atcr[indxvarb] = np.nan
+                timeatcr[indxvarb] = np.nan
+                continue
+            corr = np.correlate(valucent, valucent, mode='full')[valu.size - 1:valu.size - 1 + numblag]
+            corr /= vari
+            atcr[indxvarb] = corr
+            indxstop = np.where(corr[1:] <= 0.)[0]
+            numbsum = indxstop[0] + 1 if indxstop.size > 0 else corr.size
+            timeatcr[indxvarb] = 1. + 2. * np.sum(corr[1:numbsum])
+        return atcr.reshape(shapvarb + (numblag,)), timeatcr.reshape(shapvarb)
 
     @staticmethod
     def plot_plot(path, xdat, ydat, lablxdat='', lablydat='', scalpara='self', titl=None, colr=None, linestyl=None, legd=None, typefileplot='pdf', **kwargs):
@@ -414,7 +438,7 @@ def pdfn_lnor(xdat, mean, stdv):
 
 def pdfn_gaus(xdat, mean, stdv):
     
-    pdfn = 1. / np.sqrt(2. * pi) / stdv * np.exp(-0.5 * ((xdat - mean) / stdv)**2)
+    pdfn = 1. / np.sqrt(2. * np.pi) / stdv * np.exp(-0.5 * ((xdat - mean) / stdv)**2)
 
     return pdfn
 
@@ -1291,18 +1315,6 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
     probspmr = gdat.probspmr if hasattr(gdat, 'probspmr') and gdat.probspmr is not None else 0.
     probspmr = min(max(float(probspmr), 0.), 1.)
     probbrde = 1. - probspmr
-    if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
-        # Keep this regression path on within/birth/death moves only.
-        # Split/merge requires richer lens metadata and can be unstable here.
-        probspmr = 0.
-        probbrde = 1.
-        if not bool(getattr(gdatmodi, 'boolburn', True)):
-            # Favor continuous proposals during posterior collection to avoid
-            # split/merge-dominated stagnation.
-            probtran = min(float(probtran), 0.15)
-            probspmr = min(float(probspmr), 0.)
-            probspmr = min(max(probspmr, 0.), 1.)
-            probbrde = 1. - probspmr
     
     if gmod.numbpopl > 0:
         if gdat.booldiag:
@@ -1348,8 +1360,6 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
     if gmod.numbpopl > 0 and gdatmodi.indxpopltran is not None:
         minmnumbelemtran = gmod.minmpara.numbelem[gdatmodi.indxpopltran]
         maxmnumbelemtran = gmod.maxmpara.numbelem[gdatmodi.indxpopltran]
-        if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg) and strgmodl == 'fitt':
-            minmnumbelemtran = max(minmnumbelemtran, 2)
     
     # forced death or birth does not check for the prior on the dimensionality on purpose!
     if gmod.numbpopl > 0 and (deth or brth or np.random.rand() < probtran) and \
@@ -1474,12 +1484,7 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                         listindximag.append(int(indxbase))
 
             if len(listindximag) > 0:
-                # Ensure a non-negligible fraction of type-0 moves target
-                # lens-strength parameters that directly affect image morphology.
-                if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg) and len(listindxlensstrg) > 0:
-                    thisindxsampfull = np.array([np.random.choice(np.array(listindxlensstrg, dtype=int))], dtype=int)
-                else:
-                    thisindxsampfull = np.array([np.random.choice(np.array(listindximag, dtype=int))], dtype=int)
+                thisindxsampfull = np.array([np.random.choice(np.array(listindximag, dtype=int))], dtype=int)
                 boolforceimag = True
         
         thisindxstdp = np.full(thisindxsampfull.size, -1, dtype=int)
@@ -1503,11 +1508,6 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             # Keep image-driving moves active but avoid over-large unit-space
             # jumps that collapse post-burn acceptance in sparse lens runs.
             thisstdp = np.maximum(thisstdp, 1e-3)
-            if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg) and len(listindxlensstrg) > 0:
-                setindxlensstrg = set(listindxlensstrg)
-                for k, indxparaimag in enumerate(thisindxsampfull):
-                    if int(indxparaimag) in setindxlensstrg:
-                        thisstdp[k] = max(thisstdp[k], 5e-2)
         if not np.isfinite(thisstdp).all():
             print('')
             print('')
@@ -1521,20 +1521,6 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             print('')
             print('')
             raise Exception('')
-
-    # In this regression config, occasionally steer proposal-family selection
-    # away from prolonged one-type deadlocks.
-    if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
-        if gmod.numbpopl > 0 and gdatmodi.this.indxproptype > 0:
-            if np.random.rand() < 0.35:
-                if minmnumbelemtran is not None and numbelemtemp <= minmnumbelemtran:
-                    gdatmodi.this.indxproptype = 1
-                elif maxmnumbelemtran is not None and numbelemtemp >= maxmnumbelemtran:
-                    gdatmodi.this.indxproptype = 2
-                elif np.random.rand() < 0.5:
-                    gdatmodi.this.indxproptype = 1
-                else:
-                    gdatmodi.this.indxproptype = 2
 
     if gdat.typeverb > 1:
         print('gdatmodi.this.indxproptype')
@@ -1583,9 +1569,7 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             if not np.isfinite(gmodnext.paragenrunitfull).all():
                 raise Exception('')
 
-        indxsamplowr = np.where(gmodnext.paragenrunitfull[gmod.numbpopl:] < 0.)[0]
-        if indxsamplowr.size > 0:
-            gmodnext.paragenrunitfull[gmod.numbpopl+indxsamplowr] = abs(gmodnext.paragenrunitfull[gmod.numbpopl+indxsamplowr]) % 1.
+        gmodnext.paragenrunitfull[gmod.numbpopl:] = retr_unitrefl(gmodnext.paragenrunitfull[gmod.numbpopl:])
         
         if gdat.booldiag:
             if (gmodnext.paragenrunitfull[gmod.numbpopl:] == 1).any():
@@ -1594,10 +1578,6 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             if (gmodnext.paragenrunitfull[gmod.numbpopl:] == 0).any():
                 raise Exception('')
 
-        indxsampuppr = np.where(gmodnext.paragenrunitfull[gmod.numbpopl:] > 1.)[0]
-        if indxsampuppr.size > 0:
-            gmodnext.paragenrunitfull[gmod.numbpopl+indxsampuppr] = (gmodnext.paragenrunitfull[gmod.numbpopl+indxsampuppr] - 1.) % 1.
-        
         if gdat.booldiag:
             if (gmodnext.paragenrunitfull[gmod.numbpopl:] == 1).any():
                 raise Exception('')
@@ -1653,13 +1633,8 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
     
     if gdatmodi.this.indxproptype == 1 or gdatmodi.this.indxproptype == 3:
        
-        # find an empty slot in the element list
-        maxmnumbelemsafe = len(thisindxparagenrfullelem[gdatmodi.indxpopltran][gmod.namepara.genrelem[gdatmodi.indxpopltran][0]])
-        u = None
-        for utmp in range(maxmnumbelemsafe):
-            if not utmp in gdatmodi.this.indxelemfull[gdatmodi.indxpopltran]:
-                u = utmp
-                break
+        # find an empty slot in the allocated element list
+        u = retr_indxelemfree(gdatmodi.this.indxelemfull[gdatmodi.indxpopltran], maxmnumbelemtran)
         if u is None:
             gdatmodi.this.boolpropfilt = False
             return
@@ -2086,6 +2061,20 @@ def calc_probprop(gdat, gdatmodi):
     for l in gmod.indxpopl:
         if gdatmodi.this.indxproptype > 0:
             setattr(gdatmodi, 'auxiparapop%d' % l, gdatmodi.this.auxipara)
+
+
+def retr_unitrefl(valu):
+    '''Reflect values into the closed unit interval.'''
+
+    valumod = np.mod(valu, 2.)
+    return np.where(valumod <= 1., valumod, 2. - valumod)
+
+
+def retr_indxelemfree(indxelemfull, maxmnumbelem):
+    '''Return the first unoccupied element slot within the allocated capacity.'''
+
+    setindxelemfull = set(indxelemfull)
+    return next((indxelem for indxelem in range(int(maxmnumbelem)) if indxelem not in setindxelemfull), None)
 
 
 def retr_indxparagenrelemfull(gdat, indxelemfull, strgmodl):
@@ -2691,6 +2680,9 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
         if varbname.startswith('sbrt') or varbname.startswith('cntp'):
             return np.zeros_like(gdat.cntpdata)
         return np.zeros_like(gdat.cntpdata)
+
+    def _raise_missing(varbname):
+        raise AttributeError('Requested product %s is unavailable for %s %s.' % (varbname, strgmodl, strgstat))
     
     if strgvarb.startswith('cntpdata'):
         varb = getattr(gdat, strgvarb)
@@ -2712,7 +2704,7 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
                     if hasattr(gdatmodi, nameerrr):
                         varb = getattr(gdatmodi, nameerrr)
                     else:
-                        varb = _retr_default_missing(strgvarb)
+                        _raise_missing(strgvarb)
                 else:
                     namethis = strgstat + strgvarb
                     if strgvarb == 'cntpmodl':
@@ -2722,7 +2714,7 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
                         elif hasattr(gdatmodi, namecntpmodl):
                             varb = getattr(gdatmodi, namecntpmodl)
                         else:
-                            varb = _retr_default_missing(strgvarb)
+                            _raise_missing(strgvarb)
                     elif strgvarb == 'cntpresi':
                         if gmodithis is not None and hasattr(gmodithis, 'cntpmodl'):
                             varb = getattr(gdat, 'cntpdata') - getattr(gmodithis, 'cntpmodl')
@@ -2732,7 +2724,7 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
                             if hasattr(gdatmodi, namecntpdata) and hasattr(gdatmodi, namecntpmodl):
                                 varb = getattr(gdatmodi, namecntpdata) - getattr(gdatmodi, namecntpmodl)
                             else:
-                                varb = _retr_default_missing(strgvarb)
+                                _raise_missing(strgvarb)
                     elif strgvarb == 'cntpdata':
                         varb = getattr(gdat, 'cntpdata')
                     elif gmodithis is not None and hasattr(gmodithis, strgvarb):
@@ -2746,23 +2738,23 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
                 if hasattr(gdat, namevarb):
                     varb = getattr(gdat, namevarb)
                 elif strgmome == 'errr':
-                    varb = _retr_default_missing(strgvarb)
+                    _raise_missing(strgvarb)
                 elif strgvarb == 'cntpresi':
                     namecntpdata = strgmome + strgpdfn + 'cntpdata'
                     namecntpmodl = strgmome + strgpdfn + 'cntpmodl'
                     if hasattr(gdat, namecntpdata) and hasattr(gdat, namecntpmodl):
                         varb = getattr(gdat, namecntpdata) - getattr(gdat, namecntpmodl)
                     else:
-                        varb = np.zeros_like(gdat.cntpdata)
+                        _raise_missing(strgvarb)
                 elif strgvarb == 'cntpdata':
                     varb = getattr(gdat, 'cntpdata')
                 elif strgvarb == 'cntpmodl':
                     if hasattr(gdat, 'cntpmodl'):
                         varb = getattr(gdat, 'cntpmodl')
                     else:
-                        varb = getattr(gdat, 'cntpdata')
+                        _raise_missing(strgvarb)
                 elif strgvarb.startswith('cntp'):
-                    varb = np.zeros_like(gdat.cntpdata)
+                    _raise_missing(strgvarb)
                 else:
                     varb = np.zeros_like(gdat.cntpdata)
 
@@ -2770,8 +2762,7 @@ def retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn, strgmo
     if boolmapvarb:
         varbarr = np.asarray(varb)
         if varbarr.ndim == 0 or varbarr.size == 1:
-            # Do not broadcast scalar placeholders to full maps in plotting.
-            varb = _retr_default_missing(strgvarb)
+            _raise_missing(strgvarb)
 
     if indxlist is not None:
         varb = varb[indxlist]
@@ -8548,6 +8539,7 @@ def stopchro(gdat, gdatmodi, name):
 
 def retr_lpriselfdist(gdat, strgmodl, feat, strgfeat):
     
+    gmod = getattr(gdat, strgmodl)
     minm = getattr(gmod.minmpara, strgfeat)
     maxm = getattr(gmod.maxmpara, strgfeat)
     
@@ -8558,6 +8550,7 @@ def retr_lpriselfdist(gdat, strgmodl, feat, strgfeat):
 
 def retr_lprilogtdist(gdat, strgmodl, feat, strgfeat):
     
+    gmod = getattr(gdat, strgmodl)
     minm = getattr(gmod.minmpara, strgfeat)
     maxm = getattr(gmod.maxmpara, strgfeat)
     
@@ -8688,8 +8681,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         gmod.boolelemsbrtextsbgrdanyy = False
     if not hasattr(gmod, 'boolelempsfn'):
         gmod.boolelempsfn = []
-    if not hasattr(gmod, 'numblpri'):
-        gmod.numblpri = 1
+    gmod.numblpri = max(getattr(gmod, 'numblpri', 0), 4)
     for attr in ['indxpara', 'namepara', 'scalpara', 'minmpara', 'maxmpara']:
         if not hasattr(gmod, attr):
             setattr(gmod, attr, tdpy.gdatstrt())
@@ -9131,8 +9123,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
             if l >= len(listnameparagenrelem) or l >= len(listscalparagenrelem):
                 continue
             for g, (strgfeat, strgpdfn) in enumerate(zip(listnameparagenrelem[l], listscalparagenrelem[l])):
-                indxlpritemp = 0# + l * gmod.numbparagenrelempopl + g
-                lpri[indxlpritemp] = retr_lprielem(gdat, strgmodl, l, g, strgfeat, strgpdfn, gmodstat.paragenrscalfull, gmodstat.dictelem, gmodstat.numbelem)
+                lpri[3] += retr_lprielem(gdat, strgmodl, l, g, strgfeat, strgpdfn, gmodstat.paragenrscalfull, gmodstat.dictelem, gmodstat.numbelem)
     lpritotl = np.sum(lpri)
     
     if gdat.typeverb > 1:
@@ -9145,7 +9136,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     if gdat.typeverb > 1:
         print('Evaluating the likelihood...')
     
-    llik = retr_llik_bind(gdat, strgmodl, cntp['modl'])
+    llik = retr_llik_eval(gdat, strgmodl, cntp['modl'])
     
     if gdat.typeverb > 1:
         print('cntp[modl]')
@@ -9184,7 +9175,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         print(gmodstat.lliktotl)
     stopchro(gdat, gdatmodi, 'llik')
 
-    lpostotl = lpritotl + gmodstat.lliktotl
+    lpostotl = retr_lpostotl(lpritotl, gmodstat.lliktotl, getattr(gdat, 'strgpdfn', 'post'))
     if gdat.typeverb > 1:
         print('lpostotl')
         print(lpostotl)
@@ -11200,7 +11191,7 @@ def retr_lprielem(gdat, strgmodl, l, g, strgfeat, strgpdfn, paragenrscalfull, di
         maxmfeat = getattr(gmod.maxmpara, strgfeat)
         lpri = numbelem[l] * np.log(1. / (maxmfeat - minmfeat))
     if strgpdfn == 'logt':
-        lpri = retr_lprilogtdist(gdat, strgmodl, dictelem[l][strgfeat], strgfeat, paragenrscalfull, l)
+        lpri = retr_lprilogtdist(gdat, strgmodl, dictelem[l][strgfeat], strgfeat)
     if strgpdfn == 'gaus':
         lpri = retr_lprigausdist(gdat, strgmodl, dictelem[l][strgfeat], strgfeat, paragenrscalfull, l)
     if strgpdfn == 'dexp':
@@ -11457,8 +11448,6 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                     gdatfinl.gmrbstat = np.zeros((gdatfinl.numbener, gdatfinl.numbpixl, gdatfinl.numbdqlt))
                     for k in gdatfinl.fitt.indxpara.genr.base:
                         gdatfinl.gmrbparagenrscalbase[k] = tdpy.mcmc.gmrb_test(listparagenrscalfull[:, :, k])
-                        if not np.isfinite(gdatfinl.gmrbparagenrscalbase[k]):
-                            gdatfinl.gmrbparagenrscalbase[k] = 0.
                     listcntpmodl = getattr(gdatfinl, 'list' + strgpdfn + 'cntpmodl')
                     for i in gdatfinl.indxener:
                         for j in gdatfinl.indxpixl:
@@ -12356,7 +12345,7 @@ def make_fold(gdat):
                 continue
             if attr.endswith('opti') and not getattr(gdat, 'boolmakeplotopti', False):
                 continue
-            os.system('mkdir -p %s' % valu)
+            make_directory(valu)
 
 
 make_cmap = tdpy.make_cmap
@@ -12645,6 +12634,25 @@ def retr_llik_bind(gdat, strgmodl, cntpmodl):
         llik = -0.5 * (gdat.cntpdata - cntpmodl)**2 / gdat.varidata
      
     return llik
+
+
+def retr_llik_eval(gdat, strgmodl, cntpmodl):
+    '''Evaluate a configured likelihood callback or the built-in likelihood.'''
+
+    retr_llik = getattr(gdat, 'retr_llik', None)
+    if retr_llik is None:
+        return retr_llik_bind(gdat, strgmodl, cntpmodl)
+    return np.asarray(retr_llik(gdat, strgmodl, cntpmodl))
+
+
+def retr_lpostotl(lpritotl, lliktotl, strgpdfn):
+    '''Return the log target for prior or posterior sampling.'''
+
+    if strgpdfn == 'prio':
+        return lpritotl
+    if strgpdfn == 'post':
+        return lpritotl + lliktotl
+    raise ValueError('Unknown target distribution %s.' % strgpdfn)
 
 
 def retr_mapsgaus(gdat, xpos, ypos, spec, size, ellp, angl):
@@ -13564,12 +13572,10 @@ def delete_strgcnfg(strgcnfg):
     pathdata = pathbase + 'data/outp/'
     pathvisu = pathbase + 'visuals/'
     
-    cmnd = 'rm -rf %s%s' % (pathdata, strgcnfg)
-    print(cmnd)
-    os.system(cmnd)
-    cmnd = 'rm -rf %s%s' % (pathvisu, strgcnfg)
-    os.system(cmnd)
-    print(cmnd)
+    for pathroot in [pathdata, pathvisu]:
+        path = retr_pathcnfg(pathroot, strgcnfg)
+        print('Writing to %s...' % path)
+        shutil.rmtree(path, ignore_errors=True)
 
 
 def plot_infopvks(gdat, gdatprio, name, namefull, nameseco=None):
@@ -15594,8 +15600,8 @@ def plot_init(gdat):
         gdat.pathinit = gdat.pathplotcnfg + 'init/'
     if not hasattr(gdat, 'pathinitintr') or gdat.pathinitintr is None:
         gdat.pathinitintr = gdat.pathinit + 'intr/'
-    os.system('mkdir -p %s' % gdat.pathinit)
-    os.system('mkdir -p %s' % gdat.pathinitintr)
+    make_directory(gdat.pathinit)
+    make_directory(gdat.pathinitintr)
 
     gmod = gdat.fitt
 
@@ -16058,7 +16064,7 @@ def init( \
     gdat = tdpy.gdatstrt()
     
     for attr, valu in locals().items():
-        if '__' not in attr and attr != 'gdat' and not attr.startswith('_') and not callable(valu):
+        if '__' not in attr and attr != 'gdat' and not attr.startswith('_') and (not callable(valu) or attr in ['plot_func', 'retr_llik']):
             setattr(gdat, attr, valu)
 
     # Apply caller-provided configuration dictionary before setup.
@@ -16570,8 +16576,8 @@ def init( \
                         gdatinit.pathinit = gdatinit.pathplotcnfg + 'init/'
                     if not hasattr(gdatinit, 'pathinitintr') or gdatinit.pathinitintr is None:
                         gdatinit.pathinitintr = gdatinit.pathinit + 'intr/'
-                    os.system('mkdir -p %s' % gdatinit.pathinit)
-                    os.system('mkdir -p %s' % gdatinit.pathinitintr)
+                    make_directory(gdatinit.pathinit)
+                    make_directory(gdatinit.pathinitintr)
                     plot_init(gdatinit)
         except Exception as excp:
             print('Warning: could not regenerate init/ plots from cached state: %s' % str(excp))
@@ -16581,7 +16587,7 @@ def init( \
             print('Creating output directory structure and writing the run-argument manifest...')
     
         # create output folder for the run
-        os.system('mkdir -p %s' % gdat.pathoutpcnfg)
+        make_directory(gdat.pathoutpcnfg)
 
         # write the list of arguments to the canonical run-argument manifest
         fram = inspect.currentframe()
@@ -17077,8 +17083,8 @@ def init( \
             gdat.pathinit = gdat.pathplotcnfg + 'init/'
         if not hasattr(gdat, 'pathinitintr') or gdat.pathinitintr is None:
             gdat.pathinitintr = gdat.pathinit + 'intr/'
-        os.system('mkdir -p %s' % gdat.pathinit)
-        os.system('mkdir -p %s' % gdat.pathinitintr)
+        make_directory(gdat.pathinit)
+        make_directory(gdat.pathinitintr)
 
         # initial plots
         try:
@@ -17876,8 +17882,7 @@ def sample_parallel( \
             dictoutp[strgvarbtotl][k] = getattr(gdattemp, strgvarbtotl)
 
     pathvisuinsp = '%s/visu/%s_%s/' % (gdat.pathbase, strgtimestmp, inspect.stack()[1][3])
-    cmnd = 'mkdir -p %s' % pathvisuinsp 
-    os.system(cmnd)
+    make_directory(pathvisuinsp)
     cmnd = 'gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%smrgd.%s' % (pathvisuinsp, gdat.typefileplot)
     for strgvarbtotl, varboutp in dictoutp.items():
         
@@ -17984,7 +17989,7 @@ class logg(object):
         gdat.pathstdo = gdat.pathoutpcnfg + 'stdo.txt'
         self.log = open_narr(gdat.pathstdo, 'a')
         pathlink = gdat.pathplotcnfg + 'stdo.txt'
-        os.system('ln -s %s %s' % (gdat.pathstdo, pathlink))
+        make_symlink(gdat.pathstdo, pathlink)
     
     def write(self, strg):
         self.terminal.write(strg)
@@ -18146,11 +18151,11 @@ def worksamp(gdat, lock, strgpdfn='post'):
 
     if not hasattr(gdat, 'pathplotcnfg') or gdat.pathplotcnfg is None:
         gdat.pathplotcnfg = gdat.pathvisu + gdat.strgcnfg + '/'
-    os.system('mkdir -p %s' % gdat.pathplotcnfg)
+    make_directory(gdat.pathplotcnfg)
     
     pathorig = gdat.pathoutpcnfg + 'stat.txt'
     pathlink = gdat.pathplotcnfg + 'stat.txt'
-    os.system('ln -sf %s %s' % (pathorig, pathlink))
+    make_symlink(pathorig, pathlink)
     
     if gdat.numbproc == 1:
         narr_task('Running a single sampler worker.', gdat=gdat, phase='during', major=True)
@@ -18183,6 +18188,7 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
     # read the initial global object, gdatinit
     path = pathoutpcnfg + 'gdatinit'
     gdat = readfile(path) 
+    gdat.strgpdfn = strgpdfn
     narr_task('Worker #%d loaded initial state.' % indxprocwork, gdat=gdat, phase='after', major=False)
     if not hasattr(gdat, 'listnamechro') or gdat.listnamechro is None:
         gdat.listnamechro = ['totl', 'prop', 'diag', 'save', 'plot', 'proc', 'elem', 'modl', 'llik', 'sbrtmodl']
@@ -18596,10 +18602,6 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
             stopchro(gdat, gdatmodi, 'diag')
     
         # determine the acceptance probability
-        if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
-            if gdatmodi.this.indxproptype > 0 and not gdatmodi.this.boolpropfilt:
-                gdatmodi.this.boolpropfilt = True
-
         if gdatmodi.this.boolpropfilt:
             
             initchro(gdat, gdatmodi, 'proc')
@@ -18621,23 +18623,6 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
             if not np.isfinite(gdatmodi.this.accpprob[0]):
                 gdatmodi.this.accpprob[0] = 0.
 
-            # Compatibility safeguard for the lens-count regression: if
-            # acceptance probability collapses to exactly zero for many
-            # consecutive sweeps, gently shrink proposal scales to recover
-            # nonzero acceptance and avoid frozen posterior samples.
-            if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg):
-                if gdatmodi.this.accpprob[0] <= 0.:
-                    gdatmodi.cntraccpzero += 1
-                    gdatmodi.cntraccpzerototl += 1
-                else:
-                    gdatmodi.cntraccpzero = 0
-                    gdatmodi.cntraccpzerototl = 0
-                if gdatmodi.cntraccpzero >= 25 and gdatmodi.cntrswep > 20 and hasattr(gdatmodi, 'stdp') and np.size(gdatmodi.stdp) > 0:
-                    gdatmodi.stdp = np.maximum(np.asarray(gdatmodi.stdp, dtype=float) * 0.5, 1e-8)
-                    gdatmodi.this.stdp = np.copy(gdatmodi.stdp)
-                    gdatmodi.cntraccpzero = 0
-                    if gdat.typeverb > 0:
-                        print('Warning: shrinking proposal scales after sustained zero acceptance probability in eval_lenscntpmodl.')
             if gdat.typeverb > 1:
                 print('gdatmodi.this.lpritotl')
                 print(gdatmodi.this.lpritotl)
@@ -18706,20 +18691,6 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
             initchro(gdat, gdatmodi, 'proc')
             proc_samp(gdat, gdatmodi, 'this', 'fitt')
             stopchro(gdat, gdatmodi, 'proc')
-
-        if hasattr(gdat, 'strgcnfg') and 'eval_lenscntpmodl' in str(gdat.strgcnfg) and gmod.numbpopl > 0:
-            for l in gmod.indxpopl:
-                if l >= len(gmod.indxpara.numbelem) or l >= len(gdatmodi.this.indxelemfull):
-                    continue
-                numbelemindx = int(gmod.indxpara.numbelem[l])
-                if numbelemindx < 0 or numbelemindx >= gdatmodi.this.paragenrscalfull.size:
-                    continue
-                numbelemvect = int(np.rint(gdatmodi.this.paragenrscalfull[numbelemindx]))
-                numbelemlist = len(gdatmodi.this.indxelemfull[l])
-                if numbelemvect != numbelemlist or numbelemlist == 0:
-                    raise Exception('eval_lenscntpmodl invariant failure at sweep %d: pop %d vector count=%d list count=%d proposal type=%s accepted=%s indxelemfull=%s indxsampmodi=%s' % \
-                                    (gdatmodi.cntrswep, l, numbelemvect, numbelemlist, str(getattr(gdatmodi.this, 'indxproptype', None)), \
-                                     str(getattr(gdatmodi.this, 'boolpropaccp', None)), str(gdatmodi.this.indxelemfull[l]), str(getattr(gdatmodi, 'indxsampmodi', None))))
 
         # save the sample
         if gdat.boolsave[gdatmodi.cntrswep]:

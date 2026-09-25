@@ -38,21 +38,19 @@ cd /path/to/pcat
 pip install -e .
 ```
 
-## Minimal usage
+## Roman strong-lens example
 
-PCAT is still primarily a research framework rather than a turnkey black-box package. The normal workflow is to initialize a model configuration, define a likelihood and data product, and then call `pcat.main.init(...)` with a populated configuration dictionary.
+The executable example uses the compact PCAT Roman benchmark to simulate 100 strong-lens images. Half contain one dark-matter perturber drawn at a candidate position around the macro Einstein ring, and half contain no perturber. The catalog approximation compares zero- and one-perturber models after Roman point-spread-function convolution and Poisson plus read noise.
 
-A minimal import smoke test should work as:
-
-```python
-import pcat
-from pcat import main
-
-print('PCAT import OK')
-print(hasattr(main, 'init'))
+```bash
+python examples/roman_lens_catalog_diagnostic.py --typefileplot png
 ```
 
-The exact sampler configuration depends on the scientific workflow; the repository’s existing `pcat.test` script and configuration patterns remain the most direct reference for active usage.
+![Simulated Roman strong-lens catalog diagnostic](examples/roman_lens_catalog_diagnostic.png)
+
+For the fixed seed, the approximate catalog classifier recovers 38% of injected perturbers above a posterior threshold of 0.5, produces no false positives among the 50 null lenses, and localizes 84% of injected perturbers to the correct candidate position. The mean one-perturber posterior probability is 0.37 for injected systems and $4.6\times10^{-5}$ for null systems. These values characterize this clearly labeled simulation and are not forecasts from real Roman observations.
+
+PCAT remains a research framework rather than a turnkey black-box package. Full transdimensional runs initialize a model configuration, define a likelihood and data product, and call `pcat.main.init(...)` with a populated configuration dictionary.
 
 ## Output and visualization conventions
 

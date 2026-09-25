@@ -9,6 +9,8 @@ The examples are intentionally lightweight and focus on the package’s path con
 - `gaussian_mixture/`: a compact Gaussian-mixture toy example
 - `chandra_point_source/`: a point-source mock example inspired by Chandra-style source detection
 - `hst_lens/`: a lensing-style image example illustrating catalog-level inference concepts
+- `roman_lens_catalog_diagnostic.py`: a seeded Roman strong-lens population benchmark
+- `pcat_voigt_profile_detection.py`: simulated nominal and high-signal Voigt-profile detection configurations
 - `run_examples.py`: runs all example scripts in sequence
 
 ## Running

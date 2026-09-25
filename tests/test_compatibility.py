@@ -1,30 +1,40 @@
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from pcat.main import retr_fromgdat, show_paragenrscalfull
 
 
-def test_retr_fromgdat_indexes_fallback_error_map_without_uncertainty_axis():
+def test_retr_fromgdat_rejects_missing_uncertainty_map():
     gdat = SimpleNamespace(
         cntpdata=np.ones((1, 2, 1)),
         numbener=1,
         fitt=SimpleNamespace(),
     )
 
-    result = retr_fromgdat(
-        gdat,
-        None,
-        'pdfn',
-        'fitt',
-        'cntpmodl',
-        'post',
-        strgmome='errr',
-        indxvarb=[slice(None), slice(None), 0],
+    with pytest.raises(AttributeError, match='cntpmodl is unavailable'):
+        retr_fromgdat(
+            gdat,
+            None,
+            'pdfn',
+            'fitt',
+            'cntpmodl',
+            'post',
+            strgmome='errr',
+            indxvarb=[slice(None), slice(None), 0],
+        )
+
+
+def test_retr_fromgdat_rejects_missing_posterior_model():
+    gdat = SimpleNamespace(
+        cntpdata=np.array([4., 9.]),
+        numbener=1,
+        fitt=SimpleNamespace(),
     )
 
-    assert result.shape == (1, 2)
-    assert np.array_equal(result, np.zeros((1, 2)))
+    with pytest.raises(AttributeError, match='cntpmodl is unavailable'):
+        retr_fromgdat(gdat, None, 'pdfn', 'fitt', 'cntpmodl', 'post')
 
 
 def test_show_paragenrscalfull_accepts_empty_element_indices(capsys):

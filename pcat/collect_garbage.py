@@ -6,6 +6,7 @@ maintained PCAT library API.
 
 import fnmatch
 import os
+import shutil
 import sys
 
 
@@ -47,8 +48,8 @@ def main():
                 if strgtemp.endswith('tile'):
                     strgtemp = strgtemp[:-4]
                 if strgtemp.isdigit() and ((not os.path.isfile(pathchec) or not boolkeep or int(strgtemp) <= 1000) and 'mockonly' not in rtag) or boolforcdele:
-                    print(f'Deleting {pathchec}...')
-                    os.system(f'rm -rf "{pathfile}"')
+                    print(f'Writing to {pathfile}...')
+                    shutil.rmtree(pathfile)
 
     listrtagdata = fnmatch.filter(os.listdir(pathdata), '2*')
     listrtagimag = fnmatch.filter(os.listdir(pathimag), '2*')
