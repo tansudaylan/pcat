@@ -4401,13 +4401,15 @@ def init_image( \
         # true model parameters
         if gdat.typedata == 'simu':
             gmod.numbelem = np.zeros(gmod.numbpopl, dtype=int)
-            if gmod.typemodltran == 'pois':
-                for l in gmod.indxpopl:
+            for l in gmod.indxpopl:
+                if strgmodl == 'true':
+                    name = 'numbelempop%d' % l
+                    gmod.numbelem[l] = int(getattr(gmod.this, name, getattr(gdat, 'true' + name, 2)))
+                if gmod.typemodltran == 'pois':
                     setattr(gdat.true.this, 'meanelempop%d' % l, getattr(gdat.true.this, 'numbelempop%d' % l))
-                    gmod.numbelem[l] = getattr(gdat.true.this, 'numbelempop%d' % l)
-        
-                    if gmod.numbelem[l] > gmod.maxmpara.numbelem[l]:
-                        raise Exception('True number of elements is larger than maximum.')
+
+                if gmod.numbelem[l] > gmod.maxmpara.numbelem[l]:
+                    raise Exception('True number of elements is larger than maximum.')
 
         gdat.stdvhostsour = 0.04 / gdat.anglfact
         
@@ -4842,7 +4844,7 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
         
     # construct the fitting model
     setp_paragenrscalbase(gdat, strgmodl='fitt')
-    
+
     if gdat.typedata == 'simu':
         # construct the true model
         setp_paragenrscalbase(gdat, strgmodl='true')
@@ -6127,8 +6129,10 @@ def retr_refrchaninit(gdat):
         if gdat.true.numbpopl > 0:
             gdat.true.this.numbelempopl = np.empty(gdat.true.maxmpara.numbelem[l], dtype=int)
             for l in gdat.true.indxpopl:
-                gdat.true.this.paragenrunitfull[gdat.true.indxpara.numbelem[l]] = getattr(gdat.true.this, 'numbelempop%d' % l)
-                gdat.true.this.numbelempopl[l] = getattr(gdat.true.this, 'numbelempop%d' % l)
+                truenumbelem = int(gdat.true.numbelem[l])
+                if gdat.true.typemodltran == 'pois':
+                    gdat.true.this.paragenrunitfull[gdat.true.indxpara.numbelem[l]] = truenumbelem
+                gdat.true.this.numbelempopl[l] = truenumbelem
 
             gdat.true.this.indxelemfull = [[] for l in gdat.true.indxpopl]
             for l in gdat.true.indxpopl:
@@ -8022,7 +8026,7 @@ def supr_fram(gdat, gdatmodi, strgstat, strgmodl, axis, indxpoplplot=-1, assc=Fa
                 
                 if indx.size > 0: 
                     axis.scatter(gdat.anglfact * xpos[indx], gdat.anglfact * ypos[indx], s=mrkrsize[indx], alpha=gdat.alphelem, facecolor='none', \
-                                                             label=gdat.refr.listlablmiss, marker=gdat.refr.listmrkrmiss[q], \
+                                                             label=gdat.refr.lablmiss[q], marker=gdat.refr.listmrkrmiss[q], \
                                                              lw=gdat.mrkrlinewdth, color=gdat.refr.colrelem[q])
         
             sizexoff = gdat.maxmgangdata * 0.05 * gdat.anglfact
@@ -8772,6 +8776,22 @@ def retr_gdatobjt(gdat, gdatmodi, strgmodl, boolinit=False):
     return gdatobjt
 
 
+def _resolve_population_elements(gmod, gmodstat, population, paragenr, indxelemfull):
+    """Return the active count and indices for one model population."""
+
+    count_indices = getattr(gmod.indxpara, 'numbelem', [])
+    if len(count_indices) <= population:
+        return int(gmodstat.numbelempopl[population]), np.asarray(indxelemfull[population], dtype=int)
+    if paragenr.size == 0:
+        return 0, np.arange(0, dtype=int)
+
+    count_index = int(count_indices[population])
+    if count_index < 0 or count_index >= paragenr.size:
+        return 0, np.arange(0, dtype=int)
+    count = int(np.sum(np.asarray(paragenr[count_index]).astype(int)))
+    return count, np.arange(count, dtype=int)
+
+
 def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
    
     gmod = getattr(gdat, strgmodl)
@@ -8928,19 +8948,9 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         numbelem = np.empty(numbpopl, dtype=int)
         indxelem = [[] for l in indxpopl]
         for l in indxpopl:
-            boolhasnumbelem = hasattr(indxpara, 'numbelem') and len(getattr(indxpara, 'numbelem', [])) > l
-            if not boolhasnumbelem or paragenr.size == 0:
-                numbelem[l] = 0
-                indxelem[l] = np.arange(0, dtype=int)
-                continue
-            indxnumbelem = int(indxpara.numbelem[l])
-            if indxnumbelem < 0 or indxnumbelem >= paragenr.size:
-                numbelem[l] = 0
-                indxelem[l] = np.arange(0, dtype=int)
-                continue
-            numbelem[l] = np.asarray(paragenr[indxnumbelem]).astype(int)
-            indxelem[l] = np.arange(numbelem[l])
-            numbelem[l] = np.sum(numbelem[l])
+            numbelem[l], indxelem[l] = _resolve_population_elements(
+                gmod, gmodstat, l, paragenr, indxelemfull
+            )
         
         numbelemtotl = np.sum(numbelem) 
 
@@ -10239,7 +10249,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
 
                         blim = getattr(gdat.blimpara, strgfeat)
                         if len(indxelempars) > 0:
-                            refrhistpars = np.histogram(gmodstat.dictelem[q][strgfeat][indxelempars], blim=blim)[0].astype(float)
+                            refrhistpars = np.histogram(gmodstat.dictelem[q][strgfeat][indxelempars], bins=blim)[0].astype(float)
                             if indxrefrgood.size > 0:
                                 reca[indxrefrgood] = refrhistpars[indxrefrgood] / refrhist[indxrefrgood]
                         
@@ -10406,7 +10416,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                     if len(indxelemrefrasschits[q][l]) > 0:
                         refrhistfeatfrst = getattr(gdat.refr, 'hist' + nameparaelemfrst + 'pop%d' % q)
                         blimfeatfrst = getattr(gdat.blimpara, nameparaelemfrst)
-                        refrhistfeatfrstassc = np.histogram(refrfeatfrst[indxelemrefrasschits[q][l]], blim=blimfeatfrst)[0]
+                        refrhistfeatfrstassc = np.histogram(refrfeatfrst[indxelemrefrasschits[q][l]], bins=blimfeatfrst)[0]
                         indxgood = np.where(refrhistfeatfrst != 0.)[0]
                         if indxgood.size > 0:
                             cmplfrst[indxgood] = refrhistfeatfrstassc[indxgood].astype(float) / refrhistfeatfrst[indxgood]
@@ -10455,7 +10465,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                     fdisfrst = np.zeros(gdat.numbbinsplot)
                     if len(indxelemrefrasschits[q][l]) > 0 and len(gmodstat.dictelem[l][nameparaelemfrst]) > 0:
                         blimfeatfrst = getattr(gdat.blimpara, nameparaelemfrst)
-                        fitthistfeatfrstfals = np.histogram(gmodstat.dictelem[l][nameparaelemfrst][indxelemfittasscfals[q][l]], blim=blimfeatfrst)[0]
+                        fitthistfeatfrstfals = np.histogram(gmodstat.dictelem[l][nameparaelemfrst][indxelemfittasscfals[q][l]], bins=blimfeatfrst)[0]
                         fitthistfeatfrst = getattr(gmodstat, 'hist' + nameparaelemfrst + 'pop%d' % l)
                         indxgood = np.where(fitthistfeatfrst != 0.)[0]
                         if indxgood.size > 0:
@@ -12222,18 +12232,21 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
         gdatfinl.refr.colr = 'r'
     if not hasattr(gdatfinl.refr, 'numbelem'):
         gdatfinl.refr.numbelem = np.array([])
-    if not hasattr(gdatfinl.refr, 'colrelem'):
-        gdatfinl.refr.colrelem = []
+    numbrefr = len(gdatfinl.indxrefr)
+    if not hasattr(gdatfinl.refr, 'lablelem') or len(gdatfinl.refr.lablelem) < numbrefr:
+        gdatfinl.refr.lablelem = ['True'] * numbrefr
+    if not hasattr(gdatfinl.refr, 'colrelem') or len(gdatfinl.refr.colrelem) < numbrefr:
+        gdatfinl.refr.colrelem = ['darkgreen'] * numbrefr
     if not hasattr(gdatfinl.refr, 'listmrkr'):
         gdatfinl.refr.listmrkr = []
     if not hasattr(gdatfinl.refr, 'listmrkrhits'):
         gdatfinl.refr.listmrkrhits = []
-    if not hasattr(gdatfinl.refr, 'listmrkrmiss'):
-        gdatfinl.refr.listmrkrmiss = []
-    if not hasattr(gdatfinl.refr, 'lablhits'):
-        gdatfinl.refr.lablhits = []
-    if not hasattr(gdatfinl.refr, 'lablmiss'):
-        gdatfinl.refr.lablmiss = []
+    if not hasattr(gdatfinl.refr, 'listmrkrmiss') or len(gdatfinl.refr.listmrkrmiss) < numbrefr:
+        gdatfinl.refr.listmrkrmiss = ['x'] * numbrefr
+    if not hasattr(gdatfinl.refr, 'lablhits') or len(gdatfinl.refr.lablhits) < numbrefr:
+        gdatfinl.refr.lablhits = ['Matched truth'] * numbrefr
+    if not hasattr(gdatfinl.refr, 'lablmiss') or len(gdatfinl.refr.lablmiss) < numbrefr:
+        gdatfinl.refr.lablmiss = ['Missed truth'] * numbrefr
     if not hasattr(gdatfinl, 'true'):
         gdatfinl.true = tdpy.gdatstrt()
     if not hasattr(gdatfinl.true, 'lpritotl'):
@@ -12481,7 +12494,7 @@ def setp_pdfnvarb(gdat, strgpdfn, name, namefull, nameseco=None):
     if listvarb.ndim == 1:
         binsvarb = getattr(gdat.blimpara, name)
         deltvarb = getattr(gdat, 'delt' + name)
-        pdfn[:, 0] = np.histogram(listvarb, blim=blimvarb)[0].astype(float)
+        pdfn[:, 0] = np.histogram(listvarb, bins=blimvarb)[0].astype(float)
         pdfn[:, 0] /= np.sum(pdfn[:, 0])
         pdfn[:, 0] /= deltvarb
     else:
@@ -12489,13 +12502,13 @@ def setp_pdfnvarb(gdat, strgpdfn, name, namefull, nameseco=None):
         
     if listvarb.ndim == 2:
         for k in range(listvarb.shape[1]):
-            pdfn[:, k] = np.histogram(listvarb[:, k], blim=blimvarb)[0].astype(float)
+            pdfn[:, k] = np.histogram(listvarb[:, k], bins=blimvarb)[0].astype(float)
             pdfn[:, k] /= np.sum(pdfn[:, k])
         pdfn *= 50.
     if listvarb.ndim == 3:
         for k in range(listvarb.shape[1]):
             for m in range(listvarb.shape[2]):
-                pdfn[:, k, m] = np.histogram(listvarb[:, k, m], blim=blimvarb)[0].astype(float)
+                pdfn[:, k, m] = np.histogram(listvarb[:, k, m], bins=blimvarb)[0].astype(float)
                 pdfn[:, k, m] /= np.sum(pdfn[:, k, m])
         pdfn *= 2500.
     pdfn[np.where(pdfn < 1e-50)[0]] = 1e-50
@@ -17096,6 +17109,70 @@ def init( \
                 raise RuntimeError('gdat.fitt.typeelem length is inconsistent with gdat.fitt.numbpopl while initializing sampler state.')
         _require_nonempty('gdat.indxener', _require_attr(gdat, 'indxener', 'initializing sampler state'), 'initializing sampler state')
         init_stat(gdat)
+
+        if gdat.typedata == 'simu' and not gdat.typeexpr.startswith('HST_WFC3'):
+            truenumbelem = np.array([
+                int(getattr(
+                    gdat,
+                    'truenumbelempop%d' % l,
+                    gdat.true.numbelem[l] if l < len(gdat.true.numbelem) else 2,
+                ))
+                for l in gdat.true.indxpopl
+            ], dtype=int)
+            setp_paragenrscalbase(gdat, strgmodl='true')
+            gdat.true.numbelem = truenumbelem
+            gdat.true.this = tdpy.gdatstrt()
+            gdat.true.next = tdpy.gdatstrt()
+            gdat.true.this.indxpara = tdpy.gdatstrt()
+            if gdat.typeseedelem is None:
+                trueunit = np.random.rand(gdat.true.numbparagenr)
+            else:
+                trueunit = np.random.RandomState(gdat.typeseedelem).rand(gdat.true.numbparagenr)
+            gdat.true.this.paragenrunitfull = trueunit
+            gdat.true.this.paragenrscalfull = np.zeros(gdat.true.numbparagenr)
+            gdat.true.this.numbelempopl = np.asarray(gdat.true.numbelem, dtype=int)
+            gdat.true.this.indxelemfull = [list(range(numbelem)) for numbelem in gdat.true.this.numbelempopl]
+            gdat.true.this.indxparagenrelemfull = retr_indxparagenrelemfull(
+                gdat, gdat.true.this.indxelemfull, 'true'
+            ) if gdat.true.numbpopl > 0 else None
+            gdat.true.this.paragenrscalfull = icdf_paragenrscalfull(
+                gdat, 'true', gdat.true.this.paragenrunitfull, gdat.true.this.indxparagenrelemfull
+            )
+            proc_samp(gdat, None, 'this', 'true', boolinit=True)
+
+            for name, value in gdat.true.this.__dict__.items():
+                if name == 'dictelem':
+                    value = [
+                        {
+                            parameter: np.stack((values, np.zeros_like(values), np.zeros_like(values)))
+                            for parameter, values in population.items()
+                        }
+                        for population in value
+                    ]
+                setattr(gdat.refr, name, value)
+            for name in [
+                'lablelem', 'colrelem', 'listmrkrmiss', 'listmrkrhits', 'lablmiss', 'lablhits',
+                'nameparagenrelemampl',
+            ]:
+                if hasattr(gdat.true, name):
+                    setattr(gdat.refr, name, deepcopy(getattr(gdat.true, name)))
+            gdat.refr.numbelem = np.asarray(gdat.true.numbelem, dtype=int)
+            if not hasattr(gdat.refr, 'lablelem'):
+                gdat.refr.lablelem = ['True'] * gdat.numbrefr
+            if not hasattr(gdat.refr, 'lablhits'):
+                gdat.refr.lablhits = ['Matched truth'] * gdat.numbrefr
+            if not hasattr(gdat.refr, 'lablmiss'):
+                gdat.refr.lablmiss = ['Missed truth'] * gdat.numbrefr
+            gdat.refr.namepara = deepcopy(gdat.true.namepara)
+            gdat.refr.namepara.elemonly = [
+                [[] for _ in gdat.true.indxpopl] for _ in gdat.indxrefr
+            ]
+            gdat.refr.indxpoplfittassc = np.asarray(gdat.fitt.indxpopl, dtype=int)
+            gdat.fitt.indxpoplrefrassc = np.asarray(gdat.fitt.indxpopl, dtype=int)
+            if gdat.true.numbpopl > 0 and 'elin' in gdat.refr.dictelem[0]:
+                gdat.refrelin = [gdat.refr.dictelem[0]['elin']]
+                if gdat.anglassc is None:
+                    gdat.anglassc = 2. * np.median(np.diff(gdat.bctrpara.ener)) / np.median(gdat.bctrpara.ener)
 
         if gdat.typeexpr.startswith('HST_WFC3') and gdat.typedata == 'simu' and hasattr(gdat, 'fitt') and getattr(gdat.fitt, 'numbpopl', 0) > 0:
             if not hasattr(gdat.fitt.this, 'indxelemfull') or len(getattr(gdat.fitt.this, 'indxelemfull', [])) != gdat.fitt.numbpopl:

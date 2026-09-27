@@ -15,7 +15,7 @@ def build_configurations():
     common = {
         "typeexpr": "fire",
         "spectype": ["voig"],
-        "strgexpo": 1.0e3,
+        "strgexpo": 1.0e5,
         "spatdisttype": ["line"],
         "typeelem": ["lghtlinevoig"],
         "boolmakeplotinit": True,
@@ -24,12 +24,14 @@ def build_configurations():
         "anlytype": "spec",
         "numbelempop0reg0": 20,
         "probspmr": 0.0,
+        "typeseed": 0,
+        "typeseedelem": 17,
         "numbswep": 100000,
         "numbsamp": 1000,
     }
     names = ["nomi", "s2nrhigh"]
     variations = {name: {} for name in names}
-    variations["s2nrhigh"]["strgexpo"] = 1.0e5
+    variations["s2nrhigh"]["strgexpo"] = 1.0e6
     return common, variations, names
 
 

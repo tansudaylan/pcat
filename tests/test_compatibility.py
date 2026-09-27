@@ -5,10 +5,28 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from pcat.main import plot_genemaps, plot_scatcntp, retr_fromgdat, show_paragenrscalfull
+from pcat.main import (
+    _resolve_population_elements,
+    plot_genemaps,
+    plot_scatcntp,
+    retr_fromgdat,
+    show_paragenrscalfull,
+)
 
 
 pcat_main = importlib.import_module('pcat.main')
+
+
+def test_fixed_population_count_does_not_require_sampled_count_index():
+    model = SimpleNamespace(indxpara=SimpleNamespace(numbelem=np.array([], dtype=int)))
+    state = SimpleNamespace(numbelempopl=np.array([2]))
+
+    count, indices = _resolve_population_elements(
+        model, state, 0, np.arange(8, dtype=float), [[0, 1]]
+    )
+
+    assert count == 2
+    np.testing.assert_array_equal(indices, [0, 1])
 
 
 def test_retr_fromgdat_rejects_missing_uncertainty_map():

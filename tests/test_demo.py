@@ -81,6 +81,7 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
     assert captured["numbsamp"] == 10
     assert captured["numbswepplot"] == 3
     assert captured["makeanim"] is True
+    assert captured["truenumbelempop0"] == 2
     assert captured["dictfitt"]["typeelem"] == ["lghtlinevoig"]
 
 
