@@ -15820,10 +15820,14 @@ def plot_genemaps(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, strgvarb, indxen
             strgtemp = ''
         strgplot = strgtemp + strgvarb
     
-    figr, axis, path = init_figr(gdat, gdatmodi, strgpdfn, strgplot, strgstat, strgmodl, indxenerplot, indxdqltplot, indxpoplplot)
-   
-    maps = retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn)
+    try:
+        maps = retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, strgvarb, strgpdfn)
+    except AttributeError as excp:
+        print('Warning: skipping %s map due to unavailable model product: %s' % (strgvarb, str(excp)))
+        return
     maps = np.asarray(maps)
+
+    figr, axis, path = init_figr(gdat, gdatmodi, strgpdfn, strgplot, strgstat, strgmodl, indxenerplot, indxdqltplot, indxpoplplot)
 
     if strgstat == 'this' and strgvarb == 'conv' and maps.size > 0 and np.all(np.abs(maps) == 0.):
         def _retr_defl_map(name):
