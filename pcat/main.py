@@ -58,7 +58,7 @@ import h5py
 # tdpy
 import tdpy
 import tdpy.util as tdpy_util
-from tdpy.paths import open_narr
+from tdpy.paths import make_directory, make_symlink, open_narr
 from tdpy.util import summgene
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -74,18 +74,6 @@ try:
     import aspendos
 except ImportError:
     aspendos = None
-
-
-def make_directory(path):
-    print('Writing to %s...' % path)
-    os.makedirs(path, exist_ok=True)
-
-
-def make_symlink(pathorig, pathlink):
-    print('Writing to %s...' % pathlink)
-    if os.path.lexists(pathlink):
-        os.unlink(pathlink)
-    os.symlink(pathorig, pathlink)
 
 
 def retr_pathcnfg(pathroot, strgcnfg):
@@ -6261,6 +6249,27 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
             gmod.maxmpara = tdpy.gdatstrt()
         gmod.minmpara.numbelem = np.array([getattr(gmod.minmpara, 'numbelempop%d' % l, 0) for l in gmod.indxpopl], dtype=int)
         gmod.maxmpara.numbelem = np.array([getattr(gmod.maxmpara, 'numbelempop%d' % l, max(1, getattr(gmod.minmpara, 'numbelempop%d' % l, 1))) for l in gmod.indxpopl], dtype=int)
+        gmod.numbparagenrelempopl = gmod.maxmpara.numbelem * gmod.numbparagenrelemsing
+        gmod.numbparagenrelem = int(np.sum(gmod.numbparagenrelempopl))
+    if gdat.typeexpr == 'chan' and gmod.numbpopl > 0 and all(len(names) == 0 for names in gmod.namepara.genrelem):
+        names = ['xpos', 'ypos', 'flux', 'sind', 'curv', 'expc']
+        names += ['sindcolr%04d' % i for i in gdat.indxenerinde]
+        gmod.namepara.genrelem = [list(names) for _ in gmod.indxpopl]
+        gmod.namepara.elem = [list(names) for _ in gmod.indxpopl]
+        gmod.namepara.derielemodim = [[] for _ in gmod.indxpopl]
+        gmod.scalpara.genrelem = [
+            ['self', 'self', 'logt', 'self', 'self', 'logt'] + ['self' for _ in gdat.indxenerinde]
+            for _ in gmod.indxpopl
+        ]
+        gmod.indxparagenrelemsing = [np.arange(len(names), dtype=int) for _ in gmod.indxpopl]
+        gmod.indxparaderielemsing = [np.array([], dtype=int) for _ in gmod.indxpopl]
+        gmod.numbparagenrelemsing = np.full(gmod.numbpopl, len(names), dtype=int)
+        gmod.numbparaderielemsing = np.zeros(gmod.numbpopl, dtype=int)
+        gmod.numbparagenrelemcuml = np.zeros(gmod.numbpopl, dtype=int)
+        if gmod.numbpopl > 1:
+            gmod.numbparagenrelemcuml[1:] = np.cumsum(
+                gmod.numbparagenrelemsing[:-1] * gmod.maxmpara.numbelem[:-1]
+            )
         gmod.numbparagenrelempopl = gmod.maxmpara.numbelem * gmod.numbparagenrelemsing
         gmod.numbparagenrelem = int(np.sum(gmod.numbparagenrelempopl))
     
