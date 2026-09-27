@@ -3463,8 +3463,12 @@ def init_image( \
     
     if gdat.typeexpr == 'gmix':
         legdelem = ['Cluster']
-    if gdat.typeexpr.startswith('HST_WFC3'):
+    elif gdat.typeexpr == 'ferm' or gdat.typeexpr == 'tess' or gdat.typeexpr == 'chan':
+        legdelem = ['Point source']
+    elif gdat.typeexpr.startswith('HST_WFC3'):
         legdelem = ['Subhalo']
+    elif gdat.typeexpr == 'fire':
+        legdelem = ['Spectral line']
     setp_varb(gdat, 'legdelem', valu=legdelem)
 
     ### PSF model
@@ -16244,7 +16248,7 @@ def init( \
             gmod.indxpopl = np.arange(len(getattr(gmod, 'typeelem', [])), dtype=int)
         gmod.numbpopl = int(len(getattr(gmod, 'indxpopl', [])))
         setp_modlemis_init(gdat, strgmodl=strgmodl)
-        setp_modlemis_finl(gdat, strgmodl=strgmodl)
+    setp_modlemis_finl(gdat, strgmodl='fitt')
     
     # to be deleted?
     #print('gdat.liststrgfeatpara')
@@ -17562,7 +17566,7 @@ def init( \
     return gdat
 def sample(**kwargs):
     typeexpr = kwargs.get('typeexpr')
-    if isinstance(typeexpr, str) and typeexpr.startswith('HST_WFC3'):
+    if isinstance(typeexpr, str) and (typeexpr == 'chan' or typeexpr.startswith('HST_WFC3')):
         gdat = init_image(**kwargs)
         return init(gdat.__dict__)
     return init(kwargs)

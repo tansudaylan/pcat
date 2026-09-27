@@ -106,3 +106,20 @@ def test_proc_anim_uses_explicit_output_root(tmp_path, monkeypatch):
     pcat_main.proc_anim('demo', pathbase=tmp_path)
 
     assert captured == {'pathbase': tmp_path, 'run_name': 'demo'}
+
+
+@pytest.mark.parametrize('typeexpr', ['chan', 'HST_WFC3_IR'])
+def test_sample_routes_image_experiments_through_image_initialization(typeexpr, monkeypatch):
+    captured = {}
+
+    def fake_init_image(**configuration):
+        captured['image'] = configuration
+        return SimpleNamespace(typeexpr=typeexpr)
+
+    monkeypatch.setattr(pcat_main, 'init_image', fake_init_image)
+    monkeypatch.setattr(pcat_main, 'init', lambda configuration: configuration)
+
+    result = pcat_main.sample(typeexpr=typeexpr)
+
+    assert captured['image']['typeexpr'] == typeexpr
+    assert result == {'typeexpr': typeexpr}
