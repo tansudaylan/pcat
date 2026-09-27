@@ -93,7 +93,10 @@ def infer_catalog_probability(
     weighted_templates = templates / variance
     information = np.sum(templates * weighted_templates, axis=(1, 2))
     projection = np.sum(residual * weighted_templates, axis=(1, 2))
-    amplitudes = np.maximum(projection / information, 0.0)
+    # A null template contributes no evidence and should not contaminate the catalog odds.
+    amplitudes = np.zeros_like(projection)
+    np.divide(projection, information, out=amplitudes, where=information > 0.0)
+    amplitudes = np.maximum(amplitudes, 0.0)
     delta_chi_squared = amplitudes**2 * information
     best_index = int(np.argmax(delta_chi_squared))
     parameter_penalty = 3.0 * np.log(data.size)
@@ -110,6 +113,9 @@ def simulate_population(
 ) -> tuple[list[dict[str, float | int | bool]], dict[str, np.ndarray]]:
     """Simulate and analyze an ensemble with a zero-or-one perturber catalog."""
     config = config or RomanLensConfig()
+    number_injected = round(number_lenses * config.subhalo_fraction)
+    if not 0 < number_injected < number_lenses:
+        raise ValueError("The benchmark requires at least one injected and null lens.")
     random = np.random.default_rng(seed)
     records: list[dict[str, float | int | bool]] = []
     examples: dict[str, np.ndarray] = {}
@@ -120,7 +126,7 @@ def simulate_population(
         source_size = random.uniform(0.06, 0.14)  # [arcsec]
         axis_ratio = random.uniform(0.55, 1.0)
         source_angle = random.uniform(0.0, np.pi)  # [rad]
-        has_subhalo = lens_index < round(number_lenses * config.subhalo_fraction)
+        has_subhalo = lens_index < number_injected
         positions = candidate_positions(einstein_radius, config.number_candidates)
         injected_index = int(random.integers(config.number_candidates))
         subhalo_einstein_radius = random.uniform(0.015, 0.045) if has_subhalo else 0.0  # [arcsec]
@@ -173,7 +179,7 @@ def simulate_population(
                 "recovered_scale": recovered_scale,
             }
         )
-        if lens_index in (0, round(number_lenses * config.subhalo_fraction)):
+        if lens_index in (0, number_injected):
             examples[f"lens_{lens_index}_data"] = data
             examples[f"lens_{lens_index}_macro"] = macro_image
             examples[f"lens_{lens_index}_residual"] = data - macro_image
@@ -188,11 +194,19 @@ def summarize_population(records: list[dict[str, float | int | bool]]) -> dict[s
     detected = probability >= 0.5
     injected_index = np.array([record["injected_index"] for record in records], dtype=int)
     recovered_index = np.array([record["recovered_index"] for record in records], dtype=int)
+    number_injected = int(truth.sum())
+    number_null = len(records) - number_injected
+    true_positive_interval = binomial_wilson_interval(int(detected[truth].sum()), number_injected)
+    false_positive_interval = binomial_wilson_interval(int(detected[~truth].sum()), number_null)
     return {
         "number_lenses": len(records),
-        "number_injected": int(truth.sum()),
+        "number_injected": number_injected,
         "true_positive_rate": float(detected[truth].mean()),
+        "true_positive_rate_lower": true_positive_interval[0],
+        "true_positive_rate_upper": true_positive_interval[1],
         "false_positive_rate": float(detected[~truth].mean()),
+        "false_positive_rate_lower": false_positive_interval[0],
+        "false_positive_rate_upper": false_positive_interval[1],
         "localization_rate": float((recovered_index[truth] == injected_index[truth]).mean()),
         "mean_posterior_injected": float(probability[truth].mean()),
         "mean_posterior_null": float(probability[~truth].mean()),
@@ -212,7 +226,7 @@ def binomial_wilson_interval(
     half_width = z_score * np.sqrt(
         fraction * (1.0 - fraction) / trials + z_squared / (4.0 * trials**2)
     ) / denominator
-    return center - half_width, center + half_width
+    return float(center - half_width), float(center + half_width)
 
 
 def plot_detection_diagnostic(
@@ -284,8 +298,15 @@ def plot_detection_diagnostic(
     axis.text(
         0.98,
         0.04,
-        "TPR %.0f%%   FPR %.0f%%"
-        % (100.0 * summary["true_positive_rate"], 100.0 * summary["false_positive_rate"]),
+        "TPR %.0f%% [%.0f, %.0f]\nFPR %.0f%% [%.0f, %.0f]\nWilson intervals ($z=1$)"
+        % (
+            100.0 * summary["true_positive_rate"],
+            100.0 * summary["true_positive_rate_lower"],
+            100.0 * summary["true_positive_rate_upper"],
+            100.0 * summary["false_positive_rate"],
+            100.0 * summary["false_positive_rate_lower"],
+            100.0 * summary["false_positive_rate_upper"],
+        ),
         transform=axis.transAxes,
         ha="right",
         va="bottom",

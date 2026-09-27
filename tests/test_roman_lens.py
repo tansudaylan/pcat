@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from pcat.roman_lens import (
     RomanLensConfig,
@@ -6,6 +7,7 @@ from pcat.roman_lens import (
     infer_catalog_probability,
     render_lens,
     simulate_population,
+    summarize_population,
 )
 
 
@@ -23,8 +25,23 @@ def test_injected_perturber_raises_catalog_probability():
     assert perturbed_probability > null_probability
 
 
+def test_zero_information_template_has_finite_catalog_probability():
+    data = np.ones((5, 5))
+    templates = np.zeros((1, 5, 5))
+
+    probability, best_index, amplitude = infer_catalog_probability(
+        data, data, templates, np.ones_like(data)
+    )
+
+    assert np.isfinite(probability)
+    assert probability < 0.5
+    assert best_index == 0
+    assert amplitude == 0.0
+
+
 def test_population_records_generated_scene_diagnostics():
     records, examples = simulate_population(number_lenses=4, seed=814)
+    summary = summarize_population(records)
 
     assert records[0]["injected_signal_to_noise"] > 0.0
     assert records[-1]["injected_signal_to_noise"] == 0.0
@@ -33,6 +50,15 @@ def test_population_records_generated_scene_diagnostics():
     assert examples["lens_0_data"].shape == (31, 31)
     assert examples["lens_0_macro"].shape == (31, 31)
     assert np.any(examples["lens_0_residual"] != 0.0)
+    assert summary["true_positive_rate_lower"] <= summary["true_positive_rate"]
+    assert summary["true_positive_rate"] <= summary["true_positive_rate_upper"]
+    assert summary["false_positive_rate_lower"] <= summary["false_positive_rate"]
+    assert summary["false_positive_rate"] <= summary["false_positive_rate_upper"]
+
+
+def test_population_requires_injected_and_null_cohorts():
+    with pytest.raises(ValueError, match="injected and null"):
+        simulate_population(number_lenses=1)
 
 
 def test_binomial_wilson_interval_has_finite_boundary_uncertainty():
@@ -40,6 +66,8 @@ def test_binomial_wilson_interval_has_finite_boundary_uncertainty():
     full_lower, full_upper = binomial_wilson_interval(40, 40)
     half_lower, half_upper = binomial_wilson_interval(20, 40)
 
+    assert type(half_lower) is float
+    assert type(half_upper) is float
     assert empty_lower == 0.0
     assert empty_upper > 0.0
     assert full_lower < 1.0
