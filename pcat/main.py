@@ -965,7 +965,7 @@ def retr_psfphubb(gdat, gmod):
     gmod.psfpexpr = np.array([0.080, 0.087]) / gdat.anglfact
 
 
-def retr_psfpchan(gmod):
+def retr_psfpchan(gdat, gmod):
 
     # temp
     #gmod.psfpexpr = np.array([0.25, 0.3, 0.4, 0.6, 0.7]) / gdat.anglfact
@@ -3967,7 +3967,7 @@ def init_image( \
                 numbpsfpform = 0
                 gmod.numbpsfptotl = 0
             if gdat.typeexpr == 'chan':
-                retr_psfpchan(gmod)
+                retr_psfpchan(gdat, gmod)
             if gdat.typeexpr == 'ferm':
                 tdpy.retr_psfpferm(gdat, gmod)
             if gdat.typeexpr == 'sdss':
