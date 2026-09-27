@@ -3,11 +3,19 @@ import os
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from pcat import demo
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_example_module(name, path):
+    specification = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    return module
 
 
 def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch):
@@ -36,7 +44,7 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
     ("example_name", "expected"),
     [
         ("chandra_point_source", {"typeexpr": "chan", "typeelem": ["lghtpnts"]}),
-        ("gaussian_mixture", {"typeexpr": "gmix", "numbspatdims": 2}),
+        ("gaussian_mixture", {"typeexpr": "gmix", "typeelem": ["clusvari"], "numbspatdims": 2}),
         ("hst_lens", {"typeexpr": "HST_WFC3_IR", "typeelem": ["lens"]}),
     ],
 )
@@ -44,9 +52,7 @@ def test_demo_entrypoint_preserves_scientific_configuration(
     example_name, expected, monkeypatch
 ):
     script_path = REPOSITORY_ROOT / "examples" / example_name / "generate_demo.py"
-    specification = importlib.util.spec_from_file_location(f"pcat_{example_name}_demo", script_path)
-    module = importlib.util.module_from_spec(specification)
-    specification.loader.exec_module(module)
+    module = load_example_module(f"pcat_{example_name}_demo", script_path)
     captured = {}
     monkeypatch.setattr(
         demo,
@@ -61,3 +67,38 @@ def test_demo_entrypoint_preserves_scientific_configuration(
     assert captured["output_root"] == script_path.parent / "pcat-output"
     for key, value in expected.items():
         assert captured[key] == value
+
+
+def test_voigt_smoke_configuration_enables_animation(monkeypatch):
+    script_path = REPOSITORY_ROOT / "examples" / "pcat_voigt_profile_detection.py"
+    module = load_example_module("pcat_voigt_example", script_path)
+    captured = {}
+    monkeypatch.setattr(module.pcat.main, "sample", lambda **configuration: captured.update(configuration))
+
+    module.run_voigt_profile_detection(smoke=True)
+
+    assert captured["numbswep"] == 30
+    assert captured["numbsamp"] == 10
+    assert captured["numbswepplot"] == 3
+    assert captured["makeanim"] is True
+    assert captured["dictfitt"]["typeelem"] == ["lghtlinevoig"]
+
+
+def test_example_output_verification_requires_multiframe_animation(tmp_path):
+    script_path = REPOSITORY_ROOT / "examples" / "run_examples.py"
+    module = load_example_module("pcat_example_runner", script_path)
+    visual_root = tmp_path / "visuals" / "demo"
+    for relative_path in ["init", "post/fram", "post/finl", "post/anim"]:
+        (visual_root / relative_path).mkdir(parents=True)
+    Image.new("RGB", (2, 2), "black").save(visual_root / "init" / "initial.png")
+    Image.new("RGB", (2, 2), "red").save(visual_root / "post" / "fram" / "frame0.png")
+    Image.new("RGB", (2, 2), "blue").save(visual_root / "post" / "fram" / "frame1.png")
+    frames = [Image.new("RGB", (2, 2), color) for color in ["red", "blue"]]
+    frames[0].save(
+        visual_root / "post" / "anim" / "posterior.gif",
+        save_all=True,
+        append_images=frames[1:],
+    )
+    Image.new("RGB", (2, 2), "black").save(visual_root / "post" / "finl" / "final.png")
+
+    module.verify_pipeline_outputs(tmp_path, "demo")

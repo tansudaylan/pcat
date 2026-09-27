@@ -2,6 +2,7 @@
 """Configure PCAT detection of simulated spectral sources with Voigt profiles."""
 
 import argparse
+from pathlib import Path
 
 import numpy as np
 
@@ -32,23 +33,39 @@ def build_configurations():
     return common, variations, names
 
 
-def run_voigt_profile_detection(configuration=None):
+def run_voigt_profile_detection(configuration="nomi", smoke=False):
     """Run the selected simulated Voigt-profile PCAT configuration."""
-    common, variations, names = build_configurations()
-    return pcat.main.sample_parallel(
-        variations,
-        names,
-        dictpcatinpt=common,
-        boolexecpara=False,
-        strgcnfgextnexec=configuration,
+    common, variations, _ = build_configurations()
+    common.update(variations[configuration])
+    common.update(
+        strgcnfg=f"voigt_{configuration}",
+        pathbase=str(Path(__file__).with_name("voigt-profile-output")),
+        truenumbelempop0=2,
+        fittminmnumbelempop0=1,
+        fittmaxmnumbelempop0=3,
+        dicttrue={"typeelem": ["lghtlinevoig"], "spectype": ["voig"]},
+        dictfitt={"typeelem": ["lghtlinevoig"], "spectype": ["voig"]},
     )
+    if smoke:
+        common.update(
+            numbswep=30,
+            numbsamp=10,
+            numbswepplot=3,
+            boolmakeplotfram=True,
+            boolmakeplotfinlpost=True,
+            makeanim=True,
+            booldiag=False,
+            typeverb=0,
+        )
+    return pcat.main.sample(**common)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--configuration", choices=("nomi", "s2nrhigh"), default="nomi")
+    parser.add_argument("--smoke", action="store_true", help="Run a short visualization smoke test.")
     arguments = parser.parse_args()
-    run_voigt_profile_detection(arguments.configuration)
+    run_voigt_profile_detection(arguments.configuration, smoke=arguments.smoke)
 
 
 if __name__ == "__main__":

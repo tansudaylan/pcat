@@ -19,7 +19,13 @@ def main() -> None:
     cfg = {
         "typeexpr": "chan",
         "typeelem": ["lghtpnts"],
-        "boolbinsener": False,
+        "truenumbelempop0": 2,
+        "fittminmnumbelempop0": 1,
+        "fittmaxmnumbelempop0": 3,
+        "dicttrue": {"typeelemspateval": ["full"]},
+        "dictfitt": {"typeelemspateval": ["full"]},
+        "numbswep": 4,
+        "numbsamp": 2,
         "numbsidecart": 8,
         "strgcnfg": "chan_demo",
     }

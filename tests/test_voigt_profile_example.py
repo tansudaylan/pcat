@@ -17,27 +17,19 @@ SPECIFICATION.loader.exec_module(example)
 def test_voigt_profile_configuration_calls_pcat_pipeline(monkeypatch):
     calls = []
 
-    def fake_sample_parallel(
-        variations,
-        names,
-        dictpcatinpt=None,
-        boolexecpara=True,
-        strgcnfgextnexec=None,
-    ):
-        calls.append(
-            (variations, dictpcatinpt, names, boolexecpara, strgcnfgextnexec)
-        )
-        return {"configuration": strgcnfgextnexec}
+    def fake_sample(**configuration):
+        calls.append(configuration)
+        return {"configuration": configuration["strgcnfg"]}
 
-    monkeypatch.setattr(example.pcat.main, "sample_parallel", fake_sample_parallel)
+    monkeypatch.setattr(example.pcat.main, "sample", fake_sample)
 
     result = example.run_voigt_profile_detection("nomi")
 
-    variations, common, names, parallel, selected = calls[0]
-    assert result == {"configuration": "nomi"}
-    assert selected == "nomi"
-    assert parallel is False
-    assert names == ["nomi", "s2nrhigh"]
-    assert common["spectype"] == ["voig"]
-    assert common["typeelem"] == ["lghtlinevoig"]
-    assert variations["s2nrhigh"]["strgexpo"] == pytest.approx(1.0e5)
+    configuration = calls[0]
+    assert result == {"configuration": "voigt_nomi"}
+    assert configuration["strgcnfg"] == "voigt_nomi"
+    assert configuration["spectype"] == ["voig"]
+    assert configuration["typeelem"] == ["lghtlinevoig"]
+    assert configuration["strgexpo"] == pytest.approx(1.0e3)
+    assert configuration["dicttrue"]["typeelem"] == ["lghtlinevoig"]
+    assert configuration["dictfitt"]["spectype"] == ["voig"]

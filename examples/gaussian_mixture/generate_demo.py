@@ -18,6 +18,12 @@ def main() -> None:
 
     cfg = {
         "typeexpr": "gmix",
+        "typeelem": ["clusvari"],
+        "truenumbelempop0": 2,
+        "fittminmnumbelempop0": 1,
+        "fittmaxmnumbelempop0": 3,
+        "dicttrue": {"typeelemspateval": ["full"]},
+        "dictfitt": {"typeelemspateval": ["full"]},
         "numbsidecart": 8,
         "numbspatdims": 2,
         "strgcnfg": "gmix_demo",
