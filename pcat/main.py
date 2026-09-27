@@ -58,6 +58,7 @@ import h5py
 # tdpy
 import tdpy
 import tdpy.util as tdpy_util
+from tdpy.paths import open_narr
 from tdpy.util import summgene
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -7477,113 +7478,6 @@ def setp_varb(gdat, \
                 setattr(gmodoutp.deltpara, strgvarb, delt)
        
 
-def retr_ticklabltemp_TOBEDELETED(gdat, strgcbar):
-    
-    minm = getattr(gdat.minmpara, strgcbar)
-    maxm = getattr(gdat.maxmpara, strgcbar)
-    scal = getattr(gdat.scalpara, strgcbar)
-    numb = gdat.numbtickcbar - 1
-    setp_varb(gdat, strgcbar, numb=numb)
-
-    minmscal = minm
-    if scal == 'asnh':
-        minmscal = np.arcsinh(minmscal)
-    if scal == 'logt':
-        minmscal = np.log10(minmscal)
-    maxmscal = maxm
-    if scal == 'asnh':
-        maxmscal = np.arcsinh(maxmscal)
-    if scal == 'logt':
-        maxmscal = np.log10(maxmscal)
-
-    tickscal = np.linspace(minmscal, maxmscal, gdat.numbtickcbar)
-    labl = np.empty(gdat.numbtickcbar, dtype=object)
-    tick = np.copy(tickscal)
-    for k in range(gdat.numbtickcbar):
-        if scal == 'asnh':
-            tick[k] = np.sinh(tickscal[k])
-        elif scal == 'logt':
-            tick[k] = 10**(tickscal[k])
-
-        # avoid very small, but nonzero central values in the residual count color maps
-        if strgcbar == 'cntpresi' and np.fabs(tick[k]) < 1e-5:
-            tick[k] = 0.
-
-        if strgcbar == 'cntpdata' and np.amax(tick) > 1e3:
-            labl[k] = '%d' % tick[k]
-        else:
-            labl[k] = '%.3g' % tick[k]
-    setattr(gdat.tickpara, strgcbar, tick)
-
-
-
-def setp_varb_TOBEDELETED(gdat, strgvarb, strgmodl=None, boolinvr=False):
-    
-    if strgmodl is None:
-        listgdattemp = [gdat]
-        for strgmodl in gdat.liststrgmodl:
-            listgdattemp.append(getattr(gdat, strgmodl))
-    elif strgmodl == 'fitt' or strgmodl == 'true':
-        listgdattemp = [getattr(gdat, strgmodl)]
-    elif strgmodl == 'allm':
-        listgdattemp = []
-        for strgmodl in gdat.liststrgmodl:
-            listgdattemp = getattr(gdat, strgmodl)
-    
-    for gdattemp in listgdattemp:
-        if not hasattr(gdattemp.minmpara, strgvarb) or \
-           not hasattr(gdattemp.maxmpara, strgvarb) or \
-           not hasattr(gdattemp.numbbinspara, strgvarb) or \
-           not hasattr(gdattemp.scalpara, strgvarb):
-            continue
-            
-        minm = getattr(gdattemp.minmpara, strgvarb)
-        maxm = getattr(gdattemp.maxmpara, strgvarb)
-        numb = getattr(gdattemp.numbbinspara, strgvarb)
-        scal = getattr(gdattemp.scalpara, strgvarb)
-
-        if scal == 'self' or scal == 'pois' or scal == 'gaus':
-            binsscal = np.linspace(minm, maxm, numb + 1)
-        # 'temp' fix 'powr', it's wrong
-        elif scal == 'logt' or scal == 'powr':
-            binsscal = np.linspace(np.log10(minm), np.log10(maxm), numb + 1)
-            if gdat.booldiag:
-                if minm <= 0.:
-                    raise Exception('')
-
-        elif scal == 'asnh':
-            binsscal = np.linspace(np.arcsinh(minm), np.arcsinh(maxm), numb + 1)
-        else:
-            print('')
-            print('scal')
-            print(scal)
-            raise Exception('')
-
-        if boolinvr:
-            binsscal = binsscal[::-1]
-        
-        meanvarbscal = (binsscal[1:] + binsscal[:-1]) / 2.
-        
-        if scal == 'self' or scal == 'pois' or scal == 'gaus':
-            meanvarb = meanvarbscal
-            blim = binsscal
-        # 'temp' fix 'powr', it's wrong
-        if scal == 'logt' or scal == 'powr':
-            meanvarb = 10**meanvarbscal
-            blim = 10**binsscal
-        if scal == 'asnh':
-            meanvarb = np.sinh(meanvarbscal)
-            blim = np.sinh(binsscal)
-
-        delt = np.diff(bins) 
-        limt = np.array([np.amin(bins), np.amax(bins)]) 
-        
-        setattr(gdattemp.limtpara, strgvarb, limt)
-        setattr(gdattemp.blimpara, strgvarb, bins)
-        setattr(gdattemp.bctrpara, strgvarb, meanvarb)
-        setattr(gdattemp.deltpara, strgvarb, delt)
-
-
 def setp_varbcore(gdat, strgmodl, gdattemptemp, strgvarbtemp, valu, strgtake):
     
     if strgtake == '':
@@ -8151,12 +8045,6 @@ def _narrate_io(path, mode):
         action = 'Opening'
     print('%s %s...' % (action, pathnorm))
     return pathnorm
-
-
-def open_narr(path, mode):
-
-    pathnorm = _narrate_io(path, mode)
-    return open(pathnorm, mode)
 
 
 def open_h5_narr(path, mode):

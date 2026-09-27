@@ -20,6 +20,10 @@ DEMO_DEFAULTS = {
     "boolmakeplot": True,
     "boolmakeplotinit": True,
     "boolmakeplotfram": True,
+    "boolmakeplotfinlpost": True,
+    "makeanim": True,
+    "numbswepplot": 1,
+    "typefileplot": "png",
 }
 
 

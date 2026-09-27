@@ -22,6 +22,12 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
     assert captured["typeexpr"] == "gmix"
     assert captured["typedata"] == "simu"
     assert captured["boolmakeplot"] is True
+    assert captured["boolmakeplotinit"] is True
+    assert captured["boolmakeplotfram"] is True
+    assert captured["boolmakeplotfinlpost"] is True
+    assert captured["makeanim"] is True
+    assert captured["numbswepplot"] == 1
+    assert captured["typefileplot"] == "png"
     assert captured["numbswep"] == 3
     assert captured["pathbase"] == str(output_root)
 

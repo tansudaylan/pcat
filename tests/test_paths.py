@@ -24,6 +24,7 @@ def test_repository_path_is_required(monkeypatch):
 
 
 def test_legacy_commands_reuse_shared_narrated_opener():
+    assert pcat.open_narr is open_narr
     assert collect_garbage.narr_open is open_narr
     assert comp_rtag.narr_open is open_narr
     assert submit_batch.narr_open is open_narr

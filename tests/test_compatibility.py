@@ -1,9 +1,14 @@
+import importlib
+import io
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
 from pcat.main import plot_genemaps, plot_scatcntp, retr_fromgdat, show_paragenrscalfull
+
+
+pcat_main = importlib.import_module('pcat.main')
 
 
 def test_retr_fromgdat_rejects_missing_uncertainty_map():
@@ -80,3 +85,24 @@ def test_show_paragenrscalfull_accepts_empty_element_indices(capsys):
     show_paragenrscalfull(gdat, None)
 
     assert 'value' in capsys.readouterr().out
+
+
+def test_proc_anim_uses_explicit_output_root(tmp_path, monkeypatch):
+    captured = {}
+
+    def fake_output_path(pathbase, run_name):
+        captured['pathbase'] = pathbase
+        captured['run_name'] = run_name
+        return str(tmp_path) + '/'
+
+    monkeypatch.setattr(pcat_main, 'retr_pathoutpcnfg', fake_output_path)
+    monkeypatch.setattr(
+        pcat_main,
+        'readfile',
+        lambda path: SimpleNamespace(liststrgpdfn=[], liststrgfoldanim=[]),
+    )
+    monkeypatch.setattr(pcat_main, 'open_narr', lambda path, mode: io.StringIO())
+
+    pcat_main.proc_anim('demo', pathbase=tmp_path)
+
+    assert captured == {'pathbase': tmp_path, 'run_name': 'demo'}
