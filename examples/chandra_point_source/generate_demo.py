@@ -18,7 +18,7 @@ def main() -> None:
 
     cfg = {
         "typeexpr": "chan",
-        "elemtype": ["lghtpnts"],
+        "typeelem": ["lghtpnts"],
         "boolbinsener": False,
         "numbsidecart": 8,
         "strgcnfg": "chan_demo",

@@ -12603,8 +12603,12 @@ def copytdgu(varb):
         return deepcopy(varb)
 
 
-def proc_anim(strgcnfg):
-    
+def proc_anim(strgcnfg, pathbase=None):
+
+    if pathbase is None:
+        pathbase = os.environ.get('PCAT_DATA_PATH')
+    if pathbase is None:
+        raise RuntimeError('PCAT_DATA_PATH is not set; cannot locate frame plots for animation.')
     pathoutpcnfg = retr_pathoutpcnfg(pathbase, strgcnfg)
     
     print('Making animations of frame plots for %s...' % strgcnfg)
@@ -12673,7 +12677,6 @@ def proc_anim(strgcnfg):
                         print('GIF already exists.')
                         pass
     
-    pathoutpcnfg = retr_pathoutpcnfg(pathbase, strgcnfg)
     filestat = open_narr(pathoutpcnfg + 'stat.txt', 'a')
     filestat.write('animfinl written.\n')
     filestat.close()
@@ -17527,7 +17530,7 @@ def init( \
     # make animations
     try:
         if gdat.makeanim and gdat.numbplotfram > 1:
-            proc_anim(gdat.strgcnfg)
+            proc_anim(gdat.strgcnfg, pathbase=gdat.pathbase)
     except (AttributeError, KeyError):
         pass
 

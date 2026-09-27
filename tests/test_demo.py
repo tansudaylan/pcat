@@ -35,7 +35,7 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
 @pytest.mark.parametrize(
     ("example_name", "expected"),
     [
-        ("chandra_point_source", {"typeexpr": "chan", "elemtype": ["lghtpnts"]}),
+        ("chandra_point_source", {"typeexpr": "chan", "typeelem": ["lghtpnts"]}),
         ("gaussian_mixture", {"typeexpr": "gmix", "numbspatdims": 2}),
         ("hst_lens", {"typeexpr": "HST_WFC3_IR", "typeelem": ["lens"]}),
     ],
