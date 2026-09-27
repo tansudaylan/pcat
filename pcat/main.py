@@ -14902,22 +14902,29 @@ def plot_scatcntp(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, indxdqltplot, in
     
     gmod = getattr(gdat, strgmodl)
     
-    figr, axis = plt.subplots(figsize=(gdat.plotsize, gdat.plotsize))
-    ydat = retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, 'cntpmodl', strgpdfn)
     if indxenerplot is None:
         xdat = gdat.cntpdata[:, :, indxdqltplot].flatten()
-        ydat = ydat[:, :, indxdqltplot].flatten()
         nameplot = 'scatcntpevt%d' % (indxdqltplot)
         if strgstat == 'pdfn':
             indxvarb = [slice(None), slice(None), indxdqltplot]
     else:
         xdat = gdat.cntpdata[indxenerplot, :, indxdqltplot]
-        ydat = ydat[indxenerplot, :, indxdqltplot]
         nameplot = 'scatcntpen%02devt%d' % (indxenerplot, indxdqltplot)
         if strgstat == 'pdfn':
             indxvarb = [indxenerplot, slice(None), indxdqltplot]
-    if strgstat == 'pdfn':
-        yerr = retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, 'cntpmodl', strgpdfn, strgmome='errr', indxvarb=indxvarb)
+    try:
+        ydat = retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, 'cntpmodl', strgpdfn)
+        if indxenerplot is None:
+            ydat = ydat[:, :, indxdqltplot].flatten()
+        else:
+            ydat = ydat[indxenerplot, :, indxdqltplot]
+        if strgstat == 'pdfn':
+            yerr = retr_fromgdat(gdat, gdatmodi, strgstat, strgmodl, 'cntpmodl', strgpdfn, strgmome='errr', indxvarb=indxvarb)
+    except AttributeError as excp:
+        print('Warning: skipping count scatter plot due to unavailable model product: %s' % str(excp))
+        return
+
+    figr, axis = plt.subplots(figsize=(gdat.plotsize, gdat.plotsize))
     colr = gmod.colr
 
     if strgstat == 'pdfn':

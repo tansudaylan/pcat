@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from pcat.main import retr_fromgdat, show_paragenrscalfull
+from pcat.main import plot_scatcntp, retr_fromgdat, show_paragenrscalfull
 
 
 def test_retr_fromgdat_rejects_missing_uncertainty_map():
@@ -35,6 +35,18 @@ def test_retr_fromgdat_rejects_missing_posterior_model():
 
     with pytest.raises(AttributeError, match='cntpmodl is unavailable'):
         retr_fromgdat(gdat, None, 'pdfn', 'fitt', 'cntpmodl', 'post')
+
+
+def test_count_scatter_skips_missing_optional_posterior_model(capsys):
+    gdat = SimpleNamespace(
+        cntpdata=np.ones((1, 2, 1)),
+        numbener=1,
+        fitt=SimpleNamespace(),
+    )
+
+    plot_scatcntp(gdat, None, 'pdfn', 'fitt', 'post', 0)
+
+    assert 'skipping count scatter plot' in capsys.readouterr().out
 
 
 def test_show_paragenrscalfull_accepts_empty_element_indices(capsys):

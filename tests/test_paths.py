@@ -3,7 +3,9 @@ import os
 import pytest
 
 import pcat
+from pcat import collect_garbage, comp_rtag, submit_batch
 from pcat.paths import get_data_path, get_repository_path, get_visuals_path
+from tdpy.paths import open_narr
 
 
 def test_repository_runtime_paths(monkeypatch, tmp_path):
@@ -19,6 +21,12 @@ def test_repository_path_is_required(monkeypatch):
 
     with pytest.raises(EnvironmentError, match='PCAT_PATH'):
         get_repository_path()
+
+
+def test_legacy_commands_reuse_shared_narrated_opener():
+    assert collect_garbage.narr_open is open_narr
+    assert comp_rtag.narr_open is open_narr
+    assert submit_batch.narr_open is open_narr
 
 
 def test_setup_pcat_uses_pcater_data_path(monkeypatch, tmp_path):

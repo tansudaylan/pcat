@@ -7,15 +7,7 @@ maintained PCAT API surface.
 import os
 import sys
 
-
-def narr_open(path, mode='r'):
-    pathnorm = os.path.normpath(path)
-    if mode.startswith('r') and '+' not in mode:
-        action = 'Reading'
-    else:
-        action = 'Writing'
-    print(f'{action} {pathnorm}...')
-    return open(pathnorm, mode)
+from tdpy.paths import open_narr as narr_open
 
 
 def main():
