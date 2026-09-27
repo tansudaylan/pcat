@@ -48,7 +48,7 @@ def main():
                 if strgtemp.endswith('tile'):
                     strgtemp = strgtemp[:-4]
                 if strgtemp.isdigit() and ((not os.path.isfile(pathchec) or not boolkeep or int(strgtemp) <= 1000) and 'mockonly' not in rtag) or boolforcdele:
-                    print(f'Writing to {pathfile}...')
+                    print(f'Deleting {pathfile}...')
                     shutil.rmtree(pathfile)
 
     listrtagdata = fnmatch.filter(os.listdir(pathdata), '2*')
