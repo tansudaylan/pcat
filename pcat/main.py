@@ -3646,6 +3646,8 @@ def init_image( \
     
         # pixelization
         if gdat.typepixl == 'cart':
+            if gdat.typeexpr == 'chan':
+                gdat.sizepixl = 0.492  # [arcsec]
             if gdat.typeexpr == 'HST_WFC3_UVIS':
                 gdat.sizepixl = 0.04 # [arcsec]
             if gdat.typeexpr == 'HST_WFC3_IR':
