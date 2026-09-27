@@ -13,8 +13,8 @@ from pcat.roman_lens import (
 
 def run_example(output_path: Path, number_lenses: int = 100) -> dict[str, float | int]:
     """Simulate the lens population and write its catalog-detection diagnostic."""
-    records, _ = simulate_population(number_lenses=number_lenses, seed=814)
-    plot_detection_diagnostic(records, output_path)
+    records, examples = simulate_population(number_lenses=number_lenses, seed=814)
+    plot_detection_diagnostic(records, output_path, examples)
     return summarize_population(records)
 
 

@@ -78,7 +78,7 @@ def render_lens(
 
 def candidate_positions(einstein_radius: float, number_candidates: int) -> np.ndarray:
     """Place candidate perturbers around the macro Einstein ring."""
-    angle = np.linspace(0.0, 2.0 * np.pi, number_candidates, endpoint=False)
+    angle = np.linspace(0.0, 2.0 * np.pi, number_candidates, endpoint=False)  # [rad]
     return np.column_stack((einstein_radius * np.cos(angle), einstein_radius * np.sin(angle)))
 
 
@@ -135,7 +135,7 @@ def simulate_population(
         expectation = true_signal + config.background  # [electron pixel^-1]
         data = random.poisson(expectation) + random.normal(0.0, config.read_noise, expectation.shape)
         macro_image = macro_signal + config.background  # [electron pixel^-1]
-        variance = expectation + config.read_noise**2  # [electron^2 pixel^-1]
+        variance = expectation + config.read_noise**2  # [electron^2 pixel^-2]
         injected_signal_to_noise = float(
             np.sqrt(np.sum((true_signal - macro_signal) ** 2 / variance))
         )
@@ -216,9 +216,11 @@ def binomial_wilson_interval(
 
 
 def plot_detection_diagnostic(
-    records: list[dict[str, float | int | bool]], output_path: Path
+    records: list[dict[str, float | int | bool]],
+    output_path: Path,
+    examples: dict[str, np.ndarray] | None = None,
 ) -> Path:
-    """Plot catalog probability against injected perturber signal-to-noise."""
+    """Plot representative inference stages and population detection results."""
     output_path = Path(output_path)
     if output_path.suffix not in (".png", ".pdf"):
         raise ValueError("Output format must be 'png' or 'pdf'.")
@@ -230,7 +232,32 @@ def plot_detection_diagnostic(
     probability = np.array([record["posterior_one"] for record in records], dtype=float)
     summary = summarize_population(records)
 
-    figure, axis = plt.subplots(figsize=(6.5, 4.0), facecolor="white")
+    if examples:
+        example_prefix = sorted(key.removesuffix("_data") for key in examples if key.endswith("_data"))[0]
+        data = examples[f"{example_prefix}_data"]
+        macro = examples[f"{example_prefix}_macro"]
+        residual = examples[f"{example_prefix}_residual"]
+        figure, axes = plt.subplots(2, 2, figsize=(7.2, 6.4), facecolor="white")
+        image_axes = axes.flat[:3]
+        image_minimum = min(np.percentile(data, 1.0), np.percentile(macro, 1.0))
+        image_maximum = max(np.percentile(data, 99.5), np.percentile(macro, 99.5))
+        residual_limit = np.max(np.abs(residual))
+        panels = (
+            (data, "Simulated detector input", "viridis", image_minimum, image_maximum),
+            (macro, "Macro-lens model", "viridis", image_minimum, image_maximum),
+            (residual, "Data - macro model", "RdBu_r", -residual_limit, residual_limit),
+        )
+        for image_axis, (image, title, color_map, minimum, maximum) in zip(image_axes, panels):
+            image_artist = image_axis.imshow(
+                image, origin="lower", cmap=color_map, vmin=minimum, vmax=maximum
+            )
+            image_axis.set_title(title)
+            image_axis.set_xlabel("Detector x [pixel]")
+            image_axis.set_ylabel("Detector y [pixel]")
+            figure.colorbar(image_artist, ax=image_axis, label="Signal [electron pixel$^{-1}$]")
+        axis = axes[1, 1]
+    else:
+        figure, axis = plt.subplots(figsize=(6.5, 4.0), facecolor="white")
     axis.scatter(
         signal_to_noise[~truth],
         probability[~truth],
@@ -250,7 +277,7 @@ def plot_detection_diagnostic(
     axis.axhline(0.5, color="black", linestyle="--", linewidth=1.0, label="Detection threshold")
     axis.set_xlabel(r"Injected perturbation signal-to-noise [$\sigma$]")
     axis.set_ylabel(r"Posterior probability $P(N_{\rm sub}=1\mid d)$")
-    axis.set_title("Simulated Roman strong-lens catalog inference")
+    axis.set_title("Catalog inference")
     axis.set_ylim(-0.03, 1.03)
     axis.grid(False)
     axis.legend(frameon=True, fancybox=True, framealpha=1.0, loc="upper left")
@@ -263,6 +290,7 @@ def plot_detection_diagnostic(
         ha="right",
         va="bottom",
     )
+    figure.suptitle("Simulated Roman strong-lens catalog inference")
     figure.tight_layout()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

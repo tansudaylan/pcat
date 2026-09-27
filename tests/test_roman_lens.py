@@ -24,12 +24,15 @@ def test_injected_perturber_raises_catalog_probability():
 
 
 def test_population_records_generated_scene_diagnostics():
-    records, _ = simulate_population(number_lenses=4, seed=814)
+    records, examples = simulate_population(number_lenses=4, seed=814)
 
     assert records[0]["injected_signal_to_noise"] > 0.0
     assert records[-1]["injected_signal_to_noise"] == 0.0
     assert 0.6 <= records[0]["macro_einstein_radius_arcsec"] <= 1.2
     assert 0.06 <= records[0]["source_size_arcsec"] <= 0.14
+    assert examples["lens_0_data"].shape == (31, 31)
+    assert examples["lens_0_macro"].shape == (31, 31)
+    assert np.any(examples["lens_0_residual"] != 0.0)
 
 
 def test_binomial_wilson_interval_has_finite_boundary_uncertainty():
