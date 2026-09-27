@@ -4624,6 +4624,12 @@ def setp_modlemis_init(gdat, strgmodl='fitt'):
             setattr(gmod.minmpara, name, 0)
         if not hasattr(gmod.maxmpara, name):
             setattr(gmod.maxmpara, name, 3)
+    gmod.minmpara.numbelem = np.array(
+        [getattr(gmod.minmpara, 'numbelempop%d' % l) for l in gmod.indxpopl], dtype=int
+    )
+    gmod.maxmpara.numbelem = np.array(
+        [getattr(gmod.maxmpara, 'numbelempop%d' % l) for l in gmod.indxpopl], dtype=int
+    )
 
 
 def setp_modlemis_finl(gdat, strgmodl='fitt'):
@@ -4677,16 +4683,21 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
             minm = -gdat.maxmgangdata
             maxm = gdat.maxmgangdata
             for l in gmod.indxpopl:
+                lablxpos = '$%s$' % gdat.lablxpos
+                lablypos = '$%s$' % gdat.lablypos
+                lablunitxpos = ''
+                lablunitypos = ''
                 if gdat.typeexpr == 'ferm':
                     lablxpos = '$l$'
                     lablypos = '$b$'
                     lablunitxpos = 'degree'
                     lablunitypos = 'degree'
+                if gdat.typeexpr == 'sdss' or gdat.typeexpr == 'chan' or gdat.typeexpr.startswith('HST_WFC3'):
+                    lablunitxpos = 'arcsec'
+                    lablunitypos = 'arcsec'
                 if gdat.typeexpr.startswith('HST_WFC3'):
                     lablxpos = '$x$'
                     lablypos = '$y$'
-                    lablunitxpos = 'arcsec'
-                    lablunitypos = 'arcsec'
                 setp_varb(gdat, 'xpos', minm=minm, maxm=maxm, labl=[lablxpos, lablunitxpos], strgmodl=strgmodl)
                 setp_varb(gdat, 'ypos', minm=minm, maxm=maxm, labl=[lablypos, lablunitypos], strgmodl=strgmodl)
                 setp_varb(gdat, 'xpos', minm=minm, maxm=maxm, labl=[lablxpos, lablunitxpos], popl=l, strgmodl=strgmodl)
