@@ -199,6 +199,22 @@ def summarize_population(records: list[dict[str, float | int | bool]]) -> dict[s
     }
 
 
+def binomial_wilson_interval(
+    successes: int, trials: int, z_score: float = 1.0
+) -> tuple[float, float]:
+    """Return a Wilson binomial interval, including finite boundary errors."""
+    if trials <= 0 or not 0 <= successes <= trials:
+        raise ValueError("Require 0 <= successes <= trials and trials > 0.")
+    fraction = successes / trials
+    z_squared = z_score**2
+    denominator = 1.0 + z_squared / trials
+    center = (fraction + z_squared / (2.0 * trials)) / denominator
+    half_width = z_score * np.sqrt(
+        fraction * (1.0 - fraction) / trials + z_squared / (4.0 * trials**2)
+    ) / denominator
+    return center - half_width, center + half_width
+
+
 def plot_detection_diagnostic(
     records: list[dict[str, float | int | bool]], output_path: Path
 ) -> Path:

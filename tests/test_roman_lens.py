@@ -2,6 +2,7 @@ import numpy as np
 
 from pcat.roman_lens import (
     RomanLensConfig,
+    binomial_wilson_interval,
     infer_catalog_probability,
     render_lens,
     simulate_population,
@@ -29,3 +30,15 @@ def test_population_records_generated_scene_diagnostics():
     assert records[-1]["injected_signal_to_noise"] == 0.0
     assert 0.6 <= records[0]["macro_einstein_radius_arcsec"] <= 1.2
     assert 0.06 <= records[0]["source_size_arcsec"] <= 0.14
+
+
+def test_binomial_wilson_interval_has_finite_boundary_uncertainty():
+    empty_lower, empty_upper = binomial_wilson_interval(0, 40)
+    full_lower, full_upper = binomial_wilson_interval(40, 40)
+    half_lower, half_upper = binomial_wilson_interval(20, 40)
+
+    assert empty_lower == 0.0
+    assert empty_upper > 0.0
+    assert full_lower < 1.0
+    assert full_upper == 1.0
+    assert np.isclose(half_lower, 1.0 - half_upper)
