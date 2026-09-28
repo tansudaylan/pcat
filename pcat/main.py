@@ -129,6 +129,13 @@ def retr_pathcnfg(pathroot, strgcnfg):
     return os.path.join(pathroot, strgcnfg)
 
 
+def retr_pathplotcnfg(pathvisu, strgcnfg):
+    """Return the flat visual root while validating the associated run tag."""
+    pathvisu = os.path.normpath(os.fspath(pathvisu))
+    retr_pathcnfg(pathvisu, strgcnfg)
+    return pathvisu + os.sep
+
+
 def _remove_empty_directories(pathroot):
     """Remove empty descendants after optional output generation finishes."""
     pathroot = os.path.normpath(os.fspath(pathroot))
@@ -279,7 +286,11 @@ class _PCATMCMCCompat(object):
         figr, axis = plt.subplots(figsize=(6, 3.5))
         axis.plot(xdat, ydat, color='k', lw=0.8)
         if truepara is not None and np.isfinite(truepara):
-            axis.axhline(truepara, color='r', ls='--', lw=1.)
+            axis.axhline(truepara, color='g', ls='--', lw=1.)
+        for indxdraw, draw in enumerate(listvarbdraw or []):
+            if np.isfinite(draw):
+                color = 'r' if listcolrdraw is None else listcolrdraw[indxdraw]
+                axis.axhline(draw, color=color, ls='--', lw=1.)
         axis.set_xlabel('Sample')
         axis.set_ylabel(labl)
         if titl is not None:
@@ -294,7 +305,10 @@ class _PCATMCMCCompat(object):
         figr, axis = plt.subplots(figsize=(5, 4))
         axis.hist(ydat, bins=numbbins, histtype='step', color='k')
         if truepara is not None and np.isfinite(truepara):
-            axis.axvline(truepara, color='r', ls='--', lw=1.)
+            axis.axvline(truepara, color='g', ls='--', lw=1.)
+        for draw in kwargs.get('listvarbdraw', []) or []:
+            if np.isfinite(draw):
+                axis.axvline(draw, color='r', ls='--', lw=1.)
         axis.set_xlabel(strg)
         axis.set_ylabel('N')
         if titl is not None:
@@ -319,10 +333,19 @@ class _PCATMCMCCompat(object):
         if len(listlabl) < numbvarb:
             listlabl += ['para%04d' % k for k in range(len(listlabl), numbvarb)]
         if numbvarb == 1:
-            _PCATMCMCCompat.plot_hist(path + '_' + name, arr[:, 0], listlabl[0], typefileplot=typefileplot)
+            _PCATMCMCCompat.plot_hist(path + '_' + name, arr[:, 0], listlabl[0], truepara=truepara,
+                                      listvarbdraw=listvarbdraw, typefileplot=typefileplot)
             return
         figr, axis = plt.subplots(figsize=(5, 5))
         axis.scatter(arr[:, 0], arr[:, 1], s=2, alpha=0.3)
+        if truepara is not None:
+            truearray = np.asarray([np.nan if value is None else value for value in truepara], dtype=float).reshape(-1)
+            if truearray.size >= 2 and np.all(np.isfinite(truearray[:2])):
+                axis.scatter(truearray[0], truearray[1], color='g', marker='x', s=50, linewidths=1.5)
+        for draw in listvarbdraw or []:
+            drawarray = np.asarray(draw, dtype=float).reshape(-1)
+            if drawarray.size >= 2 and np.all(np.isfinite(drawarray[:2])):
+                axis.scatter(drawarray[0], drawarray[1], color='r', marker='x', s=50, linewidths=1.5)
         axis.set_xlabel(listlabl[0])
         axis.set_ylabel(listlabl[1])
         plt.tight_layout()
@@ -433,6 +456,93 @@ def _retr_persistent_element_parameter_indices(gmod, listindxelemfull):
                 if fullname in fullname_to_index:
                     indices.append(fullname_to_index[fullname])
     return np.asarray(indices, dtype=int)
+
+
+def _retr_true_parameter_value(gdat, name):
+    """Return an active simulated truth matched by full parameter name."""
+    if getattr(gdat, 'typedata', None) != 'simu' or not hasattr(gdat, 'true'):
+        return None
+    gmodtrue = gdat.true
+    if not hasattr(gmodtrue, 'namepara') or not hasattr(gmodtrue.namepara, 'genr') or not hasattr(gmodtrue, 'this'):
+        return None
+    names = [str(nametemp) for nametemp in np.asarray(gmodtrue.namepara.genr).reshape(-1)]
+    matching = [index for index, nametemp in enumerate(names) if nametemp == str(name)]
+    if len(matching) != 1 or not hasattr(gmodtrue.this, 'paragenrscalfull'):
+        return None
+    index = matching[0]
+    active = set(np.asarray(getattr(getattr(gmodtrue, 'indxpara', tdpy.gdatstrt()),
+                                    'genrbase', []), dtype=int).reshape(-1))
+    mappings = getattr(gmodtrue.this, 'indxparagenrelemfull', [])
+    if isinstance(mappings, dict):
+        mappings = [mappings]
+    for mapping in mappings:
+        if isinstance(mapping, dict):
+            active.update(np.asarray(mapping.get('full', []), dtype=int).reshape(-1))
+    values = np.asarray(gmodtrue.this.paragenrscalfull).reshape(-1)
+    if index not in active or index >= values.size or not np.isfinite(values[index]):
+        return None
+    return float(values[index])
+
+
+def _configure_proposal_types(gdat, gmod):
+    """Set proposal probabilities and descriptive names after model setup."""
+    if getattr(gdat, 'probtran', None) is None:
+        gdat.probtran = 0.4 if gmod.numbpopl > 0 else 0.
+    if getattr(gdat, 'probspmr', None) is None:
+        gdat.probspmr = gdat.probtran / 2. if gmod.numbpopl > 0 else 0.
+    gdat.probbrde = 1. - gdat.probspmr
+    if not 0. <= gdat.probtran <= 1. or not 0. <= gdat.probspmr <= 1.:
+        raise ValueError('Proposal probabilities must be between zero and one.')
+    gdat.nameproptype = ['with']
+    if gmod.numbpopl > 0:
+        gdat.nameproptype += ['brth', 'deth', 'splt', 'merg']
+    gdat.nameproptype = np.asarray(gdat.nameproptype)
+    gdat.lablproptype = _retr_proposal_type_labels(gdat.nameproptype)
+    gdat.numbproptype = len(gdat.nameproptype)
+    gdat.indxproptype = np.arange(gdat.numbproptype)
+
+
+def _retr_proposal_type_labels(names):
+    """Return descriptive labels for stable serialized proposal identifiers."""
+    labels = {
+        'with': 'Within-model proposal',
+        'brth': 'Birth proposal',
+        'deth': 'Death proposal',
+        'splt': 'Split proposal',
+        'merg': 'Merge proposal',
+    }
+    return [labels.get(str(name), str(name)) for name in names]
+
+
+def _retr_parameter_label(gmod, index):
+    """Return a readable plot label for a full generative parameter."""
+    name = str(gmod.namepara.genr[index])
+    label = getattr(getattr(gmod, 'labltotlpara', tdpy.gdatstrt()), name, None)
+    if label is not None and str(label) != name:
+        return str(label)
+    match = re.match(r'^(.*)pop(\d+)(\d{4})$', name)
+    if match is None:
+        return name.replace('_', ' ')
+    feature, population, element = match.groups()
+    descriptions = {
+        'flux': 'Line flux',
+        'elin': 'Line center',
+        'sigm': 'Gaussian line width',
+        'gamm': 'Lorentzian line width',
+    }
+    feature_label = descriptions.get(feature, feature.replace('_', ' '))
+    return '%s, population %d, element %d' % (feature_label, int(population) + 1, int(element) + 1)
+
+
+def _set_element_amplitude_indices(gmod):
+    """Resolve each population's amplitude name to its element-vector index."""
+    indices = []
+    for population in gmod.indxpopl:
+        name = gmod.nameparagenrelemampl[population]
+        if name not in gmod.namepara.genrelem[population]:
+            raise ValueError('Amplitude parameter %s is missing from population %d.' % (name, population))
+        indices.append(gmod.namepara.genrelem[population].index(name))
+    gmod.indxpara.genrelemampl = np.asarray(indices, dtype=int)
 
 
 if not hasattr(tdpy, 'mcmc'):
@@ -3026,11 +3136,11 @@ def setup_pcat(gdat):
 
     gdat.pathoutp = os.path.join(gdat.pathdata, 'outp') + '/'
     gdat.pathinpt = os.path.join(gdat.pathdata, 'inpt') + '/'
-        
+
     # run tag
     # list of parameter features to be turned into lists
     gdat.liststrgfeatparalist = ['minm', 'maxm', 'scal', 'lablroot', 'lablunit', 'labl', 'labltotl', 'name', 'mean', 'stdv']
-    
+
     # list of parameter features
     gdat.liststrgfeatpara = gdat.liststrgfeatparalist + ['limt', 'numbbins', 'blim', 'delt', 'indxbins', 'cmap', 'bctr', 'tick', 'numbbins', 'valutickmajr', \
                                                                                                                 # index of the parameter in the parameter vector
@@ -3764,7 +3874,7 @@ def init_image( \
         if gdat.typepixl == 'cart':
             if gdat.typeexpr == 'chan':
                 gdat.sizepixl = 0.492  # [arcsec]
-            if gdat.typeexpr == 'gmix':
+            if gdat.typeexpr in ['ferm', 'gmix']:
                 gdat.sizepixl = 2. * gdat.maxmgangdata / gdat.numbsidecart
             if gdat.typeexpr == 'HST_WFC3_UVIS':
                 gdat.sizepixl = 0.04 # [arcsec]
@@ -4088,7 +4198,8 @@ def init_image( \
             if gdat.typeexpr == 'chan':
                 retr_psfpchan(gdat, gmod)
             if gdat.typeexpr == 'ferm':
-                tdpy.retr_psfpferm(gdat, gmod)
+                if not hasattr(gmod, 'psfpexpr') or not hasattr(gdat, 'fermscalfact'):
+                    tdpy.retr_psfpferm(gdat, gmod)
             if gdat.typeexpr == 'sdss':
                 retr_psfpsdss(gmod)
             if gdat.typeexpr.startswith('HST_WFC3'):
@@ -5034,7 +5145,7 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
     gdat.pathpixlcnvt = gdat.pathdata + 'pixlcnvt/'
     gdat.pathprox = gdat.pathdata + 'prox/'
     ## plot
-    gdat.pathplotcnfg = gdat.pathvisu + gdat.strgcnfg + '/'
+    gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, gdat.strgcnfg)
     gdat.pathinit = gdat.pathplotcnfg + 'init/'
     gdat.pathinitintr = gdat.pathinit + 'intr/'
     
@@ -5524,17 +5635,6 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
     #    cntr = 0
     #    gdat.indxpixlroficnvt = full(gdat.numbpixlfull, -1)
 
-    if gdat.typeexpr == 'ferm':
-        # calculate the scale factor
-        gdat.fermscalfact = np.sqrt((fermscal[None, :, 0] * (10. * gdat.bctrpara.ener[:, None])**fermscal[None, :, 2])**2 + fermscal[None, :, 1]**2)
-        
-        # store the fermi PSF parameters
-        gmod.psfpexpr = np.zeros(gdat.numbener * gdat.numbdqlt * numbpsfpform)
-        for m in gdat.indxdqlt:
-            for k in range(numbpsfpform):
-                indxfermpsfptemp = m * numbpsfpform * gdat.numbener + gdat.indxener * numbpsfpform + k
-                gmod.psfpexpr[indxfermpsfptemp] = fermform[:, m, k]
-    
 def retr_refrchaninit(gdat):
     #        if j in gdat.indxpixlrofi:
     #            gdat.indxpixlroficnvt[j] = cntr
@@ -5714,28 +5814,7 @@ def retr_refrchaninit(gdat):
     gdat.numbtermlacp = len(gdat.listnametermlacp)
     gdat.indxtermlacp = np.arange(gdat.numbtermlacp)
     
-    if gdat.probtran is None:
-        if gmod.numbpopl > 0:
-            gdat.probtran = 0.4
-        else:
-            gdat.probtran = 0.
-    if gdat.probspmr is None:
-        if gmod.numbpopl > 0:
-            gdat.probspmr = gdat.probtran / 2.
-        else:
-            gdat.probspmr = 0.
-    
-    gdat.probbrde = 1. - gdat.probspmr
-
-    if gdat.probbrde < 0:
-        raise Exception('')
-    gdat.lablproptype = ['Within']
-    gdat.nameproptype = ['with']
-    if gmod.numbpopl > 0:
-        gdat.lablproptype += ['Birth', 'Death', 'Split', 'Merge']
-        gdat.nameproptype += ['brth', 'deth', 'splt', 'merg']
-    gdat.numbproptype = len(gdat.lablproptype)
-    gdat.nameproptype = np.array(gdat.nameproptype)
+    _configure_proposal_types(gdat, gmod)
     cntr = tdpy.cntr()
     if gmod.numbpopl > 0.:
         # birth
@@ -5748,7 +5827,6 @@ def retr_refrchaninit(gdat):
             # merge
             gdat.indxproptypemerg = cntr.incr()
    
-    gdat.indxproptype = np.arange(gdat.numbproptype)
     gmod.indxpara.prop = np.arange(gmod.numbparagenrbase)
     gdat.numbstdpparagenrscalbase = gmod.numbparagenrbase - gmod.numbpopl
     #### filter for model elements
@@ -6420,16 +6498,17 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
         gmod.maxmpara.numbelem = np.array([getattr(gmod.maxmpara, 'numbelempop%d' % l, max(1, getattr(gmod.minmpara, 'numbelempop%d' % l, 1))) for l in gmod.indxpopl], dtype=int)
         gmod.numbparagenrelempopl = gmod.maxmpara.numbelem * gmod.numbparagenrelemsing
         gmod.numbparagenrelem = int(np.sum(gmod.numbparagenrelempopl))
-    if gdat.typeexpr == 'chan' and gmod.numbpopl > 0 and all(len(names) == 0 for names in gmod.namepara.genrelem):
+    if gdat.typeexpr in ['chan', 'ferm'] and gmod.numbpopl > 0 and all(len(names) == 0 for names in gmod.namepara.genrelem):
         names = ['xpos', 'ypos', 'flux', 'sind', 'curv', 'expc']
         names += ['sindcolr%04d' % i for i in gdat.indxenerinde]
+        energy_cutoff_bounds = (0.1, 100.) if gdat.typeexpr == 'chan' else (0.1, 1e3)
         bounds = {
             'xpos': (-gdat.maxmgangdata, gdat.maxmgangdata),
             'ypos': (-gdat.maxmgangdata, gdat.maxmgangdata),
             'flux': (1e-11, 1e-7),
             'sind': (0., 4.),
             'curv': (-1., 1.),
-            'expc': (0.1, 100.),  # [keV]
+            'expc': energy_cutoff_bounds,  # [keV] for Chandra, [GeV] for Fermi-LAT
         }
         for i in gdat.indxenerinde:
             bounds['sindcolr%04d' % i] = (-4., 4.)
@@ -6544,6 +6623,9 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
             )
         gmod.numbparagenrelempopl = gmod.maxmpara.numbelem * gmod.numbparagenrelemsing
         gmod.numbparagenrelem = int(np.sum(gmod.numbparagenrelempopl))
+
+    if gmod.numbpopl > 0:
+        _set_element_amplitude_indices(gmod)
     
     # list of labels for background components
     listlablback = []
@@ -6694,6 +6776,13 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
     gdat.strgenerergs = 'erg'
     gdat.strgenerimum = r'\mu m^{-1}'
 
+    if not hasattr(gdat, 'nameenerunit') or gdat.nameenerunit is None:
+        gdat.nameenerunit = {
+            'chan': 'kevv',
+            'ferm': 'gevv',
+            'fire': 'imum',
+        }.get(gdat.typeexpr, '')
+
     gdat.labldefsunit = r'$^{\prime\prime}$'
     gdat.lablprat = 'cm$^{-2}$ s$^{-1}$'
     
@@ -6713,6 +6802,7 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
             for labltemptemp in ['flux', 'sbrt']:
 
                 # define the label
+                labltemp = getattr(gdat, 'labl' + labltemptemp)
                 if nameenerscaltype == 'en00':
                     strgenerscal = '%s' % labltemp
                 if nameenerscaltype == 'en01':
@@ -6749,7 +6839,7 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
                             setattr(gmod.lablunitpara, 'sbrt' + nameenerscaltype + nameenerunit + namesoldunit + 'unit', lablunit)
 
         if gdat.boolbinsener:
-            gdat.lablfluxunit = getattr(gmod.lablunitpara, 'fluxen00' + gdat.nameenerunit + 'unit')
+            gdat.lablfluxunit = getattr(gmod.lablunitpara, 'lablfluxen00' + gdat.nameenerunit + 'unit')
             gdat.lablsbrtunit = getattr(gmod.lablunitpara, 'sbrten00' + gdat.nameenerunit + 'sterunit')
 
     gdat.lablexpo = r'$\epsilon$'
@@ -8697,7 +8787,7 @@ def writfile(gdattemp, path):
         if attr.endswith('psfnintp'):
             continue
         
-        if isinstance(valu, np.ndarray) and valu.dtype != np.dtype('O') and valu.dtype != np.dtype('<U4'):# or isinstance(valu, str) or \
+        if isinstance(valu, np.ndarray) and valu.dtype.kind not in ['O', 'U']:# or isinstance(valu, str) or \
                                        #isinstance(valu, float) or isinstance(valu, bool) or isinstance(valu, int) or isinstance(valu, np.float):
             
             filearry.create_dataset(attr, data=valu)
@@ -10609,6 +10699,16 @@ def eval_modl(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                 raise Exception('')
         setattr(gmodstat, 'psfp', psfp)
     bacp = gmodstat.paragenrscalfull[gmod.indxpara.bacp]
+    if np.asarray(bacp).size == 0 and len(getattr(gmod, 'indxback', [])) > 0:
+        bacp = np.array([
+            getattr(gdat, 'bacpback%04den%02d' % (c, i), 1.)
+            for c in gmod.indxback
+            for i in gdat.indxener
+        ])
+        gmod.indxbacpback = [
+            np.arange(c * gdat.numbener, (c + 1) * gdat.numbener, dtype=int)
+            for c in gmod.indxback
+        ]
    
     if gmod.numbpopl > 0:
         
@@ -10825,6 +10925,8 @@ def eval_modl(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     
     # determine the indices of the pixels over which element kernels will be evaluated
     if gdat.boolbindspat:
+        xposgrid = gdat.xposgrid
+        yposgrid = gdat.yposgrid
         if gmod.numbpopl > 0:
             listindxpixlelem = [[] for l in gmod.indxpopl]
             listindxpixlelemconc = [[] for l in gmod.indxpopl]
@@ -11763,7 +11865,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                 print('Done with the tile number %d, run number %d...' % (indxtiletemp, n))
         
         if booltile:
-            gdatfinl.pathplotcnfg = gdatfinl.pathvisu + strgcnfgfinl + '/'
+            gdatfinl.pathplotcnfg = retr_pathplotcnfg(gdatfinl.pathvisu, strgcnfgfinl)
             make_fold(gdatfinl)
             indxstrgcnfggood = np.array(indxstrgcnfggood).astype(int)
             numbstrgcnfggood = indxstrgcnfggood.size
@@ -11921,6 +12023,8 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                 gdatfinl.indxproptype = np.arange(5, dtype=int)
             if not hasattr(gdatfinl, 'nameproptype') or gdatfinl.nameproptype is None:
                 gdatfinl.nameproptype = np.array(['prop%02d' % k for k in gdatfinl.indxproptype], dtype=object)
+            if not hasattr(gdatfinl, 'lablproptype') or gdatfinl.lablproptype is None:
+                gdatfinl.lablproptype = _retr_proposal_type_labels(gdatfinl.nameproptype)
             listindxsamptotlproptotl = []
             listindxsamptotlpropfilt = []
             listindxsamptotlpropaccp = []
@@ -12257,13 +12361,13 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
     
     print('Preparing plotting context (paths, folder lists, and compatibility defaults for reconstructed final states)...')
     gdatfinl.strgpdfn = 'post'
-    gdatfinl.pathplotcnfg = gdatfinl.pathvisu + gdatfinl.strgcnfg + '/'
+    gdatfinl.pathplotcnfg = retr_pathplotcnfg(gdatfinl.pathvisu, gdatfinl.strgcnfg)
     if not hasattr(gdatfinl, 'liststrgpdfn') or gdatfinl.liststrgpdfn is None:
         gdatfinl.liststrgpdfn = [strgpdfn]
     if not hasattr(gdatfinl, 'liststrgfoldfram') or gdatfinl.liststrgfoldfram is None:
         gdatfinl.liststrgfoldfram = []
     if not hasattr(gdatfinl, 'liststrgfoldfinl') or gdatfinl.liststrgfoldfinl is None:
-        gdatfinl.liststrgfoldfinl = ['diag/', 'lpac/', 'varbscal/', 'cond/', 'varbscalproc/']
+        gdatfinl.liststrgfoldfinl = ['diag/', 'lpac/', 'varbscal/', 'cond/']
     if not hasattr(gdatfinl, 'liststrgfoldanim') or gdatfinl.liststrgfoldanim is None:
         gdatfinl.liststrgfoldanim = []
     if not hasattr(gdatfinl, 'liststrgfoldinit') or gdatfinl.liststrgfoldinit is None:
@@ -12512,7 +12616,7 @@ def make_fold(gdat):
         for nameseco in ['finl', 'fram', 'anim', 'opti']:
             setattr(gdat, 'path' + strgpdfn + nameseco, path + nameseco + '/')
         
-        for nameseco in ['diag', 'lpac', 'varbscal', 'cond', 'varbscalproc']:
+        for nameseco in ['diag', 'lpac', 'varbscal', 'cond']:
             setattr(gdat, 'path' + strgpdfn + 'finl' + nameseco, path + 'finl/' + nameseco + '/')
         
         for n in gdat.indxproptype:
@@ -12935,8 +13039,9 @@ def proc_anim(strgcnfg, pathbase=None):
     for strgpdfn in gdat.liststrgpdfn:
         from PIL import Image
 
-        pathfram = os.path.join(gdat.pathvisu, strgcnfg, strgpdfn, 'fram')
-        pathanim = os.path.join(gdat.pathvisu, strgcnfg, strgpdfn, 'anim')
+        pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, strgcnfg)
+        pathfram = os.path.join(pathplotcnfg, strgpdfn, 'fram')
+        pathanim = os.path.join(pathplotcnfg, strgpdfn, 'anim')
         dictpathfram = {}
         for pathroot, _, listfile in os.walk(pathfram):
             for namefile in listfile:
@@ -12967,7 +13072,7 @@ def proc_anim(strgcnfg, pathbase=None):
     filestat.write('animfinl written.\n')
     filestat.close()
     pathvisu = getattr(gdat, 'pathvisu', os.path.join(os.fspath(pathbase), 'visuals'))
-    _remove_empty_directories(os.path.join(pathvisu, strgcnfg))
+    _remove_empty_directories(retr_pathplotcnfg(pathvisu, strgcnfg))
     
 
 def _should_plot_spatial_count_histograms(gdat):
@@ -14042,7 +14147,7 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
         for n, axis in enumerate(axgr):
             axis.hist(listindxsamptotlproptotl[n], bins=binstimemcmc, histtype='step', color='k', label='total')
             axis.hist(listindxsamptotlpropaccp[n], bins=binstimemcmc, histtype='step', color='tab:green', label='accepted')
-            axis.set_ylabel('%s' % gdat.nameproptype[n])
+            axis.set_ylabel(gdat.lablproptype[n])
             if n == gdat.numbproptype - 1:
                 axis.set_xlabel('$i_{samp}$')
         plt.tight_layout()
@@ -14108,22 +14213,28 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
             if numbtrapplot > 0:
                 numbtrapplot = min(4, indxtrapgood.size)
                 indxtrapplot = gmod.indxsamptrap[indxtrapgood][:numbtrapplot]
-                listlabltrap = [getattr(gmod.labltotlpara, str(gmod.namepara.genr[index]),
-                                        str(gmod.namepara.genr[index])) for index in indxtrapplot]
+                listlabltrap = [_retr_parameter_label(gmod, index) for index in indxtrapplot]
 
                 path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscaljoin')
+                listtruetrap = [_retr_true_parameter_value(gdat, gmod.namepara.genr[index])
+                                for index in indxtrapplot]
                 tdpy.mcmc.plot_grid(path, 'joint_persistent_line_parameters',
-                                    listparagenrscalfull[:, indxtrapplot], listlabltrap)
+                                    listparagenrscalfull[:, indxtrapplot], listlabltrap,
+                                    truepara=listtruetrap)
 
                 for index in gmod.indxsamptrap[indxtrapgood]:
                     name = str(gmod.namepara.genr[index])
+                    label = _retr_parameter_label(gmod, index)
                     values = listparagenrscalfull[:, index]
                     scale = str(gmod.scalpara.genr[index])
                     maximum_likelihood = gdat.mlikparagenrscalfull[index]
+                    truepara = _retr_true_parameter_value(gdat, name)
                     path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscaltrac') + name
-                    tdpy.mcmc.plot_trac(path, values, name, scalpara=scale, listvarbdraw=[maximum_likelihood])
+                    tdpy.mcmc.plot_trac(path, values, label, truepara=truepara, scalpara=scale,
+                                        listvarbdraw=[maximum_likelihood])
                     path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalhist') + name
-                    tdpy.mcmc.plot_hist(path, values, name, scalpara=scale, listvarbdraw=[maximum_likelihood])
+                    tdpy.mcmc.plot_hist(path, values, label, truepara=truepara, scalpara=scale,
+                                        listvarbdraw=[maximum_likelihood])
     
     if gdat.typeverb > 0:
         print('Scalar variables...')
@@ -14138,7 +14249,9 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
         if gdat.typeverb > 0:
             print('Working on %s...' % name)
         scal = getattr(gdat, 'scal' + name) 
-        truepara = getattr(gdat, 'corr' + name, None)
+        truepara = _retr_true_parameter_value(gdat, name)
+        if truepara is None:
+            truepara = getattr(gdat, 'corr' + name, None)
         labltotl = getattr(gmod.labltotlpara, name, name)
         
         listvarb = getattr(gdat, 'list' + strgpdfn + name)
@@ -14163,7 +14276,9 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
                 print('Working on correlation of %s with %s...' % (name, nameseco))
             
             pathjoin = getattr(gdat, 'path' + strgpdfn + 'finlvarbscaljoin')
-            trueparaseco = getattr(gdat, 'corr' + nameseco, None)
+            trueparaseco = _retr_true_parameter_value(gdat, nameseco)
+            if trueparaseco is None:
+                trueparaseco = getattr(gdat, 'corr' + nameseco, None)
             listvarbseco = np.asarray(getattr(gdat, 'list' + strgpdfn + nameseco))
             mlikseco = getattr(gdat, 'mlik' + nameseco)
             scalseco = getattr(gdat, 'scal' + nameseco)
@@ -14186,7 +14301,7 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
     ### covariance
     ## overall
     path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalcova')
-    truepara = gmod.corrparagenrscalbase
+    truepara = [_retr_true_parameter_value(gdat, name) for name in gmod.namepara.genrbase]
     mlikpara = gdat.mlikparagenrscalbase
     tdpy.mcmc.plot_grid(path, 'paragenrscalbase', listparagenrscalbase, gmod.labltotlpara.genr.basetotl, truepara=truepara, listvarbdraw=[mlikpara])
     
@@ -15853,7 +15968,7 @@ def plot_init(gdat):
     if not hasattr(gdat, 'typefileplot'):
         gdat.typefileplot = 'png'
     if not hasattr(gdat, 'pathplotcnfg') or gdat.pathplotcnfg is None:
-        gdat.pathplotcnfg = gdat.pathvisu + gdat.strgcnfg + '/'
+        gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, gdat.strgcnfg)
     if not hasattr(gdat, 'pathinit') or gdat.pathinit is None:
         gdat.pathinit = gdat.pathplotcnfg + 'init/'
     if not hasattr(gdat, 'pathinitintr') or gdat.pathinitintr is None:
@@ -16610,6 +16725,7 @@ def init( \
         gmod.numbpopl = int(len(getattr(gmod, 'indxpopl', [])))
         setp_modlemis_init(gdat, strgmodl=strgmodl)
     setp_modlemis_finl(gdat, strgmodl='fitt')
+    _configure_proposal_types(gdat, gdat.fitt)
     
     # to be deleted?
     #print('gdat.liststrgfeatpara')
@@ -16849,7 +16965,7 @@ def init( \
                 if not _has_init_plot_outputs(gdatinit):
                     print('Initialization plot files are missing; regenerating init/ diagnostics from cached gdatinit state.')
                     if not hasattr(gdatinit, 'pathplotcnfg') or gdatinit.pathplotcnfg is None:
-                        gdatinit.pathplotcnfg = gdatinit.pathvisu + gdatinit.strgcnfg + '/'
+                        gdatinit.pathplotcnfg = retr_pathplotcnfg(gdatinit.pathvisu, gdatinit.strgcnfg)
                     if not hasattr(gdatinit, 'pathinit') or gdatinit.pathinit is None:
                         gdatinit.pathinit = gdatinit.pathplotcnfg + 'init/'
                     if not hasattr(gdatinit, 'pathinitintr') or gdatinit.pathinitintr is None:
@@ -17313,6 +17429,8 @@ def init( \
             init_stat(gdat)
 
         if gdat.typeexpr.startswith('HST_WFC3') and gdat.typedata == 'simu' and hasattr(gdat, 'fitt') and getattr(gdat.fitt, 'numbpopl', 0) > 0:
+            if not hasattr(gdat.fitt.this, 'paragenrscalfull'):
+                init_stat(gdat)
             if not hasattr(gdat.fitt.this, 'indxelemfull') or len(getattr(gdat.fitt.this, 'indxelemfull', [])) != gdat.fitt.numbpopl:
                 gdat.fitt.this.indxelemfull = [[] for _ in gdat.fitt.indxpopl]
             for l in gdat.fitt.indxpopl:
@@ -17429,7 +17547,7 @@ def init( \
         # Ensure init-plot paths exist even for minimal/mock configurations
         # where folder scaffolding may be incomplete.
         if not hasattr(gdat, 'pathplotcnfg') or gdat.pathplotcnfg is None:
-            gdat.pathplotcnfg = gdat.pathvisu + gdat.strgcnfg + '/'
+            gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, gdat.strgcnfg)
         if not hasattr(gdat, 'pathinit') or gdat.pathinit is None:
             gdat.pathinit = gdat.pathplotcnfg + 'init/'
         if not hasattr(gdat, 'pathinitintr') or gdat.pathinitintr is None:
@@ -17996,14 +18114,16 @@ def init( \
     except (AttributeError, KeyError):
         pass
 
-    if hasattr(gdat, 'pathplotcnfg'):
+    if hasattr(gdat, 'pathbase'):
+        _remove_empty_directories(gdat.pathbase)
+    elif hasattr(gdat, 'pathplotcnfg'):
         _remove_empty_directories(gdat.pathplotcnfg)
     
     print('PCAT initialization completed successfully.')
     return gdat
 def sample(**kwargs):
     typeexpr = kwargs.get('typeexpr')
-    if isinstance(typeexpr, str) and (typeexpr in ['chan', 'fire', 'gmix'] or typeexpr.startswith('HST_WFC3')):
+    if isinstance(typeexpr, str) and (typeexpr in ['chan', 'ferm', 'fire', 'gmix'] or typeexpr.startswith('HST_WFC3')):
         gdat = init_image(**kwargs)
         return init(gdat.__dict__)
     return init(kwargs)
@@ -18504,7 +18624,7 @@ def worksamp(gdat, lock, strgpdfn='post'):
     narr_task('Preparing sampler workers.', gdat=gdat, phase='before', major=True)
 
     if not hasattr(gdat, 'pathplotcnfg') or gdat.pathplotcnfg is None:
-        gdat.pathplotcnfg = gdat.pathvisu + gdat.strgcnfg + '/'
+        gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, gdat.strgcnfg)
     make_directory(gdat.pathplotcnfg)
     
     pathorig = gdat.pathoutpcnfg + 'stat.txt'

@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-OUTPUT_ROOT = Path(__file__).resolve().parent / "pcat-output"
+RUN_NAME = "hst_lens_demo"
+OUTPUT_ROOT = Path(__file__).resolve().parent
 
 
 def main() -> None:
@@ -22,7 +23,7 @@ def main() -> None:
         "numbsidecart": 80,
         "numbpixl": 80**2,
         "numbpixlcart": 80**2,
-        "strgcnfg": "hst_lens_demo",
+        "strgcnfg": RUN_NAME,
         "inittype": "refr",
         "truenumbelempop0": 3,
         "numbelempop0": 2,

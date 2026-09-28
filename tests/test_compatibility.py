@@ -241,7 +241,7 @@ def test_proc_anim_preserves_numeric_sweep_order(tmp_path, monkeypatch):
     from PIL import Image
 
     output_path = tmp_path / "data" / "outp" / "demo"
-    frame_path = tmp_path / "visuals" / "demo" / "post" / "fram" / "maps"
+    frame_path = tmp_path / "visuals" / "post" / "fram" / "maps"
     output_path.mkdir(parents=True)
     frame_path.mkdir(parents=True)
     Image.new("RGB", (2, 2), "blue").save(frame_path / "sample_swep000000010.png")
@@ -264,9 +264,7 @@ def test_proc_anim_preserves_numeric_sweep_order(tmp_path, monkeypatch):
 
     pcat_main.proc_anim("demo", pathbase=tmp_path)
 
-    animation_path = (
-        tmp_path / "visuals" / "demo" / "post" / "anim" / "maps" / "sample.gif"
-    )
+    animation_path = tmp_path / "visuals" / "post" / "anim" / "maps" / "sample.gif"
     with Image.open(animation_path) as animation:
         assert animation.n_frames == 2
         animation.seek(0)
@@ -275,7 +273,7 @@ def test_proc_anim_preserves_numeric_sweep_order(tmp_path, monkeypatch):
         assert animation.convert("RGB").getpixel((0, 0)) == (0, 0, 255)
 
 
-@pytest.mark.parametrize("typeexpr", ["chan", "fire", "gmix", "HST_WFC3_IR"])
+@pytest.mark.parametrize("typeexpr", ["chan", "ferm", "fire", "gmix", "HST_WFC3_IR"])
 def test_sample_routes_image_experiments_through_image_initialization(
     typeexpr, monkeypatch
 ):

@@ -6,7 +6,10 @@ import matplotlib.pyplot as plt
 
 
 EXAMPLE_SCRIPT = (
-    Path(__file__).resolve().parents[1] / "examples" / "roman_lens_catalog_diagnostic.py"
+    Path(__file__).resolve().parents[1]
+    / "examples"
+    / "roman_lens_catalog"
+    / "roman_lens_catalog_diagnostic.py"
 )
 SPECIFICATION = importlib.util.spec_from_file_location(
     "pcat_roman_lens_catalog_diagnostic", EXAMPLE_SCRIPT

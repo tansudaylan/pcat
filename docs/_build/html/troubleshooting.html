@@ -1,0 +1,202 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Troubleshooting &mdash; PCAT 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Public API" href="api.html" />
+    <link rel="prev" title="Outputs and diagnostics" href="outputs.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="index.html" class="icon icon-home">
+            PCAT
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Maintained examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#output-path-errors">Output path errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#incomplete-runs">Incomplete runs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stale-caches">Stale caches</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#missing-figures-or-animations">Missing figures or animations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sampling-configuration-failures">Sampling configuration failures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#convergence">Convergence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#minimal-diagnostic-sequence">Minimal diagnostic sequence</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PCAT</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Troubleshooting</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/troubleshooting.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <section id="troubleshooting">
+<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h1>
+<section id="output-path-errors">
+<h2>Output path errors<a class="headerlink" href="#output-path-errors" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">output</span> <span class="pre">data</span> <span class="pre">path</span> <span class="pre">is</span> <span class="pre">configured</span></code> means neither <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> nor a supported
+environment variable was provided. Pass <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> explicitly or set
+<code class="docutils literal notranslate"><span class="pre">PCAT_DATA_PATH</span></code>. <code class="docutils literal notranslate"><span class="pre">PCAT_PATH</span></code> identifies the repository for local utilities
+and does not select a sampler output directory.</p>
+<p>If final processing or animation reports that <code class="docutils literal notranslate"><span class="pre">PCAT_DATA_PATH</span></code> is not set,
+pass the same <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> used for sampling. A run cannot be reconstructed from
+<code class="docutils literal notranslate"><span class="pre">visuals/</span></code> alone because final processing reads serialized states under
+<code class="docutils literal notranslate"><span class="pre">data/outp/&lt;run</span> <span class="pre">tag&gt;/</span></code>.</p>
+</section>
+<section id="incomplete-runs">
+<h2>Incomplete runs<a class="headerlink" href="#incomplete-runs" title="Link to this heading"></a></h2>
+<p>Inspect <code class="docutils literal notranslate"><span class="pre">data/outp/&lt;run</span> <span class="pre">tag&gt;/stat.txt</span></code> from bottom to top. A complete posterior
+run normally records these stages in order:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>gdatinit written.
+gdatmodipost written.
+gdatfinlpost written.
+plotfinlpost written.
+animfinl written.
+</pre></div>
+</div>
+<p>The animation marker is expected only when animation generation is enabled.
+Missing <code class="docutils literal notranslate"><span class="pre">gdatinit</span></code> indicates initialization did not finish. Missing
+<code class="docutils literal notranslate"><span class="pre">gdatmodipost</span></code> indicates a worker failed before writing its chain. Missing
+<code class="docutils literal notranslate"><span class="pre">gdatfinlpost</span></code> means worker products were not aggregated. Read the original
+traceback before rerunning so a configuration defect is not hidden by cached
+partial state.</p>
+</section>
+<section id="stale-caches">
+<h2>Stale caches<a class="headerlink" href="#stale-caches" title="Link to this heading"></a></h2>
+<p>PCAT can reuse existing state for a matching run tag. After changing model
+structure, output paths, or plotting configuration, make a fresh run. Maintained
+entry points that support it accept <code class="docutils literal notranslate"><span class="pre">--fresh</span></code>. Otherwise remove both
+<code class="docutils literal notranslate"><span class="pre">data/outp/&lt;run</span> <span class="pre">tag&gt;</span></code> and its corresponding visual run directory, preserving
+any products needed for provenance first.</p>
+</section>
+<section id="missing-figures-or-animations">
+<h2>Missing figures or animations<a class="headerlink" href="#missing-figures-or-animations" title="Link to this heading"></a></h2>
+<p>Check <code class="docutils literal notranslate"><span class="pre">boolmakeplot</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotinit</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotfram</span></code>,
+<code class="docutils literal notranslate"><span class="pre">boolmakeplotfinlpost</span></code>, and <code class="docutils literal notranslate"><span class="pre">makeanim</span></code>. Animations require at least two frame
+plots, controlled by chain length and <code class="docutils literal notranslate"><span class="pre">numbswepplot</span></code>. Frames that are visually
+identical may collapse to a single-frame GIF; such a file is a static image and
+should not be reported as an animation.</p>
+<p>For headless systems, set a writable Matplotlib cache before running:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">MPLCONFIGDIR</span><span class="o">=</span>/tmp/pcat-mplconfig<span class="w"> </span>python<span class="w"> </span>examples/chan_demo/generate_demo.py
+</pre></div>
+</div>
+</section>
+<section id="sampling-configuration-failures">
+<h2>Sampling configuration failures<a class="headerlink" href="#sampling-configuration-failures" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Sampling</span> <span class="pre">failed</span> <span class="pre">due</span> <span class="pre">to</span> <span class="pre">incomplete</span> <span class="pre">or</span> <span class="pre">inconsistent</span> <span class="pre">model</span> <span class="pre">configuration</span></code> wraps
+a lower-level attribute, key, index, or type error. Preserve the chained
+traceback and compare the configuration with the nearest maintained example.
+Explicitly set model-specific values in <code class="docutils literal notranslate"><span class="pre">dicttrue</span></code> and <code class="docutils literal notranslate"><span class="pre">dictfitt</span></code> when an
+experiment default would otherwise replace them.</p>
+<p>Split and merge proposals are not implemented for every element model. For
+those models, set <code class="docutils literal notranslate"><span class="pre">probspmr=0.0</span></code>. Birth and death proposals still provide
+genuine transdimensional model-count changes when <code class="docutils literal notranslate"><span class="pre">probtran</span></code> is nonzero.</p>
+</section>
+<section id="convergence">
+<h2>Convergence<a class="headerlink" href="#convergence" title="Link to this heading"></a></h2>
+<p>When <code class="docutils literal notranslate"><span class="pre">boolcheckconv</span></code> is enabled, inspect <code class="docutils literal notranslate"><span class="pre">boolconv</span></code>,
+<code class="docutils literal notranslate"><span class="pre">maxmconvrhatcalc</span></code>, and <code class="docutils literal notranslate"><span class="pre">numbsampconveffccalc</span></code> in the final state. A process
+that reaches its sweep limit and writes all files is operationally complete but
+may still be statistically unconverged. Increase chain length or improve the
+proposal and prior configuration based on acceptance, trace, residual, and
+model-count diagnostics rather than weakening thresholds solely to terminate a
+run.</p>
+</section>
+<section id="minimal-diagnostic-sequence">
+<h2>Minimal diagnostic sequence<a class="headerlink" href="#minimal-diagnostic-sequence" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Reproduce the issue with a deterministic seed and a small configuration.</p></li>
+<li><p>Run the nearest maintained example in the same Python environment.</p></li>
+<li><p>Compare <code class="docutils literal notranslate"><span class="pre">cmndargs.txt</span></code>, <code class="docutils literal notranslate"><span class="pre">stat.txt</span></code>, and the final completed stage.</p></li>
+<li><p>Confirm every pickle state has its matching HDF5 companion.</p></li>
+<li><p>Rerun under a new tag after correcting the root cause.</p></li>
+</ol>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="outputs.html" class="btn btn-neutral float-left" title="Outputs and diagnostics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api.html" class="btn btn-neutral float-right" title="Public API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Tansu Daylan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

@@ -13,10 +13,10 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent
 
 PIPELINE_EXAMPLES = [
-    (ROOT / "gaussian_mixture" / "generate_demo.py", (), ROOT / "gaussian_mixture" / "pcat-output", "gmix_demo", True, True),
-    (ROOT / "chandra_point_source" / "generate_demo.py", (), ROOT / "chandra_point_source" / "pcat-output", "chan_demo", True, False),
-    (ROOT / "hst_lens" / "generate_demo.py", (), ROOT / "hst_lens" / "pcat-output", "hst_lens_demo", True, True),
-    (ROOT / "pcat_voigt_profile_detection.py", ("--smoke",), ROOT / "voigt-profile", "voigt_nomi", False, True),
+    (ROOT / "gmix_demo" / "generate_demo.py", (), ROOT / "gmix_demo", "gmix_demo", True, True),
+    (ROOT / "chan_demo" / "generate_demo.py", (), ROOT / "chan_demo", "chan_demo", True, False),
+    (ROOT / "hst_lens" / "generate_demo.py", (), ROOT / "hst_lens", "hst_lens_demo", True, True),
+    (ROOT / "voigt-profile" / "pcat_voigt_profile_detection.py", ("--smoke",), ROOT / "voigt-profile", "voigt_nomi", False, True),
 ]
 
 
@@ -24,7 +24,7 @@ def verify_pipeline_outputs(
     output_root: Path, run_name: str, require_initial: bool = True, require_multiframe: bool = True
 ) -> None:
     """Require static posterior products and at least one genuine animation."""
-    visual_root = output_root / "visuals" / run_name
+    visual_root = output_root / "visuals"
     phases = {
         "posterior frames": list((visual_root / "post" / "fram").rglob("*.png")),
         "final plots": list((visual_root / "post" / "finl").rglob("*.png")),
@@ -59,7 +59,8 @@ def main() -> None:
         sys.path.insert(0, str(repo_root))
 
     for script, arguments, output_root, run_name, require_initial, require_multiframe in PIPELINE_EXAMPLES:
-        for path in [output_root / "data" / "outp" / run_name, output_root / "visuals" / run_name]:
+        visual_root = output_root / "visuals"
+        for path in [output_root / "data" / "outp" / run_name, visual_root]:
             if path.exists():
                 print(f"Removing cached example output {path}...")
                 shutil.rmtree(path)
@@ -71,10 +72,11 @@ def main() -> None:
             require_multiframe=require_multiframe,
         )
 
-    roman_output = ROOT / "roman_lens_catalog_diagnostic.png"
+    roman_root = ROOT / "roman_lens_catalog"
+    roman_output = roman_root / "roman_lens_catalog_diagnostic.png"
     if roman_output.exists():
         roman_output.unlink()
-    run_script(ROOT / "roman_lens_catalog_diagnostic.py")
+    run_script(roman_root / "roman_lens_catalog_diagnostic.py")
     if not roman_output.is_file():
         raise RuntimeError("Roman lens diagnostic did not produce its figure")
 

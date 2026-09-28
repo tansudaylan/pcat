@@ -1,0 +1,212 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Outputs and diagnostics &mdash; PCAT 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
+    <link rel="prev" title="Maintained examples" href="examples.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="index.html" class="icon icon-home">
+            PCAT
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Maintained examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Outputs and diagnostics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#directory-layout">Directory layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#state-files">State files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#completion-markers">Completion markers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#visual-products">Visual products</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#convergence-and-interpretation">Convergence and interpretation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reproducibility-checklist">Reproducibility checklist</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PCAT</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Outputs and diagnostics</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/outputs.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <section id="outputs-and-diagnostics">
+<h1>Outputs and diagnostics<a class="headerlink" href="#outputs-and-diagnostics" title="Link to this heading"></a></h1>
+<section id="directory-layout">
+<h2>Directory layout<a class="headerlink" href="#directory-layout" title="Link to this heading"></a></h2>
+<p>A run with output root <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> and tag <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> writes:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pathbase/
+|-- data/
+|   `-- outp/
+|       `-- strgcnfg/
+|           |-- cmndargs.txt
+|           |-- stat.txt
+|           |-- gdatinit.p
+|           |-- gdatinit.h5
+|           |-- gdatmodi0000post.p
+|           |-- gdatmodi0000post.h5
+|           |-- gdatfinlpost.p
+|           `-- gdatfinlpost.h5
+`-- visuals/
+    `-- strgcnfg/
+        |-- init/
+        `-- post/
+            |-- fram/
+            |-- finl/
+            `-- anim/
+</pre></div>
+</div>
+<p>When <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> already ends in the run tag, PCAT avoids repeating that name
+under <code class="docutils literal notranslate"><span class="pre">visuals/</span></code>. For example, <code class="docutils literal notranslate"><span class="pre">examples/gmix_demo</span></code> writes directly to
+<code class="docutils literal notranslate"><span class="pre">examples/gmix_demo/visuals/init</span></code> and <code class="docutils literal notranslate"><span class="pre">visuals/post</span></code>.</p>
+</section>
+<section id="state-files">
+<h2>State files<a class="headerlink" href="#state-files" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">gdatinit</span></code> stores initialized configuration and model metadata.
+<code class="docutils literal notranslate"><span class="pre">gdatmodi####post</span></code> stores worker-chain products. <code class="docutils literal notranslate"><span class="pre">gdatfinlpost</span></code> stores the
+aggregated posterior state and derived summaries. PCAT splits each state between
+a pickle file and an HDF5 companion, and <a class="reference internal" href="api.html#pcat.main.readfile" title="pcat.main.readfile"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.main.readfile()</span></code></a> reconstructs
+the object from the extension-free path:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pcat.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">readfile</span>
+
+<span class="n">run_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"examples/gmix_demo"</span><span class="p">)</span>
+<span class="n">state</span> <span class="o">=</span> <span class="n">readfile</span><span class="p">(</span>
+    <span class="nb">str</span><span class="p">(</span><span class="n">run_root</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="s2">"outp"</span> <span class="o">/</span> <span class="s2">"gmix_demo"</span> <span class="o">/</span> <span class="s2">"gdatfinlpost"</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">numbsamp</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="completion-markers">
+<h2>Completion markers<a class="headerlink" href="#completion-markers" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">stat.txt</span></code> is append-only and records completed stages. A fully processed run
+normally contains <code class="docutils literal notranslate"><span class="pre">gdatfinlpost</span> <span class="pre">written.</span></code>, <code class="docutils literal notranslate"><span class="pre">plotfinlpost</span> <span class="pre">written.</span></code>, and,
+when animations are enabled, <code class="docutils literal notranslate"><span class="pre">animfinl</span> <span class="pre">written.</span></code>. Validate the corresponding
+files as well as the markers before treating a run as complete.</p>
+</section>
+<section id="visual-products">
+<h2>Visual products<a class="headerlink" href="#visual-products" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">init</span></code> contains simulated data, reference-model, and initial diagnostics.
+<code class="docutils literal notranslate"><span class="pre">post/fram</span></code> contains snapshots across the chain. <code class="docutils literal notranslate"><span class="pre">post/finl</span></code> contains final
+posterior summaries and diagnostics. <code class="docutils literal notranslate"><span class="pre">post/anim</span></code> contains GIFs assembled from
+frame plots. Empty optional directories are removed at successful completion.</p>
+</section>
+<section id="convergence-and-interpretation">
+<h2>Convergence and interpretation<a class="headerlink" href="#convergence-and-interpretation" title="Link to this heading"></a></h2>
+<p>Inspect effective sample sizes, split-chain or multi-chain convergence metrics,
+proposal acceptance, likelihood traces, model-count transitions, and posterior
+predictive residuals. A completed process is not necessarily a converged or
+scientifically adequate inference. Transdimensional parameters also require
+population-level or association-aware summaries because raw element labels are
+not persistent.</p>
+</section>
+<section id="reproducibility-checklist">
+<h2>Reproducibility checklist<a class="headerlink" href="#reproducibility-checklist" title="Link to this heading"></a></h2>
+<p>Before publishing or comparing runs, preserve and report:</p>
+<ul class="simple">
+<li><p>the PCAT and TDpy repository revisions and Python environment;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cmndargs.txt</span></code> and all explicit random seeds;</p></li>
+<li><p>input filenames, versions, selections, units, and checksums;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gdatfinlpost.p</span></code> and its matching <code class="docutils literal notranslate"><span class="pre">gdatfinlpost.h5</span></code> companion;</p></li>
+<li><p>retained sample count, convergence thresholds, and measured diagnostics;</p></li>
+<li><p>proposal acceptance and model-count transition summaries;</p></li>
+<li><p>posterior predictive data, model, and residual plots; and</p></li>
+<li><dl class="simple">
+<dt>whether the run used real data, a controlled simulation, or a smoke-test</dt><dd><p>configuration.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Do not compare serialized states copied without their HDF5 companions. Avoid
+overwriting a completed run with a different configuration under the same run
+tag; use a new <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> or remove both cached data and visuals deliberately.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="examples.html" class="btn btn-neutral float-left" title="Maintained examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="troubleshooting.html" class="btn btn-neutral float-right" title="Troubleshooting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Tansu Daylan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

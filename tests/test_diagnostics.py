@@ -4,11 +4,16 @@ from types import SimpleNamespace
 
 from pcat.main import (
     _PCATMCMCCompat,
+    _configure_proposal_types,
     _retr_adapted_proposal_scale,
     _retr_chain_convergence,
     _retr_persistent_element_parameter_indices,
+    _retr_parameter_label,
     _retr_posterior_summary_channels,
+    _retr_proposal_type_labels,
     _retr_representative_atcr,
+    _retr_true_parameter_value,
+    _set_element_amplitude_indices,
 )
 
 
@@ -103,3 +108,82 @@ def test_persistent_element_indices_require_slot_in_every_sample():
     indices = _retr_persistent_element_parameter_indices(model, sample_slots)
 
     np.testing.assert_array_equal(indices, [1, 2])
+
+
+def _make_truth_state(typedata="simu"):
+    return SimpleNamespace(
+        typedata=typedata,
+        true=SimpleNamespace(
+            namepara=SimpleNamespace(genr=["base", "fluxpop00000", "fluxpop00001"]),
+            indxpara=SimpleNamespace(genrbase=np.array([0])),
+            this=SimpleNamespace(
+                paragenrscalfull=np.array([2.5, 7.0, 0.0]),
+                indxparagenrelemfull=[{"full": np.array([1])}],
+            ),
+        ),
+    )
+
+
+def test_true_parameter_value_matches_active_simulated_parameters_by_name():
+    state = _make_truth_state()
+
+    assert _retr_true_parameter_value(state, "base") == pytest.approx(2.5)
+    assert _retr_true_parameter_value(state, "fluxpop00000") == pytest.approx(7.0)
+
+
+def test_true_parameter_value_rejects_inactive_missing_and_real_parameters():
+    state = _make_truth_state()
+
+    assert _retr_true_parameter_value(state, "fluxpop00001") is None
+    assert _retr_true_parameter_value(state, "fitting_only") is None
+    assert _retr_true_parameter_value(_make_truth_state(typedata="inpt"), "base") is None
+
+
+def test_proposal_defaults_enable_transdimensional_moves():
+    state = SimpleNamespace(probtran=None, probspmr=0.0)
+    model = SimpleNamespace(numbpopl=1)
+
+    _configure_proposal_types(state, model)
+
+    assert state.probtran == pytest.approx(0.4)
+    assert state.nameproptype.tolist() == [
+        "with",
+        "brth",
+        "deth",
+        "splt",
+        "merg",
+    ]
+    assert state.lablproptype[1] == "Birth proposal"
+
+
+def test_proposal_labels_support_legacy_saved_identifiers():
+    assert _retr_proposal_type_labels(["with", "brth", "deth", "splt", "merg"]) == [
+        "Within-model proposal",
+        "Birth proposal",
+        "Death proposal",
+        "Split proposal",
+        "Merge proposal",
+    ]
+
+
+def test_element_parameter_labels_are_descriptive():
+    model = SimpleNamespace(
+        namepara=SimpleNamespace(genr=["fluxpop00001", "sigmpop10002"]),
+        labltotlpara=SimpleNamespace(),
+    )
+
+    assert _retr_parameter_label(model, 0) == "Line flux, population 1, element 2"
+    assert _retr_parameter_label(model, 1) == "Gaussian line width, population 2, element 3"
+
+
+def test_gaussian_cluster_amplitude_index_uses_object_count():
+    model = SimpleNamespace(
+        indxpopl=np.array([0]),
+        nameparagenrelemampl=["nobj"],
+        namepara=SimpleNamespace(genrelem=[["xpos", "ypos", "nobj", "gwdt"]]),
+        indxpara=SimpleNamespace(),
+    )
+
+    _set_element_amplitude_indices(model)
+
+    np.testing.assert_array_equal(model.indxpara.genrelemampl, [2])

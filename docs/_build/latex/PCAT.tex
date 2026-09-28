@@ -3,24 +3,52 @@
 \documentclass[letterpaper,10pt,english]{sphinxmanual}
 \ifdefined\pdfpxdimen
    \let\sphinxpxdimen\pdfpxdimen\else\newdimen\sphinxpxdimen
-\fi \sphinxpxdimen=49336sp\relax
+\fi \sphinxpxdimen=.75bp\relax
+\ifdefined\pdfimageresolution
+    \pdfimageresolution= \numexpr \dimexpr1in\relax/\sphinxpxdimen\relax
+\fi
+\newdimen\sphinxremdimen\sphinxremdimen = 10pt
+%% let collapsible pdf bookmarks panel have high depth per default
+\PassOptionsToPackage{bookmarksdepth=5}{hyperref}
 
-\usepackage[margin=1in,marginparwidth=0.5in]{geometry}
+\PassOptionsToPackage{booktabs}{sphinx}
+\PassOptionsToPackage{colorrows}{sphinx}
+
+\PassOptionsToPackage{warn}{textcomp}
 \usepackage[utf8]{inputenc}
 \ifdefined\DeclareUnicodeCharacter
-  \DeclareUnicodeCharacter{00A0}{\nobreakspace}
+% support both utf8 and utf8x syntaxes
+  \ifdefined\DeclareUnicodeCharacterAsOptional
+    \def\sphinxDUC#1{\DeclareUnicodeCharacter{"#1}}
+  \else
+    \let\sphinxDUC\DeclareUnicodeCharacter
+  \fi
+  \sphinxDUC{00A0}{\nobreakspace}
+  \sphinxDUC{2500}{\sphinxunichar{2500}}
+  \sphinxDUC{2502}{\sphinxunichar{2502}}
+  \sphinxDUC{2514}{\sphinxunichar{2514}}
+  \sphinxDUC{251C}{\sphinxunichar{251C}}
+  \sphinxDUC{2572}{\textbackslash}
 \fi
 \usepackage{cmap}
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,amssymb,amstext}
 \usepackage{babel}
-\usepackage{times}
+
+
+
+\usepackage{tgtermes}
+\usepackage{tgheros}
+\renewcommand{\ttdefault}{txtt}
+
+
+
 \usepackage[Bjarne]{fncychap}
-\usepackage{longtable}
 \usepackage{sphinx}
 
-\usepackage{multirow}
-\usepackage{eqparbox}
+\fvset{fontsize=auto}
+\usepackage{geometry}
+
 
 % Include hyperref last.
 \usepackage{hyperref}
@@ -29,67 +57,708 @@
 % Set up styles of URL: it should be placed after hyperref.
 \urlstyle{same}
 
-\addto\captionsenglish{\renewcommand{\figurename}{Fig.\@ }}
-\addto\captionsenglish{\renewcommand{\tablename}{Table }}
-\addto\captionsenglish{\renewcommand{\literalblockname}{Listing }}
+\addto\captionsenglish{\renewcommand{\contentsname}{User guide}}
 
-\addto\extrasenglish{\def\pageautorefname{page}}
-
+\usepackage{sphinxmessages}
 \setcounter{tocdepth}{1}
 
 
 
 \title{PCAT Documentation}
-\date{Nov 30, 2016}
-\release{0.1}
+\date{Sep 28, 2026}
+\release{0.1.0}
 \author{Tansu Daylan}
-\newcommand{\sphinxlogo}{}
+\newcommand{\sphinxlogo}{\vbox{}}
 \renewcommand{\releasename}{Release}
 \makeindex
-
 \begin{document}
 
-\maketitle
+\ifdefined\shorthandoff
+  \ifnum\catcode`\=\string=\active\shorthandoff{=}\fi
+  \ifnum\catcode`\"=\active\shorthandoff{"}\fi
+\fi
+
+\pagestyle{empty}
+\sphinxmaketitle
+\pagestyle{plain}
 \sphinxtableofcontents
-\phantomsection\label{index::doc}
+\pagestyle{normal}
+\phantomsection\label{\detokenize{index::doc}}
 
 
-When testing hypotheses or inferring their free parameters, a recurring problem is to compare models that contain a number of objects whose multiplicity is itself unknown. Therefore, given some data, it is desirable to be able to compare models with different number of parameters. One way of achieving this is to obtain a point estimate (usually the most likely point) in the parameter space of each model and, then, rely on some information criterion to penalize more complex models for excess degrees of freedom. Another way is to sample from the parameter space of each model and compare their Bayesian evidence. Yet another is to take samples from the union of the hypotheses using a set of transdimensional jumps across models. This is what PCAT (Probabilistic Cataloger) is designed for.
+\sphinxAtStartPar
+The Probabilistic Cataloger (PCAT) is a hierarchical, transdimensional Bayesian
+inference framework for datasets whose number of sources or other model elements
+is unknown. It samples an ensemble of catalogs rather than returning only one
+best\sphinxhyphen{}fit catalog. The framework was introduced by \sphinxhref{https://doi.org/10.3847/1538-4357/aa679e}{Daylan, Portillo, and
+Finkbeiner (2017)} in ApJ 839, 4.
 
-PCAT is a hierarchical, transdimensional MCMC sampler. Given some data, it can be used to sample from the \sphinxstylestrong{catalog space}, i.e., the hypothesis space of a model with a variable number of components. Alternatively, it can be used as a general purpose Poisson mixture sampler to infer clusters in a dataset.
+\sphinxAtStartPar
+PCAT supports simulated and supplied data, population\sphinxhyphen{}level priors, birth and
+death proposals, posterior catalog summaries, convergence diagnostics, static
+figures, and posterior animations. The maintained examples exercise the current
+public workflow and are the best starting points for new analyses.
 
-A user manual for PCAT will be published here soon.
+\sphinxstepscope
 
 
-\chapter{Installation}
-\label{index:installation}\label{index:welcome-to-pcat-s-documentation}
-To install PCAT you can use pip
+\chapter{Getting started}
+\label{\detokenize{getting_started:getting-started}}\label{\detokenize{getting_started::doc}}
+
+\section{Requirements}
+\label{\detokenize{getting_started:requirements}}
+\sphinxAtStartPar
+PCAT requires Python 3.10 or newer. Its runtime dependencies are declared in
+\sphinxcode{\sphinxupquote{pyproject.toml}} and include NumPy, SciPy, Astropy, Matplotlib, h5py, Numba,
+Seaborn, and TDpy.
+
+\sphinxAtStartPar
+For development with sibling repositories, install TDpy and PCAT in editable
+mode:
 
 \begin{sphinxVerbatim}[commandchars=\\\{\}]
-\PYG{n}{pip} \PYG{n}{install} \PYG{n}{pcat}
+\PYG{n+nb}{cd}\PYG{+w}{ }/path/to/tdpy
+python\PYG{+w}{ }\PYGZhy{}m\PYG{+w}{ }pip\PYG{+w}{ }install\PYG{+w}{ }\PYGZhy{}e\PYG{+w}{ }.
+\PYG{n+nb}{cd}\PYG{+w}{ }/path/to/pcat
+python\PYG{+w}{ }\PYGZhy{}m\PYG{+w}{ }pip\PYG{+w}{ }install\PYG{+w}{ }\PYGZhy{}e\PYG{+w}{ }.
 \end{sphinxVerbatim}
 
-or download \href{https://github.com/tansudaylan/pcat/releases/}{the latest release} and run
+\sphinxAtStartPar
+Install the documentation dependencies with:
 
 \begin{sphinxVerbatim}[commandchars=\\\{\}]
-\PYG{n}{python} \PYG{n}{setup}\PYG{o}{.}\PYG{n}{py} \PYG{n}{install}
+python\PYG{+w}{ }\PYGZhy{}m\PYG{+w}{ }pip\PYG{+w}{ }install\PYG{+w}{ }\PYGZhy{}e\PYG{+w}{ }\PYG{l+s+s2}{\PYGZdq{}.[docs]\PYGZdq{}}
 \end{sphinxVerbatim}
 
 
-\chapter{Usage}
-\label{index:usage}\index{pcat.main.init() (built-in function)}
+\section{First run}
+\label{\detokenize{getting_started:first-run}}
+\sphinxAtStartPar
+Run the compact Chandra\sphinxhyphen{}style demonstration from the repository root:
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+python\PYG{+w}{ }examples/chan\PYGZus{}demo/generate\PYGZus{}demo.py
+\end{sphinxVerbatim}
+
+\sphinxAtStartPar
+The script uses {\hyperref[\detokenize{api:pcat.demo.run_pipeline_demo}]{\sphinxcrossref{\sphinxcode{\sphinxupquote{pcat.demo.run\_pipeline\_demo()}}}}} to supply plotting defaults
+and calls {\hyperref[\detokenize{api:pcat.main.sample}]{\sphinxcrossref{\sphinxcode{\sphinxupquote{pcat.main.sample()}}}}}. Its source is intentionally short and is a
+runnable configuration template.
+
+\sphinxAtStartPar
+A programmatic demonstration has the same form:
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+\PYG{k+kn}{from}\PYG{+w}{ }\PYG{n+nn}{pathlib}\PYG{+w}{ }\PYG{k+kn}{import} \PYG{n}{Path}
+
+\PYG{k+kn}{from}\PYG{+w}{ }\PYG{n+nn}{pcat}\PYG{n+nn}{.}\PYG{n+nn}{demo}\PYG{+w}{ }\PYG{k+kn}{import} \PYG{n}{run\PYGZus{}pipeline\PYGZus{}demo}
+
+\PYG{n}{run\PYGZus{}pipeline\PYGZus{}demo}\PYG{p}{(}
+    \PYG{n}{Path}\PYG{p}{(}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{analysis/point\PYGZus{}sources}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{,}
+    \PYG{n}{typeexpr}\PYG{o}{=}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{chan}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{,}
+    \PYG{n}{typeelem}\PYG{o}{=}\PYG{p}{[}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{lghtpnts}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{]}\PYG{p}{,}
+    \PYG{n}{truenumbelempop0}\PYG{o}{=}\PYG{l+m+mi}{2}\PYG{p}{,}
+    \PYG{n}{fittminmnumbelempop0}\PYG{o}{=}\PYG{l+m+mi}{1}\PYG{p}{,}
+    \PYG{n}{fittmaxmnumbelempop0}\PYG{o}{=}\PYG{l+m+mi}{3}\PYG{p}{,}
+    \PYG{n}{dicttrue}\PYG{o}{=}\PYG{p}{\PYGZob{}}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{typeelemspateval}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{:} \PYG{p}{[}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{full}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{]}\PYG{p}{\PYGZcb{}}\PYG{p}{,}
+    \PYG{n}{dictfitt}\PYG{o}{=}\PYG{p}{\PYGZob{}}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{typeelemspateval}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{:} \PYG{p}{[}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{full}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{]}\PYG{p}{\PYGZcb{}}\PYG{p}{,}
+    \PYG{n}{numbsidecart}\PYG{o}{=}\PYG{l+m+mi}{8}\PYG{p}{,}
+    \PYG{n}{numbswep}\PYG{o}{=}\PYG{l+m+mi}{100}\PYG{p}{,}
+    \PYG{n}{numbsamp}\PYG{o}{=}\PYG{l+m+mi}{10}\PYG{p}{,}
+    \PYG{n}{numbswepplot}\PYG{o}{=}\PYG{l+m+mi}{10}\PYG{p}{,}
+    \PYG{n}{strgcnfg}\PYG{o}{=}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{point\PYGZus{}sources}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{,}
+\PYG{p}{)}
+\end{sphinxVerbatim}
+
+\sphinxAtStartPar
+This configuration is a pipeline check, not a scientifically converged chain.
+Production analyses require enough samples, convergence checks, and
+problem\sphinxhyphen{}specific prior validation.
+
+
+\section{Runtime paths}
+\label{\detokenize{getting_started:runtime-paths}}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{pathbase}} is the root for one analysis and contains \sphinxcode{\sphinxupquote{data/}} and
+\sphinxcode{\sphinxupquote{visuals/}}. If \sphinxcode{\sphinxupquote{pathbase}} is omitted, PCAT uses \sphinxcode{\sphinxupquote{PCAT\_DATA\_PATH}} and then
+\sphinxcode{\sphinxupquote{TDGU\_DATA\_PATH}}. \sphinxcode{\sphinxupquote{PCAT\_PATH}} separately identifies the repository root for
+repository\sphinxhyphen{}local utilities and does not replace the analysis output path.
+
+
+\section{Configuration principles}
+\label{\detokenize{getting_started:configuration-principles}}\begin{itemize}
+\item {}
+\sphinxAtStartPar
+Set \sphinxcode{\sphinxupquote{typedata="simu"}} for generated data and \sphinxcode{\sphinxupquote{typedata="inpt"}} for
+supplied data.
+
+\item {}
+\sphinxAtStartPar
+Use a filesystem\sphinxhyphen{}safe \sphinxcode{\sphinxupquote{strgcnfg}} run tag.
+
+\item {}
+\sphinxAtStartPar
+Set deterministic seeds for reproducible simulations and chains.
+
+\item {}
+\sphinxAtStartPar
+Keep true\sphinxhyphen{}model settings in \sphinxcode{\sphinxupquote{dicttrue}} and fitted\sphinxhyphen{}model settings in
+\sphinxcode{\sphinxupquote{dictfitt}} when defaults would otherwise overwrite the intended model.
+
+\item {}
+\sphinxAtStartPar
+Use \sphinxcode{\sphinxupquote{boolmakeplotinit}}, \sphinxcode{\sphinxupquote{boolmakeplotfram}}, \sphinxcode{\sphinxupquote{boolmakeplotfinlpost}}, and
+\sphinxcode{\sphinxupquote{makeanim}} to control visual products.
+
+\item {}
+\sphinxAtStartPar
+Treat short smoke configurations as integration checks rather than evidence
+for scientific claims.
+
+\end{itemize}
+
+\sphinxstepscope
+
+
+\chapter{Maintained examples}
+\label{\detokenize{examples:maintained-examples}}\label{\detokenize{examples::doc}}
+\sphinxAtStartPar
+Each example owns one subdirectory under \sphinxcode{\sphinxupquote{examples/}}. Source, generated data,
+and visuals stay together so outputs can be traced to the configuration that
+created them.
+
+
+\section{Pipeline demonstrations}
+\label{\detokenize{examples:pipeline-demonstrations}}\begin{description}
+\sphinxlineitem{\sphinxcode{\sphinxupquote{chan\_demo}}}
+\sphinxAtStartPar
+Compact Chandra\sphinxhyphen{}style point\sphinxhyphen{}source detection with simulated data.
+
+\sphinxlineitem{\sphinxcode{\sphinxupquote{gmix\_demo}}}
+\sphinxAtStartPar
+Two\sphinxhyphen{}dimensional variable\sphinxhyphen{}width Gaussian\sphinxhyphen{}mixture inference with genuine
+birth and death transitions.
+
+\sphinxlineitem{\sphinxcode{\sphinxupquote{hst\_lens}}}
+\sphinxAtStartPar
+Hubble Space Telescope Wide Field Camera 3 lensing\sphinxhyphen{}style image inference.
+
+\end{description}
+
+\sphinxAtStartPar
+Run all maintained pipeline checks and verify their figures with:
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+python\PYG{+w}{ }examples/run\PYGZus{}examples.py
+\end{sphinxVerbatim}
+
+
+\section{Publication and instrument examples}
+\label{\detokenize{examples:publication-and-instrument-examples}}\begin{description}
+\sphinxlineitem{\sphinxcode{\sphinxupquote{Daylan+2017}}}
+\sphinxAtStartPar
+Scaled mock\sphinxhyphen{}catalog reproduction of Daylan, Portillo, and Finkbeiner (2017).
+The smoke mode preserves the inference pattern while reducing the source
+count and chain length.
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+python\PYG{+w}{ }\PYG{l+s+s1}{\PYGZsq{}examples/Daylan+2017/generate\PYGZus{}reproduction.py\PYGZsq{}}\PYG{+w}{ }\PYGZhy{}\PYGZhy{}smoke\PYG{+w}{ }\PYGZhy{}\PYGZhy{}fresh
+\end{sphinxVerbatim}
+
+\sphinxlineitem{\sphinxcode{\sphinxupquote{voigt\sphinxhyphen{}profile}}}
+\sphinxAtStartPar
+Simulated nominal and high\sphinxhyphen{}signal Voigt\sphinxhyphen{}profile line detection.
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+python\PYG{+w}{ }examples/voigt\PYGZhy{}profile/pcat\PYGZus{}voigt\PYGZus{}profile\PYGZus{}detection.py\PYG{+w}{ }\PYGZhy{}\PYGZhy{}configuration\PYG{+w}{ }nomi
+\end{sphinxVerbatim}
+
+\sphinxlineitem{\sphinxcode{\sphinxupquote{roman\_lens\_catalog}}}
+\sphinxAtStartPar
+Seeded Roman strong\sphinxhyphen{}lens population benchmark and catalog\sphinxhyphen{}detection
+diagnostic.
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+python\PYG{+w}{ }examples/roman\PYGZus{}lens\PYGZus{}catalog/roman\PYGZus{}lens\PYGZus{}catalog\PYGZus{}diagnostic.py
+\end{sphinxVerbatim}
+
+\sphinxlineitem{\sphinxcode{\sphinxupquote{fermi\_lat\_pg1553}}}
+\sphinxAtStartPar
+Fermi Large Area Telescope event\sphinxhyphen{}filter configuration for PG 1553+113. This
+utility requires the Fermi Science Tools and local mission data.
+
+\end{description}
+
+
+\section{Scientific interpretation}
+\label{\detokenize{examples:scientific-interpretation}}
+\sphinxAtStartPar
+Generated examples are deterministic pipeline demonstrations unless their
+README explicitly states otherwise. Synthetic outputs validate computation and
+visualization but do not constitute measurements of real astrophysical systems.
+The Daylan+2017 README distinguishes its maintained scaled simulation from the
+archival Fermi\sphinxhyphen{}LAT analysis in the publication.
+
+\sphinxstepscope
+
+
+\chapter{Outputs and diagnostics}
+\label{\detokenize{outputs:outputs-and-diagnostics}}\label{\detokenize{outputs::doc}}
+
+\section{Directory layout}
+\label{\detokenize{outputs:directory-layout}}
+\sphinxAtStartPar
+A run with output root \sphinxcode{\sphinxupquote{pathbase}} and tag \sphinxcode{\sphinxupquote{strgcnfg}} writes:
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+pathbase/
+|\PYGZhy{}\PYGZhy{} data/
+|   `\PYGZhy{}\PYGZhy{} outp/
+|       `\PYGZhy{}\PYGZhy{} strgcnfg/
+|           |\PYGZhy{}\PYGZhy{} cmndargs.txt
+|           |\PYGZhy{}\PYGZhy{} stat.txt
+|           |\PYGZhy{}\PYGZhy{} gdatinit.p
+|           |\PYGZhy{}\PYGZhy{} gdatinit.h5
+|           |\PYGZhy{}\PYGZhy{} gdatmodi0000post.p
+|           |\PYGZhy{}\PYGZhy{} gdatmodi0000post.h5
+|           |\PYGZhy{}\PYGZhy{} gdatfinlpost.p
+|           `\PYGZhy{}\PYGZhy{} gdatfinlpost.h5
+`\PYGZhy{}\PYGZhy{} visuals/
+    `\PYGZhy{}\PYGZhy{} strgcnfg/
+        |\PYGZhy{}\PYGZhy{} init/
+        `\PYGZhy{}\PYGZhy{} post/
+            |\PYGZhy{}\PYGZhy{} fram/
+            |\PYGZhy{}\PYGZhy{} finl/
+            `\PYGZhy{}\PYGZhy{} anim/
+\end{sphinxVerbatim}
+
+\sphinxAtStartPar
+When \sphinxcode{\sphinxupquote{pathbase}} already ends in the run tag, PCAT avoids repeating that name
+under \sphinxcode{\sphinxupquote{visuals/}}. For example, \sphinxcode{\sphinxupquote{examples/gmix\_demo}} writes directly to
+\sphinxcode{\sphinxupquote{examples/gmix\_demo/visuals/init}} and \sphinxcode{\sphinxupquote{visuals/post}}.
+
+
+\section{State files}
+\label{\detokenize{outputs:state-files}}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{gdatinit}} stores initialized configuration and model metadata.
+\sphinxcode{\sphinxupquote{gdatmodi\#\#\#\#post}} stores worker\sphinxhyphen{}chain products. \sphinxcode{\sphinxupquote{gdatfinlpost}} stores the
+aggregated posterior state and derived summaries. PCAT splits each state between
+a pickle file and an HDF5 companion, and {\hyperref[\detokenize{api:pcat.main.readfile}]{\sphinxcrossref{\sphinxcode{\sphinxupquote{pcat.main.readfile()}}}}} reconstructs
+the object from the extension\sphinxhyphen{}free path:
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+\PYG{k+kn}{from}\PYG{+w}{ }\PYG{n+nn}{pathlib}\PYG{+w}{ }\PYG{k+kn}{import} \PYG{n}{Path}
+
+\PYG{k+kn}{from}\PYG{+w}{ }\PYG{n+nn}{pcat}\PYG{n+nn}{.}\PYG{n+nn}{main}\PYG{+w}{ }\PYG{k+kn}{import} \PYG{n}{readfile}
+
+\PYG{n}{run\PYGZus{}root} \PYG{o}{=} \PYG{n}{Path}\PYG{p}{(}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{examples/gmix\PYGZus{}demo}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{)}
+\PYG{n}{state} \PYG{o}{=} \PYG{n}{readfile}\PYG{p}{(}
+    \PYG{n+nb}{str}\PYG{p}{(}\PYG{n}{run\PYGZus{}root} \PYG{o}{/} \PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{data}\PYG{l+s+s2}{\PYGZdq{}} \PYG{o}{/} \PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{outp}\PYG{l+s+s2}{\PYGZdq{}} \PYG{o}{/} \PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{gmix\PYGZus{}demo}\PYG{l+s+s2}{\PYGZdq{}} \PYG{o}{/} \PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{gdatfinlpost}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{)}
+\PYG{p}{)}
+\PYG{n+nb}{print}\PYG{p}{(}\PYG{n}{state}\PYG{o}{.}\PYG{n}{numbsamp}\PYG{p}{)}
+\end{sphinxVerbatim}
+
+
+\section{Completion markers}
+\label{\detokenize{outputs:completion-markers}}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{stat.txt}} is append\sphinxhyphen{}only and records completed stages. A fully processed run
+normally contains \sphinxcode{\sphinxupquote{gdatfinlpost written.}}, \sphinxcode{\sphinxupquote{plotfinlpost written.}}, and,
+when animations are enabled, \sphinxcode{\sphinxupquote{animfinl written.}}. Validate the corresponding
+files as well as the markers before treating a run as complete.
+
+
+\section{Visual products}
+\label{\detokenize{outputs:visual-products}}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{init}} contains simulated data, reference\sphinxhyphen{}model, and initial diagnostics.
+\sphinxcode{\sphinxupquote{post/fram}} contains snapshots across the chain. \sphinxcode{\sphinxupquote{post/finl}} contains final
+posterior summaries and diagnostics. \sphinxcode{\sphinxupquote{post/anim}} contains GIFs assembled from
+frame plots. Empty optional directories are removed at successful completion.
+
+
+\section{Convergence and interpretation}
+\label{\detokenize{outputs:convergence-and-interpretation}}
+\sphinxAtStartPar
+Inspect effective sample sizes, split\sphinxhyphen{}chain or multi\sphinxhyphen{}chain convergence metrics,
+proposal acceptance, likelihood traces, model\sphinxhyphen{}count transitions, and posterior
+predictive residuals. A completed process is not necessarily a converged or
+scientifically adequate inference. Transdimensional parameters also require
+population\sphinxhyphen{}level or association\sphinxhyphen{}aware summaries because raw element labels are
+not persistent.
+
+
+\section{Reproducibility checklist}
+\label{\detokenize{outputs:reproducibility-checklist}}
+\sphinxAtStartPar
+Before publishing or comparing runs, preserve and report:
+\begin{itemize}
+\item {}
+\sphinxAtStartPar
+the PCAT and TDpy repository revisions and Python environment;
+
+\item {}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{cmndargs.txt}} and all explicit random seeds;
+
+\item {}
+\sphinxAtStartPar
+input filenames, versions, selections, units, and checksums;
+
+\item {}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{gdatfinlpost.p}} and its matching \sphinxcode{\sphinxupquote{gdatfinlpost.h5}} companion;
+
+\item {}
+\sphinxAtStartPar
+retained sample count, convergence thresholds, and measured diagnostics;
+
+\item {}
+\sphinxAtStartPar
+proposal acceptance and model\sphinxhyphen{}count transition summaries;
+
+\item {}
+\sphinxAtStartPar
+posterior predictive data, model, and residual plots; and
+
+\item {} \begin{description}
+\sphinxlineitem{whether the run used real data, a controlled simulation, or a smoke\sphinxhyphen{}test}
+\sphinxAtStartPar
+configuration.
+
+\end{description}
+
+\end{itemize}
+
+\sphinxAtStartPar
+Do not compare serialized states copied without their HDF5 companions. Avoid
+overwriting a completed run with a different configuration under the same run
+tag; use a new \sphinxcode{\sphinxupquote{strgcnfg}} or remove both cached data and visuals deliberately.
+
+\sphinxstepscope
+
+
+\chapter{Troubleshooting}
+\label{\detokenize{troubleshooting:troubleshooting}}\label{\detokenize{troubleshooting::doc}}
+
+\section{Output path errors}
+\label{\detokenize{troubleshooting:output-path-errors}}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{No output data path is configured}} means neither \sphinxcode{\sphinxupquote{pathbase}} nor a supported
+environment variable was provided. Pass \sphinxcode{\sphinxupquote{pathbase}} explicitly or set
+\sphinxcode{\sphinxupquote{PCAT\_DATA\_PATH}}. \sphinxcode{\sphinxupquote{PCAT\_PATH}} identifies the repository for local utilities
+and does not select a sampler output directory.
+
+\sphinxAtStartPar
+If final processing or animation reports that \sphinxcode{\sphinxupquote{PCAT\_DATA\_PATH}} is not set,
+pass the same \sphinxcode{\sphinxupquote{pathbase}} used for sampling. A run cannot be reconstructed from
+\sphinxcode{\sphinxupquote{visuals/}} alone because final processing reads serialized states under
+\sphinxcode{\sphinxupquote{data/outp/\textless{}run tag\textgreater{}/}}.
+
+
+\section{Incomplete runs}
+\label{\detokenize{troubleshooting:incomplete-runs}}
+\sphinxAtStartPar
+Inspect \sphinxcode{\sphinxupquote{data/outp/\textless{}run tag\textgreater{}/stat.txt}} from bottom to top. A complete posterior
+run normally records these stages in order:
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+gdatinit written.
+gdatmodipost written.
+gdatfinlpost written.
+plotfinlpost written.
+animfinl written.
+\end{sphinxVerbatim}
+
+\sphinxAtStartPar
+The animation marker is expected only when animation generation is enabled.
+Missing \sphinxcode{\sphinxupquote{gdatinit}} indicates initialization did not finish. Missing
+\sphinxcode{\sphinxupquote{gdatmodipost}} indicates a worker failed before writing its chain. Missing
+\sphinxcode{\sphinxupquote{gdatfinlpost}} means worker products were not aggregated. Read the original
+traceback before rerunning so a configuration defect is not hidden by cached
+partial state.
+
+
+\section{Stale caches}
+\label{\detokenize{troubleshooting:stale-caches}}
+\sphinxAtStartPar
+PCAT can reuse existing state for a matching run tag. After changing model
+structure, output paths, or plotting configuration, make a fresh run. Maintained
+entry points that support it accept \sphinxcode{\sphinxupquote{\sphinxhyphen{}\sphinxhyphen{}fresh}}. Otherwise remove both
+\sphinxcode{\sphinxupquote{data/outp/\textless{}run tag\textgreater{}}} and its corresponding visual run directory, preserving
+any products needed for provenance first.
+
+
+\section{Missing figures or animations}
+\label{\detokenize{troubleshooting:missing-figures-or-animations}}
+\sphinxAtStartPar
+Check \sphinxcode{\sphinxupquote{boolmakeplot}}, \sphinxcode{\sphinxupquote{boolmakeplotinit}}, \sphinxcode{\sphinxupquote{boolmakeplotfram}},
+\sphinxcode{\sphinxupquote{boolmakeplotfinlpost}}, and \sphinxcode{\sphinxupquote{makeanim}}. Animations require at least two frame
+plots, controlled by chain length and \sphinxcode{\sphinxupquote{numbswepplot}}. Frames that are visually
+identical may collapse to a single\sphinxhyphen{}frame GIF; such a file is a static image and
+should not be reported as an animation.
+
+\sphinxAtStartPar
+For headless systems, set a writable Matplotlib cache before running:
+
+\begin{sphinxVerbatim}[commandchars=\\\{\}]
+\PYG{n+nv}{MPLCONFIGDIR}\PYG{o}{=}/tmp/pcat\PYGZhy{}mplconfig\PYG{+w}{ }python\PYG{+w}{ }examples/chan\PYGZus{}demo/generate\PYGZus{}demo.py
+\end{sphinxVerbatim}
+
+
+\section{Sampling configuration failures}
+\label{\detokenize{troubleshooting:sampling-configuration-failures}}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{Sampling failed due to incomplete or inconsistent model configuration}} wraps
+a lower\sphinxhyphen{}level attribute, key, index, or type error. Preserve the chained
+traceback and compare the configuration with the nearest maintained example.
+Explicitly set model\sphinxhyphen{}specific values in \sphinxcode{\sphinxupquote{dicttrue}} and \sphinxcode{\sphinxupquote{dictfitt}} when an
+experiment default would otherwise replace them.
+
+\sphinxAtStartPar
+Split and merge proposals are not implemented for every element model. For
+those models, set \sphinxcode{\sphinxupquote{probspmr=0.0}}. Birth and death proposals still provide
+genuine transdimensional model\sphinxhyphen{}count changes when \sphinxcode{\sphinxupquote{probtran}} is nonzero.
+
+
+\section{Convergence}
+\label{\detokenize{troubleshooting:convergence}}
+\sphinxAtStartPar
+When \sphinxcode{\sphinxupquote{boolcheckconv}} is enabled, inspect \sphinxcode{\sphinxupquote{boolconv}},
+\sphinxcode{\sphinxupquote{maxmconvrhatcalc}}, and \sphinxcode{\sphinxupquote{numbsampconveffccalc}} in the final state. A process
+that reaches its sweep limit and writes all files is operationally complete but
+may still be statistically unconverged. Increase chain length or improve the
+proposal and prior configuration based on acceptance, trace, residual, and
+model\sphinxhyphen{}count diagnostics rather than weakening thresholds solely to terminate a
+run.
+
+
+\section{Minimal diagnostic sequence}
+\label{\detokenize{troubleshooting:minimal-diagnostic-sequence}}\begin{enumerate}
+\sphinxsetlistlabels{\arabic}{enumi}{enumii}{}{.}%
+\item {}
+\sphinxAtStartPar
+Reproduce the issue with a deterministic seed and a small configuration.
+
+\item {}
+\sphinxAtStartPar
+Run the nearest maintained example in the same Python environment.
+
+\item {}
+\sphinxAtStartPar
+Compare \sphinxcode{\sphinxupquote{cmndargs.txt}}, \sphinxcode{\sphinxupquote{stat.txt}}, and the final completed stage.
+
+\item {}
+\sphinxAtStartPar
+Confirm every pickle state has its matching HDF5 companion.
+
+\item {}
+\sphinxAtStartPar
+Rerun under a new tag after correcting the root cause.
+
+\end{enumerate}
+
+\sphinxstepscope
+
+
+\chapter{Public API}
+\label{\detokenize{api:public-api}}\label{\detokenize{api::doc}}
+
+\section{Sampling}
+\label{\detokenize{api:sampling}}\index{built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}!pcat.main.sample()@\spxentry{pcat.main.sample()}}\index{pcat.main.sample()@\spxentry{pcat.main.sample()}!built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}}
 
 \begin{fulllineitems}
-\phantomsection\label{index:pcat.main.init}\pysiglinewithargsret{\sphinxcode{pcat.main.}\sphinxbfcode{init}}{}{}
-Sample from the catalog space given a dataset.
-\begin{quote}\begin{description}
-\item[{Parameters}] \leavevmode
-\sphinxstyleliteralstrong{datatype} (\sphinxstyleliteralemphasis{str}) -- Type of data
+\phantomsection\label{\detokenize{api:pcat.main.sample}}
+\pysigstartsignatures
+\pysiglinewithargsret
+{\sphinxcode{\sphinxupquote{pcat.main.}}\sphinxbfcode{\sphinxupquote{sample}}}
+{\sphinxparam{\DUrole{o}{**}\DUrole{n}{configuration}}}
+{}
+\pysigstopsignatures
+\sphinxAtStartPar
+Dispatch an image or general PCAT configuration, execute sampling and final
+processing, and return the final global state object.
 
-\end{description}\end{quote}
+\sphinxAtStartPar
+Frequently used configuration keys include:
+\begin{itemize}
+\item {}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{typeexpr}} for the experiment family, including \sphinxcode{\sphinxupquote{"chan"}}, \sphinxcode{\sphinxupquote{"gmix"}},
+\sphinxcode{\sphinxupquote{"fire"}}, and HST Wide Field Camera 3 identifiers.
+
+\item {}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{typedata}} set to \sphinxcode{\sphinxupquote{"simu"}} for generated data or \sphinxcode{\sphinxupquote{"inpt"}} for
+supplied data.
+
+\item {}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{pathbase}} and \sphinxcode{\sphinxupquote{strgcnfg}} for the output root and filesystem\sphinxhyphen{}safe run
+tag.
+
+\item {}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{typeelem}} for the element types in each population.
+
+\item {}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{numbswep}} and \sphinxcode{\sphinxupquote{numbsamp}} for sampler sweeps and retained posterior
+samples.
+
+\item {}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{probtran}} and \sphinxcode{\sphinxupquote{probspmr}} for transdimensional and split/merge proposal
+probabilities. Maintained examples disable split/merge where that proposal
+is unsupported.
+
+\item {}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{boolmakeplotinit}}, \sphinxcode{\sphinxupquote{boolmakeplotfram}}, \sphinxcode{\sphinxupquote{boolmakeplotfinlpost}}, and
+\sphinxcode{\sphinxupquote{makeanim}} for visual\sphinxhyphen{}output controls.
+
+\end{itemize}
 
 \end{fulllineitems}
 
+\index{built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}!pcat.main.init()@\spxentry{pcat.main.init()}}\index{pcat.main.init()@\spxentry{pcat.main.init()}!built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{api:pcat.main.init}}
+\pysigstartsignatures
+\pysiglinewithargsret
+{\sphinxcode{\sphinxupquote{pcat.main.}}\sphinxbfcode{\sphinxupquote{init}}}
+{\sphinxparam{\DUrole{n}{configuration}}}
+{}
+\pysigstopsignatures
+\sphinxAtStartPar
+Lower\sphinxhyphen{}level initialization and execution engine. New image\sphinxhyphen{}analysis code
+should normally call {\hyperref[\detokenize{api:pcat.main.sample}]{\sphinxcrossref{\sphinxcode{\sphinxupquote{pcat.main.sample()}}}}}, which performs experiment
+dispatch before invoking this function.
+
+\end{fulllineitems}
+
+
+
+\section{Example orchestration}
+\label{\detokenize{api:example-orchestration}}\index{built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}!pcat.demo.run\_pipeline\_demo()@\spxentry{pcat.demo.run\_pipeline\_demo()}}\index{pcat.demo.run\_pipeline\_demo()@\spxentry{pcat.demo.run\_pipeline\_demo()}!built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{api:pcat.demo.run_pipeline_demo}}
+\pysigstartsignatures
+\pysiglinewithargsret
+{\sphinxcode{\sphinxupquote{pcat.demo.}}\sphinxbfcode{\sphinxupquote{run\_pipeline\_demo}}}
+{\sphinxparam{\DUrole{n}{output\_root}}\sphinxparamcomma \sphinxparam{\DUrole{o}{**}\DUrole{n}{configuration}}}
+{}
+\pysigstopsignatures
+\sphinxAtStartPar
+Apply lightweight plotting and simulation defaults, set \sphinxcode{\sphinxupquote{pathbase}}, and
+call {\hyperref[\detokenize{api:pcat.main.sample}]{\sphinxcrossref{\sphinxcode{\sphinxupquote{pcat.main.sample()}}}}}. This helper is intended for maintained
+demonstrations and integration checks.
+
+\end{fulllineitems}
+
+
+
+\section{Persistence}
+\label{\detokenize{api:persistence}}\index{built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}!pcat.main.readfile()@\spxentry{pcat.main.readfile()}}\index{pcat.main.readfile()@\spxentry{pcat.main.readfile()}!built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{api:pcat.main.readfile}}
+\pysigstartsignatures
+\pysiglinewithargsret
+{\sphinxcode{\sphinxupquote{pcat.main.}}\sphinxbfcode{\sphinxupquote{readfile}}}
+{\sphinxparam{\DUrole{n}{path}}}
+{}
+\pysigstopsignatures
+\sphinxAtStartPar
+Reconstruct a PCAT state from its pickle and HDF5 companions. Pass the path
+without \sphinxcode{\sphinxupquote{.p}} or \sphinxcode{\sphinxupquote{.h5}}.
+
+\end{fulllineitems}
+
+\index{built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}!pcat.main.writfile()@\spxentry{pcat.main.writfile()}}\index{pcat.main.writfile()@\spxentry{pcat.main.writfile()}!built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{api:pcat.main.writfile}}
+\pysigstartsignatures
+\pysiglinewithargsret
+{\sphinxcode{\sphinxupquote{pcat.main.}}\sphinxbfcode{\sphinxupquote{writfile}}}
+{\sphinxparam{\DUrole{n}{state}}\sphinxparamcomma \sphinxparam{\DUrole{n}{path}}}
+{}
+\pysigstopsignatures
+\sphinxAtStartPar
+Persist a PCAT state to pickle and HDF5 companions.
+
+\end{fulllineitems}
+
+\index{built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}!pcat.main.proc\_finl()@\spxentry{pcat.main.proc\_finl()}}\index{pcat.main.proc\_finl()@\spxentry{pcat.main.proc\_finl()}!built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{api:pcat.main.proc_finl}}
+\pysigstartsignatures
+\pysiglinewithargsret
+{\sphinxcode{\sphinxupquote{pcat.main.}}\sphinxbfcode{\sphinxupquote{proc\_finl}}}
+{\sphinxparam{\DUrole{n}{gdat}\DUrole{o}{=}\DUrole{default_value}{None}}\sphinxparamcomma \sphinxparam{\DUrole{n}{strgcnfg}\DUrole{o}{=}\DUrole{default_value}{None}}\sphinxparamcomma \sphinxparam{\DUrole{n}{strgpdfn}\DUrole{o}{=}\DUrole{default_value}{\textquotesingle{}post\textquotesingle{}}}\sphinxparamcomma \sphinxparam{\DUrole{n}{listnamevarbproc}\DUrole{o}{=}\DUrole{default_value}{None}}\sphinxparamcomma \sphinxparam{\DUrole{n}{forcplot}\DUrole{o}{=}\DUrole{default_value}{False}}}
+{}
+\pysigstopsignatures
+\sphinxAtStartPar
+Aggregate worker states and create final posterior products. Normal calls to
+{\hyperref[\detokenize{api:pcat.main.sample}]{\sphinxcrossref{\sphinxcode{\sphinxupquote{pcat.main.sample()}}}}} invoke this automatically.
+
+\end{fulllineitems}
+
+\index{built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}!pcat.main.proc\_anim()@\spxentry{pcat.main.proc\_anim()}}\index{pcat.main.proc\_anim()@\spxentry{pcat.main.proc\_anim()}!built\sphinxhyphen{}in function@\spxentry{built\sphinxhyphen{}in function}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{api:pcat.main.proc_anim}}
+\pysigstartsignatures
+\pysiglinewithargsret
+{\sphinxcode{\sphinxupquote{pcat.main.}}\sphinxbfcode{\sphinxupquote{proc\_anim}}}
+{\sphinxparam{\DUrole{n}{strgcnfg}}\sphinxparamcomma \sphinxparam{\DUrole{n}{pathbase}\DUrole{o}{=}\DUrole{default_value}{None}}}
+{}
+\pysigstopsignatures
+\sphinxAtStartPar
+Build GIF animations from posterior frame plots for an existing run.
+
+\end{fulllineitems}
+
+
+
+\section{Runtime path helpers}
+\label{\detokenize{api:runtime-path-helpers}}
+\sphinxAtStartPar
+\sphinxcode{\sphinxupquote{pcat.paths}} exports \sphinxcode{\sphinxupquote{get\_repository\_path()}}, \sphinxcode{\sphinxupquote{get\_data\_path()}}, and
+\sphinxcode{\sphinxupquote{get\_visuals\_path()}} for repository\sphinxhyphen{}local tooling. These helpers use
+\sphinxcode{\sphinxupquote{PCAT\_PATH}} and are distinct from the per\sphinxhyphen{}analysis \sphinxcode{\sphinxupquote{pathbase}} used by the
+sampler.
+
+
+\chapter{Scientific scope}
+\label{\detokenize{index:scientific-scope}}
+\sphinxAtStartPar
+PCAT represents a metamodel as the union of models with different numbers of
+elements. Each element is a group of parameters that appears or disappears
+together, such as the position and flux of a point source or the parameters of a
+spectral line. Fixed\sphinxhyphen{}dimensional parameters describe shared quantities such as
+backgrounds, population hyperparameters, or instrumental response.
+
+\sphinxAtStartPar
+Within\sphinxhyphen{}model proposals update existing parameters. Birth and death proposals
+move between catalog dimensions while respecting detailed balance. Individual
+element labels are exchangeable, so scientific conclusions should generally use
+population summaries, condensed catalogs, associations to reference objects, or
+predictions in data space rather than raw element indices.
+
+
+\chapter{Current status}
+\label{\detokenize{index:current-status}}
+\sphinxAtStartPar
+PCAT is research software under active development. Reproducible analyses should
+record the repository revision, complete run configuration, random seeds, and
+the final serialized state. The output tree stores these products together for
+each run.
 
 
 

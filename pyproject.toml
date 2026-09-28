@@ -24,6 +24,12 @@ dependencies = [
   "tdpy",
 ]
 
+[project.optional-dependencies]
+docs = [
+  "sphinx>=8",
+  "sphinx-rtd-theme>=3",
+]
+
 [tool.setuptools]
 packages = ["pcat"]
 

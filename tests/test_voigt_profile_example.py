@@ -5,7 +5,10 @@ import pytest
 
 
 EXAMPLE_SCRIPT = (
-    Path(__file__).resolve().parents[1] / "examples" / "pcat_voigt_profile_detection.py"
+    Path(__file__).resolve().parents[1]
+    / "examples"
+    / "voigt-profile"
+    / "pcat_voigt_profile_detection.py"
 )
 SPECIFICATION = importlib.util.spec_from_file_location(
     "pcat_voigt_profile_detection", EXAMPLE_SCRIPT

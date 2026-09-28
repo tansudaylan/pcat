@@ -1,0 +1,194 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getting started &mdash; PCAT 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Maintained examples" href="examples.html" />
+    <link rel="prev" title="PCAT documentation" href="index.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="index.html" class="icon icon-home">
+            PCAT
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#first-run">First run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#runtime-paths">Runtime paths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-principles">Configuration principles</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Maintained examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PCAT</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Getting started</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/getting_started.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <section id="getting-started">
+<h1>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading"></a></h1>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading"></a></h2>
+<p>PCAT requires Python 3.10 or newer. Its runtime dependencies are declared in
+<code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> and include NumPy, SciPy, Astropy, Matplotlib, h5py, Numba,
+Seaborn, and TDpy.</p>
+<p>For development with sibling repositories, install TDpy and PCAT in editable
+mode:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>/path/to/tdpy
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+<span class="nb">cd</span><span class="w"> </span>/path/to/pcat
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+<p>Install the documentation dependencies with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[docs]"</span>
+</pre></div>
+</div>
+</section>
+<section id="first-run">
+<h2>First run<a class="headerlink" href="#first-run" title="Link to this heading"></a></h2>
+<p>Run the compact Chandra-style demonstration from the repository root:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/chan_demo/generate_demo.py
+</pre></div>
+</div>
+<p>The script uses <a class="reference internal" href="api.html#pcat.demo.run_pipeline_demo" title="pcat.demo.run_pipeline_demo"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.demo.run_pipeline_demo()</span></code></a> to supply plotting defaults
+and calls <a class="reference internal" href="api.html#pcat.main.sample" title="pcat.main.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.main.sample()</span></code></a>. Its source is intentionally short and is a
+runnable configuration template.</p>
+<p>A programmatic demonstration has the same form:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pcat.demo</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_pipeline_demo</span>
+
+<span class="n">run_pipeline_demo</span><span class="p">(</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">"analysis/point_sources"</span><span class="p">),</span>
+    <span class="n">typeexpr</span><span class="o">=</span><span class="s2">"chan"</span><span class="p">,</span>
+    <span class="n">typeelem</span><span class="o">=</span><span class="p">[</span><span class="s2">"lghtpnts"</span><span class="p">],</span>
+    <span class="n">truenumbelempop0</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">fittminmnumbelempop0</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">fittmaxmnumbelempop0</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">dicttrue</span><span class="o">=</span><span class="p">{</span><span class="s2">"typeelemspateval"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"full"</span><span class="p">]},</span>
+    <span class="n">dictfitt</span><span class="o">=</span><span class="p">{</span><span class="s2">"typeelemspateval"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"full"</span><span class="p">]},</span>
+    <span class="n">numbsidecart</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">numbswep</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">numbsamp</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">numbswepplot</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">strgcnfg</span><span class="o">=</span><span class="s2">"point_sources"</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>This configuration is a pipeline check, not a scientifically converged chain.
+Production analyses require enough samples, convergence checks, and
+problem-specific prior validation.</p>
+</section>
+<section id="runtime-paths">
+<h2>Runtime paths<a class="headerlink" href="#runtime-paths" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">pathbase</span></code> is the root for one analysis and contains <code class="docutils literal notranslate"><span class="pre">data/</span></code> and
+<code class="docutils literal notranslate"><span class="pre">visuals/</span></code>. If <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> is omitted, PCAT uses <code class="docutils literal notranslate"><span class="pre">PCAT_DATA_PATH</span></code> and then
+<code class="docutils literal notranslate"><span class="pre">TDGU_DATA_PATH</span></code>. <code class="docutils literal notranslate"><span class="pre">PCAT_PATH</span></code> separately identifies the repository root for
+repository-local utilities and does not replace the analysis output path.</p>
+</section>
+<section id="configuration-principles">
+<h2>Configuration principles<a class="headerlink" href="#configuration-principles" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">typedata=&quot;simu&quot;</span></code> for generated data and <code class="docutils literal notranslate"><span class="pre">typedata=&quot;inpt&quot;</span></code> for
+supplied data.</p></li>
+<li><p>Use a filesystem-safe <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> run tag.</p></li>
+<li><p>Set deterministic seeds for reproducible simulations and chains.</p></li>
+<li><p>Keep true-model settings in <code class="docutils literal notranslate"><span class="pre">dicttrue</span></code> and fitted-model settings in
+<code class="docutils literal notranslate"><span class="pre">dictfitt</span></code> when defaults would otherwise overwrite the intended model.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">boolmakeplotinit</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotfram</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotfinlpost</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">makeanim</span></code> to control visual products.</p></li>
+<li><p>Treat short smoke configurations as integration checks rather than evidence
+for scientific claims.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="PCAT documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples.html" class="btn btn-neutral float-right" title="Maintained examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Tansu Daylan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

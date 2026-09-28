@@ -2,6 +2,7 @@ import importlib.util
 import os
 from pathlib import Path
 
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -43,18 +44,19 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
 
 
 @pytest.mark.parametrize(
-    ("example_name", "expected"),
+    ("example_name", "run_name", "expected"),
     [
-        ("chandra_point_source", {"typeexpr": "chan", "typeelem": ["lghtpnts"]}),
+        ("chan_demo", "chan_demo", {"typeexpr": "chan", "typeelem": ["lghtpnts"]}),
         (
-            "gaussian_mixture",
+            "gmix_demo",
+            "gmix_demo",
             {"typeexpr": "gmix", "typeelem": ["clusvari"], "numbspatdims": 2},
         ),
-        ("hst_lens", {"typeexpr": "HST_WFC3_IR", "typeelem": ["lens"]}),
+        ("hst_lens", "hst_lens_demo", {"typeexpr": "HST_WFC3_IR", "typeelem": ["lens"]}),
     ],
 )
 def test_demo_entrypoint_preserves_scientific_configuration(
-    example_name, expected, monkeypatch
+    example_name, run_name, expected, monkeypatch
 ):
     script_path = REPOSITORY_ROOT / "examples" / example_name / "generate_demo.py"
     module = load_example_module(f"pcat_{example_name}_demo", script_path)
@@ -69,13 +71,32 @@ def test_demo_entrypoint_preserves_scientific_configuration(
 
     module.main()
 
-    assert captured["output_root"] == script_path.parent / "pcat-output"
+    expected_output_root = (
+        script_path.parent
+        if example_name == "hst_lens"
+        else script_path.parents[1] / run_name
+    )
+    assert captured["output_root"] == expected_output_root
     for key, value in expected.items():
         assert captured[key] == value
+    if example_name == "gmix_demo":
+        assert captured["dicttrue"]["typeelem"] == ["clusvari"]
+        assert captured["dictfitt"]["typeelem"] == ["clusvari"]
+        assert captured["strgexpo"] == pytest.approx(50.0)
+        assert captured["typeseedelem"] == 2_293
+        assert captured["probspmr"] == pytest.approx(0.0)
+        assert captured["numbswep"] == 1_000
+        assert captured["numbsamp"] == 100
+        assert captured["numbswepplot"] == 100
 
 
 def test_voigt_smoke_configuration_enables_animation(monkeypatch):
-    script_path = REPOSITORY_ROOT / "examples" / "pcat_voigt_profile_detection.py"
+    script_path = (
+        REPOSITORY_ROOT
+        / "examples"
+        / "voigt-profile"
+        / "pcat_voigt_profile_detection.py"
+    )
     module = load_example_module("pcat_voigt_example", script_path)
     captured = {}
     monkeypatch.setattr(
@@ -97,38 +118,55 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
     assert captured["dictfitt"]["typeelem"] == ["lghtlinevoig"]
 
 
-def test_daylan2016_configuration_preserves_published_mock_assumptions():
+def test_daylan2017_configuration_preserves_published_mock_assumptions():
     script_path = (
-        REPOSITORY_ROOT / "examples" / "daylan2016" / "generate_reproduction.py"
+        REPOSITORY_ROOT / "examples" / "Daylan+2017" / "generate_reproduction.py"
     )
-    module = load_example_module("pcat_daylan2016_reproduction", script_path)
+    module = load_example_module("pcat_daylan2017_reproduction", script_path)
 
     full = module.build_configuration()
     smoke = module.build_configuration(smoke=True, typefileplot="pdf")
 
+    assert full["typeexpr"] == "ferm"
     assert full["truenumbelempop0"] == 300
     assert full["truemaxmnumbelempop0"] == 300
     assert full["numbelempop0reg0"] == 300
     assert full["truefluxdistslop"] == pytest.approx(-1.8)
     assert full["typeelem"] == ["lghtpnts"]
     assert full["typepixl"] == "cart"
+    assert full["boolforccart"] is True
+    assert np.rad2deg(full["maxmgangdata"]) == pytest.approx(20.0)
+    assert len(full["indxenerincl"]) == 3
+    assert len(full["indxdqltincl"]) == 2
+    assert full["fermscalfact"].shape == (3, 2)
+    assert full["dicttrue"]["psfpexpr"].shape == (30,)
+    assert full["dicttrue"]["listnamediff"] == ["back0000", "back0001"]
+    assert full["numbsidecart"] == 100
     assert full["numbswep"] == 1_000_000
     assert full["numbsamp"] == 10_000
+    assert full["pathbase"] == str(REPOSITORY_ROOT / "examples" / "Daylan+2017")
     assert full["boolcondcatl"] is True
-    assert smoke["truenumbelempop0"] == 12
-    assert smoke["numbelempop0reg0"] == 12
+    assert smoke["truenumbelempop0"] == 40
+    assert smoke["numbelempop0reg0"] == 40
+    assert smoke["numbsidecart"] == 48
     assert smoke["numbswep"] == 10_000
     assert smoke["numbsamp"] == 1_000
     assert smoke["numbswepplot"] == 1_000
+    assert smoke["probspmr"] == pytest.approx(0.0)
     assert smoke["boolcondcatl"] is True
     assert smoke["makeanim"] is True
     assert smoke["typefileplot"] == "pdf"
+
+    diffuse_template = smoke["dicttrue"]["sbrtbacknorm"][1]
+    assert diffuse_template.shape == (3, 48**2, 2)
+    assert np.mean(diffuse_template, axis=1) == pytest.approx(np.ones((3, 2)))
+    assert np.std(diffuse_template[1, :, 0]) > 0.15
 
 
 def test_example_output_verification_requires_multiframe_animation(tmp_path):
     script_path = REPOSITORY_ROOT / "examples" / "run_examples.py"
     module = load_example_module("pcat_example_runner", script_path)
-    visual_root = tmp_path / "visuals" / "demo"
+    visual_root = tmp_path / "visuals"
     for relative_path in ["init", "post/fram", "post/finl", "post/anim"]:
         (visual_root / relative_path).mkdir(parents=True)
     Image.new("RGB", (2, 2), "black").save(visual_root / "init" / "initial.png")

@@ -1,0 +1,212 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Public API &mdash; PCAT 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Troubleshooting" href="troubleshooting.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="index.html" class="icon icon-home">
+            PCAT
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Maintained examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Public API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#sampling">Sampling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.main.sample"><code class="docutils literal notranslate"><span class="pre">pcat.main.sample()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.main.init"><code class="docutils literal notranslate"><span class="pre">pcat.main.init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#example-orchestration">Example orchestration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.demo.run_pipeline_demo"><code class="docutils literal notranslate"><span class="pre">pcat.demo.run_pipeline_demo()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#persistence">Persistence</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.main.readfile"><code class="docutils literal notranslate"><span class="pre">pcat.main.readfile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.main.writfile"><code class="docutils literal notranslate"><span class="pre">pcat.main.writfile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.main.proc_finl"><code class="docutils literal notranslate"><span class="pre">pcat.main.proc_finl()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.main.proc_anim"><code class="docutils literal notranslate"><span class="pre">pcat.main.proc_anim()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#runtime-path-helpers">Runtime path helpers</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PCAT</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Public API</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <section id="public-api">
+<h1>Public API<a class="headerlink" href="#public-api" title="Link to this heading"></a></h1>
+<section id="sampling">
+<h2>Sampling<a class="headerlink" href="#sampling" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.main.sample">
+<span class="sig-prename descclassname"><span class="pre">pcat.main.</span></span><span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">configuration</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.main.sample" title="Link to this definition"></a></dt>
+<dd><p>Dispatch an image or general PCAT configuration, execute sampling and final
+processing, and return the final global state object.</p>
+<p>Frequently used configuration keys include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">typeexpr</span></code> for the experiment family, including <code class="docutils literal notranslate"><span class="pre">&quot;chan&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;gmix&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;fire&quot;</span></code>, and HST Wide Field Camera 3 identifiers.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">typedata</span></code> set to <code class="docutils literal notranslate"><span class="pre">&quot;simu&quot;</span></code> for generated data or <code class="docutils literal notranslate"><span class="pre">&quot;inpt&quot;</span></code> for
+supplied data.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pathbase</span></code> and <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> for the output root and filesystem-safe run
+tag.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">typeelem</span></code> for the element types in each population.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">numbswep</span></code> and <code class="docutils literal notranslate"><span class="pre">numbsamp</span></code> for sampler sweeps and retained posterior
+samples.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">probtran</span></code> and <code class="docutils literal notranslate"><span class="pre">probspmr</span></code> for transdimensional and split/merge proposal
+probabilities. Maintained examples disable split/merge where that proposal
+is unsupported.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">boolmakeplotinit</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotfram</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotfinlpost</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">makeanim</span></code> for visual-output controls.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.main.init">
+<span class="sig-prename descclassname"><span class="pre">pcat.main.</span></span><span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">configuration</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.main.init" title="Link to this definition"></a></dt>
+<dd><p>Lower-level initialization and execution engine. New image-analysis code
+should normally call <a class="reference internal" href="#pcat.main.sample" title="pcat.main.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.main.sample()</span></code></a>, which performs experiment
+dispatch before invoking this function.</p>
+</dd></dl>
+
+</section>
+<section id="example-orchestration">
+<h2>Example orchestration<a class="headerlink" href="#example-orchestration" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.demo.run_pipeline_demo">
+<span class="sig-prename descclassname"><span class="pre">pcat.demo.</span></span><span class="sig-name descname"><span class="pre">run_pipeline_demo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_root</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">configuration</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.demo.run_pipeline_demo" title="Link to this definition"></a></dt>
+<dd><p>Apply lightweight plotting and simulation defaults, set <code class="docutils literal notranslate"><span class="pre">pathbase</span></code>, and
+call <a class="reference internal" href="#pcat.main.sample" title="pcat.main.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.main.sample()</span></code></a>. This helper is intended for maintained
+demonstrations and integration checks.</p>
+</dd></dl>
+
+</section>
+<section id="persistence">
+<h2>Persistence<a class="headerlink" href="#persistence" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.main.readfile">
+<span class="sig-prename descclassname"><span class="pre">pcat.main.</span></span><span class="sig-name descname"><span class="pre">readfile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.main.readfile" title="Link to this definition"></a></dt>
+<dd><p>Reconstruct a PCAT state from its pickle and HDF5 companions. Pass the path
+without <code class="docutils literal notranslate"><span class="pre">.p</span></code> or <code class="docutils literal notranslate"><span class="pre">.h5</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.main.writfile">
+<span class="sig-prename descclassname"><span class="pre">pcat.main.</span></span><span class="sig-name descname"><span class="pre">writfile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.main.writfile" title="Link to this definition"></a></dt>
+<dd><p>Persist a PCAT state to pickle and HDF5 companions.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.main.proc_finl">
+<span class="sig-prename descclassname"><span class="pre">pcat.main.</span></span><span class="sig-name descname"><span class="pre">proc_finl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gdat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strgcnfg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strgpdfn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'post'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">listnamevarbproc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.main.proc_finl" title="Link to this definition"></a></dt>
+<dd><p>Aggregate worker states and create final posterior products. Normal calls to
+<a class="reference internal" href="#pcat.main.sample" title="pcat.main.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.main.sample()</span></code></a> invoke this automatically.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.main.proc_anim">
+<span class="sig-prename descclassname"><span class="pre">pcat.main.</span></span><span class="sig-name descname"><span class="pre">proc_anim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">strgcnfg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pathbase</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.main.proc_anim" title="Link to this definition"></a></dt>
+<dd><p>Build GIF animations from posterior frame plots for an existing run.</p>
+</dd></dl>
+
+</section>
+<section id="runtime-path-helpers">
+<h2>Runtime path helpers<a class="headerlink" href="#runtime-path-helpers" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">pcat.paths</span></code> exports <code class="docutils literal notranslate"><span class="pre">get_repository_path()</span></code>, <code class="docutils literal notranslate"><span class="pre">get_data_path()</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">get_visuals_path()</span></code> for repository-local tooling. These helpers use
+<code class="docutils literal notranslate"><span class="pre">PCAT_PATH</span></code> and are distinct from the per-analysis <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> used by the
+sampler.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="troubleshooting.html" class="btn btn-neutral float-left" title="Troubleshooting" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Tansu Daylan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>
