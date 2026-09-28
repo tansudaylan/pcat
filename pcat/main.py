@@ -129,6 +129,23 @@ def retr_pathcnfg(pathroot, strgcnfg):
     return os.path.join(pathroot, strgcnfg)
 
 
+def _remove_empty_directories(pathroot):
+    """Remove empty descendants after optional output generation finishes."""
+    pathroot = os.path.normpath(os.fspath(pathroot))
+    if not os.path.isdir(pathroot):
+        return []
+    listpathremo = []
+    for path, _, _ in os.walk(pathroot, topdown=False):
+        if path == pathroot:
+            continue
+        try:
+            os.rmdir(path)
+        except OSError:
+            continue
+        listpathremo.append(path)
+    return listpathremo
+
+
 def _ensure_chalcedon_compat():
     global chalcedon
     if chalcedon is None:
@@ -12393,6 +12410,8 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
             filestat.write('plotfinl%s written.\n' % strgpdfn)
             filestat.close()
 
+    _remove_empty_directories(gdatfinl.pathplotcnfg)
+
 
 def retr_listgdat(liststrgcnfg, typegdat='finlpost'):
    
@@ -12947,6 +12966,8 @@ def proc_anim(strgcnfg, pathbase=None):
     filestat = open_narr(pathoutpcnfg + 'stat.txt', 'a')
     filestat.write('animfinl written.\n')
     filestat.close()
+    pathvisu = getattr(gdat, 'pathvisu', os.path.join(os.fspath(pathbase), 'visuals'))
+    _remove_empty_directories(os.path.join(pathvisu, strgcnfg))
     
 
 def _should_plot_spatial_count_histograms(gdat):
@@ -17974,6 +17995,9 @@ def init( \
 
     except (AttributeError, KeyError):
         pass
+
+    if hasattr(gdat, 'pathplotcnfg'):
+        _remove_empty_directories(gdat.pathplotcnfg)
     
     print('PCAT initialization completed successfully.')
     return gdat
