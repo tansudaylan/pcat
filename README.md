@@ -54,25 +54,18 @@ Full transdimensional runs initialize a model configuration, define a likelihood
 
 ## Daylan et al. 2017 reproduction
 
-The maintained synthetic reproduction of the original PCAT point-source analysis is in
+The synthetic reproduction of the original PCAT point-source analysis is in
 [`examples/Daylan+2017`](examples/Daylan+2017). It preserves the published 300-source
 population and flux-distribution slope while clearly separating this scaled,
 self-contained run from the archival Fermi-LAT data analysis.
 
-## Output and visualization conventions
+## Outputs
 
-PCAT is designed to write diagnostics into a project-specific output tree rooted at `PCAT_DATA_PATH` or a compatible fallback such as `TDGU_DATA_PATH`. The active code expects a directory structure with `data/` and `visuals/` subdirectories, and the plotting routines are designed to expose the main input, intermediate, and posterior-summary diagnostics rather than only final tables.
-
-## Important files
-
-- `pcat/main.py`: main scientific engine and workflow logic
-- `pcat/__init__.py`: package re-export shim for legacy compatibility
-- `pcat/test.py`: historical validation and configuration tests
-- `tests/`: modern import and path smoke checks
+PCAT writes serialized posterior states under `data/` and figures under `visuals/`, rooted at `PCAT_DATA_PATH` or `TDGU_DATA_PATH`. The figures show the input data, model realization, residual, source population, parameter distributions, and convergence diagnostics.
 
 ## Documentation
 
-The maintained user guide begins at [`docs/index.rst`](docs/index.rst) and covers
+The user guide begins at [`docs/index.rst`](docs/index.rst) and covers
 installation, runnable examples, output products, diagnostics, and the public
 API. Build the HTML documentation with:
 

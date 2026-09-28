@@ -1,19 +1,16 @@
 # PCAT example figures
 
-This folder contains demonstration scripts that exercise the PCAT package and write generated figures into each example directory.
-
-The examples are intentionally lightweight and focus on the package’s path conventions, plotting workflow, and configuration patterns rather than expensive MCMC runs.
+These examples apply probabilistic cataloging to point-source images, Gaussian mixtures, strong gravitational lenses, and Voigt spectral lines. The aggregate command uses reduced sampling depths for rapid calculations, while the Voigt commands below run the complete sampling configurations.
 
 ## Layout
 
-- `gmix_demo/`: source and generated products for a compact Gaussian-mixture example
-- `chan_demo/`: source and generated products for a point-source mock inspired by Chandra-style source detection
+- `gmix_demo/`: transdimensional inference of a compact Gaussian mixture
+- `chan_demo/`: point-source inference in a simulated Chandra-style image
 - `Daylan+2017/`: a scaled mock-catalog reproduction of Daylan et al. (2017)
-- `hst_lens/`: a lensing-style image example illustrating catalog-level inference concepts
+- `hst_lens/`: catalog inference in a simulated Hubble Space Telescope lens image
 - `roman_lens_catalog/`: a seeded Roman strong-lens benchmark and its generated diagnostic
-- `voigt-profile/`: simulated nominal and high-signal Voigt-profile detection configurations and products
+- `voigt-profile/`: nominal and high-signal Voigt-profile line detection in simulated spectra
 - `fermi_lat_pg1553/`: a Fermi Large Area Telescope event-filter configuration for PG 1553+113
-- `run_examples.py`: runs all maintained examples in isolated processes and verifies their plots
 
 ## Running
 
@@ -24,9 +21,7 @@ cd /path/to/pcat
 python examples/run_examples.py
 ```
 
-The aggregate runner removes cached products, executes all three image demonstrations, runs the Roman diagnostic, and runs the reduced Voigt smoke configuration. It fails if a pipeline example omits required static posterior plots or animations. Gaussian and HST additionally require a genuine multi-frame animation because their deterministic posterior frames differ.
-
-Each example keeps its source and generated products in one direct child of `examples/`. Configuration-specific run tags remain below `data/outp/`, while all plots are written directly under the example's `visuals/` directory without another run-tag subfolder.
+The aggregate calculation evaluates the three image analyses, the Roman strong-lens benchmark, and the reduced Voigt configuration. It produces static posterior diagnostics for every analysis and posterior animations for the Gaussian-mixture and Hubble lens calculations.
 
 Run either Voigt configuration at its full sampling depth with:
 

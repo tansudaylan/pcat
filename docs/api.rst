@@ -21,8 +21,8 @@ Sampling
    * ``numbswep`` and ``numbsamp`` for sampler sweeps and retained posterior
      samples.
    * ``probtran`` and ``probspmr`` for transdimensional and split/merge proposal
-     probabilities. Maintained examples disable split/merge where that proposal
-     is unsupported.
+       probabilities. The listed image configurations disable split/merge where
+       that proposal is unsupported.
    * ``boolmakeplotinit``, ``boolmakeplotfram``, ``boolmakeplotfinlpost``, and
      ``makeanim`` for visual-output controls.
 
@@ -32,14 +32,13 @@ Sampling
    should normally call :func:`pcat.main.sample`, which performs experiment
    dispatch before invoking this function.
 
-Example orchestration
----------------------
+Example analyses
+----------------
 
 .. py:function:: pcat.demo.run_pipeline_demo(output_root, **configuration)
 
-   Apply lightweight plotting and simulation defaults, set ``pathbase``, and
-   call :func:`pcat.main.sample`. This helper is intended for maintained
-   demonstrations and integration checks.
+   Apply the reduced sampling and plotting settings used by the simulated image
+   analyses, set ``pathbase``, and call :func:`pcat.main.sample`.
 
 Persistence
 -----------

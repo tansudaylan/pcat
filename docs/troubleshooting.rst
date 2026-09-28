@@ -39,8 +39,8 @@ Stale caches
 ------------
 
 PCAT can reuse existing state for a matching run tag. After changing model
-structure, output paths, or plotting configuration, make a fresh run. Maintained
-entry points that support it accept ``--fresh``. Otherwise remove both
+structure, output paths, or plotting configuration, make a fresh run. Commands
+that support fresh initialization accept ``--fresh``. Otherwise remove both
 ``data/outp/<run tag>`` and the corresponding ``visuals/`` directory, preserving
 any products needed for provenance first.
 
@@ -64,7 +64,7 @@ Sampling configuration failures
 
 ``Sampling failed due to incomplete or inconsistent model configuration`` wraps
 a lower-level attribute, key, index, or type error. Preserve the chained
-traceback and compare the configuration with the nearest maintained example.
+traceback and compare the configuration with the closest example.
 Explicitly set model-specific values in ``dicttrue`` and ``dictfitt`` when an
 experiment default would otherwise replace them.
 
@@ -87,7 +87,7 @@ Minimal diagnostic sequence
 ---------------------------
 
 1. Reproduce the issue with a deterministic seed and a small configuration.
-2. Run the nearest maintained example in the same Python environment.
+2. Run the closest example in the same Python environment.
 3. Compare ``cmndargs.txt``, ``stat.txt``, and the final completed stage.
 4. Confirm every pickle state has its matching HDF5 companion.
 5. Rerun under a new tag after correcting the root cause.

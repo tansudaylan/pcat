@@ -1,9 +1,5 @@
-Maintained examples
-===================
-
-Each example owns one subdirectory under ``examples/``. Source, generated data,
-and visuals stay together so outputs can be traced to the configuration that
-created them.
+Examples
+========
 
 Pipeline demonstrations
 -----------------------
@@ -18,7 +14,7 @@ Pipeline demonstrations
 ``hst_lens``
    Hubble Space Telescope Wide Field Camera 3 lensing-style image inference.
 
-Run all maintained pipeline checks and verify their figures with:
+Run the image analyses, Roman benchmark, and reduced Voigt calculation with:
 
 .. code-block:: bash
 
@@ -61,5 +57,5 @@ Scientific interpretation
 Generated examples are deterministic pipeline demonstrations unless their
 README explicitly states otherwise. Synthetic outputs validate computation and
 visualization but do not constitute measurements of real astrophysical systems.
-The Daylan+2017 README distinguishes its maintained scaled simulation from the
+The Daylan+2017 README distinguishes its scaled simulation from the
 archival Fermi-LAT analysis in the publication.

@@ -9,8 +9,8 @@ Finkbeiner (2017) <https://doi.org/10.3847/1538-4357/aa679e>`_ in ApJ 839, 4.
 
 PCAT supports simulated and supplied data, population-level priors, birth and
 death proposals, posterior catalog summaries, convergence diagnostics, static
-figures, and posterior animations. The maintained examples exercise the current
-public workflow and are the best starting points for new analyses.
+figures, and posterior animations. The examples cover point-source images,
+Gaussian mixtures, strong gravitational lenses, and spectral-line detection.
 
 .. toctree::
    :maxdepth: 2
