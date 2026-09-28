@@ -50,7 +50,7 @@ python examples/roman_lens_catalog_diagnostic.py --typefileplot png
 
 For the fixed seed, the approximate catalog classifier recovers 38% of injected perturbers above a posterior threshold of 0.5, with a 68% Wilson interval of 31% to 45%. It produces no false positives among the 50 null lenses, with an upper interval bound of 2%, and localizes 84% of injected perturbers to the correct candidate position. The mean one-perturber posterior probability is 0.37 for injected systems and $4.6\times10^{-5}$ for null systems. These values characterize this clearly labeled simulation and are not forecasts from real Roman observations.
 
-PCAT remains a research framework rather than a turnkey black-box package. Full transdimensional runs initialize a model configuration, define a likelihood and data product, and call `pcat.main.init(...)` with a populated configuration dictionary.
+Full transdimensional runs initialize a model configuration, define a likelihood and data product, and call `pcat.main.init(...)` with a populated configuration dictionary.
 
 ## Daylan et al. 2016 reproduction
 
@@ -69,16 +69,6 @@ PCAT is designed to write diagnostics into a project-specific output tree rooted
 - `pcat/__init__.py`: package re-export shim for legacy compatibility
 - `pcat/test.py`: historical validation and configuration tests
 - `tests/`: modern import and path smoke checks
-
-## Current development status
-
-This repository is in a transition state:
-
-- stable: package importability and modern packaging compatibility
-- research-grade: core transdimensional sampling routines and model logic
-- legacy: some scripts and configuration patterns remain Python-2-era or repo-local in style
-
-The active strategy is to preserve scientifically useful functionality while making the package more portable, inspectable, and maintainable.
 
 ## References
 

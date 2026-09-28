@@ -27,8 +27,16 @@ def build_configurations():
         "typeseed": 0,
         "typeseedelem": 17,
         "inittype": "refr",
-        "numbswep": 100000,
-        "numbsamp": 1000,
+        "numbswep": 200000,
+        "numbsamp": 20000,
+        "boolcheckconv": True,
+        "numbsampconvmin": 3000,
+        "numbsampconvcheck": 500,
+        "numbsampconveffc": 500.0,
+        "maxmconvrhat": 1.01,
+        "numbconvpass": 2,
+        "stdvpropelemfire": [5.0e-4, 5.0e-4, 2.0e-3, 2.0e-3],
+        "booladaptstdp": True,
     }
     names = ["nomi", "s2nrhigh"]
     variations = {name: {} for name in names}
@@ -51,9 +59,13 @@ def run_voigt_profile_detection(configuration="nomi", smoke=False):
     )
     if smoke:
         common.update(
-            numbswep=30,
-            numbsamp=10,
-            numbswepplot=3,
+            numbswep=150000,
+            numbsamp=15000,
+            numbsampconvmin=2000,
+            numbsampconvcheck=500,
+            numbsampconveffc=100.0,
+            maxmconvrhat=1.03,
+            numbswepplot=10000,
             boolmakeplotfram=True,
             boolmakeplotfinlpost=True,
             makeanim=True,

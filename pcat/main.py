@@ -339,6 +339,85 @@ def _retr_representative_atcr(atcr, timeatcr):
     return atcrflat[indx], timeflat[indx]
 
 
+def _retr_chain_convergence(listvarb, maxmrhat=1.01, minmess=200.):
+    """Evaluate split-chain R-hat and effective sample size for varying columns."""
+    values = np.asarray(listvarb, dtype=float)
+    if values.ndim == 1:
+        values = values[:, None]
+    elif values.ndim > 2:
+        values = values.reshape(values.shape[0], -1)
+    values = values[np.all(np.isfinite(values), axis=1)]
+    numbsamp = values.shape[0]
+    if numbsamp < 4:
+        return False, np.inf, 0.
+
+    boolvary = np.std(values, axis=0) > 0.
+    if not np.any(boolvary):
+        return False, np.inf, 0.
+    values = values[:, boolvary]
+
+    numbsamphalf = numbsamp // 2
+    chains = np.stack((values[:numbsamphalf], values[-numbsamphalf:]), axis=1)
+    variwith = np.mean(np.var(chains, axis=0, ddof=1), axis=0)
+    varibtwn = numbsamphalf * np.var(np.mean(chains, axis=0), axis=0, ddof=1)
+    varipool = (numbsamphalf - 1.) / numbsamphalf * variwith + varibtwn / numbsamphalf
+    rhat = np.sqrt(np.divide(varipool, variwith, out=np.full_like(varipool, np.inf), where=variwith > 0.))
+
+    centered = values - np.mean(values, axis=0)
+    numbfft = 1 << (2 * numbsamp - 1).bit_length()
+    fourier = np.fft.rfft(centered, n=numbfft, axis=0)
+    covariance = np.fft.irfft(fourier * np.conjugate(fourier), n=numbfft, axis=0)[:numbsamp]
+    covariance /= np.arange(numbsamp, 0, -1)[:, None]
+    correlation = covariance / covariance[0]
+    numbpairs = (numbsamp - 1) // 2
+    pair_sums = correlation[1:1 + 2 * numbpairs:2] + correlation[2:2 + 2 * numbpairs:2]
+    negative = pair_sums <= 0.
+    first_negative = np.where(np.any(negative, axis=0), np.argmax(negative, axis=0), pair_sums.shape[0])
+    timeatcr = np.ones(values.shape[1])
+    for indxvarb, indxstop in enumerate(first_negative):
+        timeatcr[indxvarb] += 2. * np.sum(pair_sums[:indxstop, indxvarb])
+    timeatcr = np.maximum(timeatcr, 1.)
+    effsamp = numbsamp / timeatcr
+
+    maxmrhatcalc = float(np.max(rhat))
+    minmesscalc = float(np.min(effsamp))
+    boolconv = maxmrhatcalc <= maxmrhat and minmesscalc >= minmess
+    return boolconv, maxmrhatcalc, minmesscalc
+
+
+def _retr_adapted_proposal_scale(scale, accepted, count, target=0.44):
+    """Return a Robbins-Monro proposal-scale update during burn-in."""
+    gain = min(0.05, 1. / np.sqrt(max(int(count), 1)))
+    return float(scale) * np.exp(gain * (float(accepted) - target))
+
+
+def _retr_posterior_summary_channels(gdatfinl, gdatmodi, strgpdfn):
+    """Return registered channels plus saved histogram chains needing summaries."""
+    channels = list(getattr(gdatmodi, 'liststrgchan', []))
+    for name in getattr(gdatmodi, 'liststrgvarbarrysamp', []):
+        if name.startswith('hist') and hasattr(gdatfinl, 'list' + strgpdfn + name) and name not in channels:
+            channels.append(name)
+    return channels
+
+
+def _retr_persistent_element_parameter_indices(gmod, listindxelemfull):
+    """Return full-vector indices for element slots occupied in every sample."""
+    if len(listindxelemfull) == 0:
+        return np.array([], dtype=int)
+    fullname_to_index = {str(name): index for index, name in enumerate(gmod.namepara.genr)}
+    indices = []
+    for population in gmod.indxpopl:
+        persistent = set(listindxelemfull[0][population])
+        for sample in listindxelemfull[1:]:
+            persistent.intersection_update(sample[population])
+        for element in sorted(persistent):
+            for name in gmod.namepara.genrelem[population]:
+                fullname = '%spop%d%04d' % (name, population, element)
+                if fullname in fullname_to_index:
+                    indices.append(fullname_to_index[fullname])
+    return np.asarray(indices, dtype=int)
+
+
 if not hasattr(tdpy, 'mcmc'):
     tdpy.mcmc = _PCATMCMCCompat()
 
@@ -1562,6 +1641,9 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             if len(listindximag) > 0:
                 thisindxsampfull = np.array([np.random.choice(np.array(listindximag, dtype=int))], dtype=int)
                 boolforceimag = True
+
+        if gdat.propwithsing and thisindxsampfull.size > 1:
+            thisindxsampfull = np.array([np.random.choice(thisindxsampfull)], dtype=int)
         
         thisindxstdp = np.full(thisindxsampfull.size, -1, dtype=int)
         if hasattr(gdat, 'indxstdppara') and gdat.indxstdppara is not None and np.size(gdat.indxstdppara) > 0:
@@ -1580,6 +1662,7 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                 thisstdp[k] = float(stdp[indxstdp])
             else:
                 thisstdp[k] = stdpfallback
+        gdatmodi.this.indxstdpprop = np.unique(thisindxstdp[thisindxstdp >= 0])
         if boolforceimag:
             # Keep image-driving moves active but avoid over-large unit-space
             # jumps that collapse post-burn acceptance in sparse lens runs.
@@ -11414,6 +11497,20 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
             for k in gdatinit.indxproc:
                 path = pathoutpcnfgmodi + 'gdatmodi%04d' % k + strgpdfn
                 listgdatmodi.append(readfile(path))
+
+            if getattr(gdatinit, 'boolcheckconv', False):
+                numbsampactl = min(worker.numbsampactl for worker in listgdatmodi)
+                numbswepactl = min(worker.cntrswep for worker in listgdatmodi)
+                gdatinit.numbsamp = numbsampactl
+                gdatinit.indxsamp = np.arange(numbsampactl)
+                gdatinit.numbsamptotl = numbsampactl * gdatinit.numbproc
+                gdatinit.indxsamptotl = np.arange(gdatinit.numbsamptotl)
+                gdatinit.numbswep = numbswepactl
+                gdatinit.indxswep = np.arange(numbswepactl)
+                gdatinit.numbsweptotl = numbswepactl * gdatinit.numbproc
+                gdatinit.boolconv = all(worker.boolconv for worker in listgdatmodi)
+                gdatinit.maxmconvrhatcalc = max(worker.maxmconvrhat for worker in listgdatmodi)
+                gdatinit.numbsampconveffccalc = min(worker.numbsampconveffc for worker in listgdatmodi)
             
             # erase
             gdatdictcopy = deepcopy(gdatinit.__dict__)
@@ -11924,7 +12021,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
             timeinit = gdatfinl.functime()
         liststrgvarbhist = getattr(gdatfinl, 'liststrgvarbhist', [])
        
-        for strgchan in listgdatmodi[0].liststrgchan:
+        for strgchan in _retr_posterior_summary_channels(gdatfinl, listgdatmodi[0], strgpdfn):
             
             if booltile:
                 if strgchan in gdatfinl.liststrgvarbarryswep or strgchan in listgdatmodi[0].liststrgvarblistsamp:
@@ -12985,28 +13082,24 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
 
             for l in gmod.indxpopl:
                 strgindxydat = 'pop%d' % l
-                listderielemodim = []
+                listelemodim = []
+                if hasattr(gmod, 'namepara') and hasattr(gmod.namepara, 'genrelem') and l < len(gmod.namepara.genrelem):
+                    listelemodim.extend(gmod.namepara.genrelem[l])
                 if hasattr(gmod, 'namepara') and hasattr(gmod.namepara, 'derielemodim') and l < len(gmod.namepara.derielemodim):
-                    listderielemodim = gmod.namepara.derielemodim[l]
-                for nameparaderielemodim in listderielemodim:
-                    if not (nameparaderielemodim == 'flux' or nameparaderielemodim == 'mcut' or \
-                            nameparaderielemodim == 'deltllik' or nameparaderielemodim == 'defs' or nameparaderielemodim == 'nobj' or \
-                            nameparaderielemodim == 'xpos' or nameparaderielemodim == 'ypos' or \
-                            nameparaderielemodim == 'asca' or nameparaderielemodim == 'acut' or nameparaderielemodim == 'mass'):
-                        continue
+                    listelemodim.extend(gmod.namepara.derielemodim[l])
+                for nameparaelemodim in dict.fromkeys(listelemodim):
                                                                               
                     if gdat.boolmakeshrtfram and strgstat == 'this' and strgmodl == 'fitt':
                         continue
                     indxydat = [l, slice(None)]
                     
-                    name = nameparaderielemodim
-                    namepopl = nameparaderielemodim + 'pop%d' % l
-                    if not hasattr(gmod.labltotlpara, namepopl) or not hasattr(gmod.scalpara, namepopl) or \
-                                    not hasattr(gmod.limtpara, namepopl) or not hasattr(gdat.bctrpara, name):
+                    name = nameparaelemodim
+                    namepopl = nameparaelemodim + 'pop%d' % l
+                    if not hasattr(gmod.scalpara, namepopl) or not hasattr(gdat.bctrpara, name):
                         continue
-                    lablxdat = getattr(gmod.labltotlpara, namepopl)
+                    lablxdat = getattr(gmod.labltotlpara, namepopl, getattr(gmod.labltotlpara, name, name))
                     scalxdat = getattr(gmod.scalpara, namepopl)
-                    limtxdat = getattr(gmod.limtpara, namepopl)
+                    limtxdat = getattr(gmod.limtpara, namepopl, [getattr(gmod.minmpara, name), getattr(gmod.maxmpara, name)])
                     meanxdat = getattr(gdat.bctrpara, name)
                         
                     if gdat.numbpixl > 1:
@@ -13019,7 +13112,7 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                         if ydattype == 'sden':
                             
                             # plot the surface density of elements only for the amplitude feature
-                            if nameparaderielemodim != gmod.nameparagenrelemampl: 
+                            if nameparaelemodim != gmod.nameparagenrelemampl:
                                 continue
                             
                             if gdat.sdenunit == 'degr':
@@ -13036,7 +13129,7 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                         else:
                             listtypehist = ['hist']
                         
-                        boolhistprio = not booltile
+                        boolhistprio = not booltile and gdat.typeexpr != 'fire'
                         for typehist in listtypehist:
                             
                             if typehist == 'histcorrreca':
@@ -13044,15 +13137,15 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                                 if gmod.numbparaelem == 0 or gdat.factpriodoff == 0.:
                                     continue
 
-                                if nameparaderielemodim == 'specplot' or nameparaderielemodim == 'spec' or nameparaderielemodim == 'deflprof':
+                                if nameparaelemodim == 'specplot' or nameparaelemodim == 'spec' or nameparaelemodim == 'deflprof':
                                     continue
                             
-                                if not nameparaderielemodim in gmod.namepara.genrelem[l]:
+                                if not nameparaelemodim in gmod.namepara.genrelem[l]:
                                     continue
                             
                             try:
-                                plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, 'hist' + nameparaderielemodim + 'pop%d' % l, \
-                                                  'bctr' + nameparaderielemodim, scalydat='logt', lablxdat=lablxdat, \
+                                plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, 'hist' + nameparaelemodim + 'pop%d' % l, \
+                                                  'bctr' + nameparaelemodim, scalydat='logt', lablxdat=lablxdat, \
                                                   lablydat=lablydat, histodim=True, ydattype=ydattype, \
                                                   scalxdat=scalxdat, meanxdat=meanxdat, limtydat=limtydat, \
                                                   limtxdat=limtxdat, boolhistprio=boolhistprio, \
@@ -13060,7 +13153,7 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                                                   nameinte='histodim/', typehist=typehist)
                             except Exception as excp:
                                 print('Warning: skipping hist%s pop%d (%s/%s) due to plotting error: %s' % \
-                                            (nameparaderielemodim, l, ydattype, typehist, str(excp)))
+                                            (nameparaelemodim, l, ydattype, typehist, str(excp)))
     
     if not booltile:
         if gmod.numbpopl > 0:
@@ -13981,41 +14074,51 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
         if gdat.typeverb > 0:
             print('Transdimensional parameters...')
         if not hasattr(gmod, 'indxsamptrap') or np.size(gmod.indxsamptrap) == 0:
+            listindxelemfull = getattr(gdat, 'list' + strgpdfn + 'indxelemfull', [])
+            gmod.indxsamptrap = _retr_persistent_element_parameter_indices(gmod, listindxelemfull)
+        if not hasattr(gmod, 'indxsamptrap') or np.size(gmod.indxsamptrap) == 0:
             print('Skipping transdimensional-parameter plots because indxsamptrap is unavailable.')
         else:
     
             # choose the parameters based on persistence
             stdvlistsamptran = np.std(listparagenrscalfull[:, gmod.indxsamptrap], axis=0)
             indxtrapgood = np.where(stdvlistsamptran > 0.)[0]
-            gmod.numbpara.totl.elemgood = indxtrapgood.size
-            gmod.numbpara.totl.elemplot = min(3, gmod.numbpara.totl.elemgood)
-            if gmod.numbpara.totl.elemplot > 0:
-                indxtrapplot = np.sort(np.random.choice(gmod.indxsamptrap[indxtrapgood], size=gmod.numbpara.totl.elemplot, replace=False))
+            numbtrapplot = min(3, indxtrapgood.size)
+            if numbtrapplot > 0:
+                numbtrapplot = min(4, indxtrapgood.size)
+                indxtrapplot = gmod.indxsamptrap[indxtrapgood][:numbtrapplot]
+                listlabltrap = [getattr(gmod.labltotlpara, str(gmod.namepara.genr[index]),
+                                        str(gmod.namepara.genr[index])) for index in indxtrapplot]
 
-                path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalcova')
-                tdpy.mcmc.plot_grid(path, 'listelemfrst', listparagenrscalfull[:, gmod.indxsamptrap[:3]], [gmod.lablpara[k] for k in gmod.indxsamptrap[:3]])
-                path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalcova')
-                tdpy.mcmc.plot_grid(path, 'listsamp', listparagenrscalfull[:, indxtrapplot], ['%d' % k for k in indxtrapplot])
-                path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalcova')
-                tdpy.mcmc.plot_grid(path, 'listsamp', listparagenrscalfull[:, indxtrapplot], [gmod.lablpara[k] for k in indxtrapplot])
+                path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscaljoin')
+                tdpy.mcmc.plot_grid(path, 'joint_persistent_line_parameters',
+                                    listparagenrscalfull[:, indxtrapplot], listlabltrap)
+
+                for index in gmod.indxsamptrap[indxtrapgood]:
+                    name = str(gmod.namepara.genr[index])
+                    values = listparagenrscalfull[:, index]
+                    scale = str(gmod.scalpara.genr[index])
+                    maximum_likelihood = gdat.mlikparagenrscalfull[index]
+                    path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscaltrac') + name
+                    tdpy.mcmc.plot_trac(path, values, name, scalpara=scale, listvarbdraw=[maximum_likelihood])
+                    path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalhist') + name
+                    tdpy.mcmc.plot_hist(path, values, name, scalpara=scale, listvarbdraw=[maximum_likelihood])
     
     if gdat.typeverb > 0:
         print('Scalar variables...')
     # scalar variables
     ## trace and marginal distribution of each parameter
-    for name in gmod.namepara.scal:
-        namereqr = ['scal' + name, 'corr' + name, 'list' + strgpdfn + name, 'mlik' + name]
+    listnamescal = list(gmod.namepara.scal)
+    for indxname, name in enumerate(listnamescal):
+        namereqr = ['scal' + name, 'list' + strgpdfn + name, 'mlik' + name]
         if not all(hasattr(gdat, nametemp) for nametemp in namereqr):
             continue
         
         if gdat.typeverb > 0:
             print('Working on %s...' % name)
         scal = getattr(gdat, 'scal' + name) 
-        corr = getattr(gdat, 'corr' + name)
-        if corr is None:
-            truepara = None
-        else:
-            truepara = getattr(gdat, 'corr' + name)
+        truepara = getattr(gdat, 'corr' + name, None)
+        labltotl = getattr(gmod.labltotlpara, name, name)
         
         listvarb = getattr(gdat, 'list' + strgpdfn + name)
         if listvarb.ndim != 1:
@@ -14030,19 +14133,20 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
         path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalhist') + name
         tdpy.mcmc.plot_hist(path, listvarb, labltotl, truepara=truepara, scalpara=scal, listvarbdraw=[mlik], listlabldraw=[''], listcolrdraw=['r'])
        
-        for nameseco in gmod.namepara.scal:
-            
-            if name == nameseco:
+        for nameseco in listnamescal[indxname + 1:]:
+            namereqrseco = ['scal' + nameseco, 'list' + strgpdfn + nameseco, 'mlik' + nameseco]
+            if not all(hasattr(gdat, nametemp) for nametemp in namereqrseco):
                 continue
             
             if gdat.typeverb > 0:
                 print('Working on correlation of %s with %s...' % (name, nameseco))
             
             pathjoin = getattr(gdat, 'path' + strgpdfn + 'finlvarbscaljoin')
-            if corrseco is None:
-                trueparaseco = None
-            else:
-                trueparaseco = getattr(gdat, 'corr' + nameseco)
+            trueparaseco = getattr(gdat, 'corr' + nameseco, None)
+            listvarbseco = np.asarray(getattr(gdat, 'list' + strgpdfn + nameseco))
+            mlikseco = getattr(gdat, 'mlik' + nameseco)
+            scalseco = getattr(gdat, 'scal' + nameseco)
+            labltotlseco = getattr(gmod.labltotlpara, nameseco, nameseco)
             
             if listvarbseco.ndim != 1:
                 if listvarbseco.shape[1] == 1:
@@ -14655,15 +14759,9 @@ def plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, strgydat, strgxdat, 
         axis.scatter(xdat, ydat, alpha=gdat.alphelem, color=colr, label=gdat.lablparagenrscalfull)
     else:
         if histodim:
-            # temp
-            if strgxdat[4:] in gmod.namepara.elem:
-                deltxdat = getattr(gdat.deltpara, strgxdat[4:])
-                binsxdat = getattr(gdat.blimpara, strgxdat[4:])
-            else:
-                deltxdat = getattr(gdat.deltpara, strgxdat[4:])
-                binsxdat = getattr(gdat.blimpara, strgxdat[4:])
-
-            xdattemp = binsxdat[:-1] + deltxdat / 2.
+            binsxdat = getattr(gdat.blimpara, strgxdat[4:])
+            deltxdat = np.diff(binsxdat)
+            xdattemp = 0.5 * (binsxdat[:-1] + binsxdat[1:])
    
     if strgmodl == 'fitt':
         if boolelem:
@@ -16081,6 +16179,22 @@ def init( \
          numbsamp=None, \
          ## number of initial sweeps to be burned
          numbburn=None, \
+         ## dynamically stop a single chain after repeated convergence checks
+         boolcheckconv=False, \
+         ## minimum retained samples before checking convergence
+         numbsampconvmin=1000, \
+         ## retained samples between convergence checks
+         numbsampconvcheck=250, \
+         ## minimum effective sample size for every convergence observable
+         numbsampconveffc=200., \
+         ## maximum split-chain R-hat for every convergence observable
+         maxmconvrhat=1.01, \
+         ## consecutive successful checks required before stopping
+         numbconvpass=2, \
+         ## proposal scale for FIRE element parameters in transformed coordinates
+         stdvpropelemfire=1e-4, \
+         ## adapt within-model proposal scales during burn-in
+         booladaptstdp=False, \
             
          # number of samples for Bootstrap
          numbsampboot=None, \
@@ -16750,6 +16864,8 @@ def init( \
         gdat.strgproc = os.uname()[1]
         if gdat.numbproc is None:
             gdat.numbproc = 1
+        if gdat.boolcheckconv and gdat.numbproc != 1:
+            raise ValueError('Dynamic convergence checking currently requires numbproc=1.')
     
         ## number of burned sweeps
         if gdat.numbburn is None:
@@ -17068,7 +17184,10 @@ def init( \
 
             if gdat.typeexpr == 'fire':
                 numbstdpbase = gdat.fitt.numbparagenrbase - gdat.fitt.numbpopl
-                gdat.stdp[numbstdpbase:] = 1e-4
+                stdvpropelemfire = np.asarray(gdat.stdvpropelemfire, dtype=float)
+                if stdvpropelemfire.size not in [1, gdat.stdp[numbstdpbase:].size]:
+                    raise ValueError('stdvpropelemfire must be scalar or provide one scale per FIRE element parameter.')
+                gdat.stdp[numbstdpbase:] = stdvpropelemfire
         
         if (gdat.stdp > 1e100).any():
             raise Exception('')
@@ -18587,6 +18706,13 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
     gdatmodi.cntraccpzerototl = 0
 
     gdatmodi.optidone = False 
+    gdatmodi.boolconv = False
+    gdatmodi.numbconvpass = 0
+    gdatmodi.maxmconvrhat = np.inf
+    gdatmodi.numbsampconveffc = 0.
+    gdatmodi.numbsampactl = 0
+    gdatmodi.boolstopconv = False
+    gdatmodi.numbpropstdp = np.zeros(gdat.numbstdp, dtype=int)
     
     while gdatmodi.cntrswep < gdat.numbswep:
         if gdat.numbswep > 0 and gdatmodi.cntrswep % max(1, gdat.numbswep // 10) == 0:
@@ -18703,6 +18829,7 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
         
         # make a proposal
         initchro(gdat, gdatmodi, 'prop')
+        gdatmodi.this.indxstdpprop = np.array([], dtype=int)
         prop_stat(gdat, gdatmodi, 'fitt')
         stopchro(gdat, gdatmodi, 'prop')
 
@@ -18867,6 +18994,14 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
         # accept or reject the proposal
         booltemp = gdatmodi.this.accpprob[0] >= np.random.rand()
 
+        if gdat.booladaptstdp and gdatmodi.boolburn and gdatmodi.this.indxproptype == 0:
+            for indxstdp in gdatmodi.this.indxstdpprop:
+                if gdat.typeexpr == 'fire' and indxstdp < gmod.numbparagenrbase - gmod.numbpopl:
+                    continue
+                gdatmodi.numbpropstdp[indxstdp] += 1
+                gdatmodi.stdp[indxstdp] = _retr_adapted_proposal_scale(
+                    gdatmodi.stdp[indxstdp], booltemp, gdatmodi.numbpropstdp[indxstdp])
+
         if gdat.booldiag:
             if gdatmodi.this.indxproptype == 0:
                 if gdat.boolsqzeprop and not booltemp:
@@ -18960,6 +19095,33 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
             for strgvarb in gdat.liststrgvarblistsamp:
                 workdict['list' + gdat.strgpdfn + strgvarb].append(deepcopy(getattr(gdatmodi.this, strgvarb)))
             stopchro(gdat, gdatmodi, 'save')
+
+            gdatmodi.numbsampactl = indxsampsave + 1
+            if gdat.boolcheckconv and gdatmodi.numbsampactl >= gdat.numbsampconvmin and \
+                    (gdatmodi.numbsampactl - gdat.numbsampconvmin) % gdat.numbsampconvcheck == 0:
+                listlpost = workdict['list' + gdat.strgpdfn + 'lpostotl'][:gdatmodi.numbsampactl]
+                listnumbelem = workdict['list' + gdat.strgpdfn + 'numbelem'][:gdatmodi.numbsampactl]
+                listindxelemfull = workdict['list' + gdat.strgpdfn + 'indxelemfull']
+                indxparapersist = _retr_persistent_element_parameter_indices(gmod, listindxelemfull)
+                if indxparapersist.size > 0:
+                    listpara = workdict['list' + gdat.strgpdfn + 'paragenrscalfull'][:gdatmodi.numbsampactl]
+                    listparameter = listpara[:, indxparapersist]
+                else:
+                    listcntpmodl = workdict['list' + gdat.strgpdfn + 'cntpmodl'][:gdatmodi.numbsampactl]
+                    listparameter = listcntpmodl.reshape(gdatmodi.numbsampactl, -1)
+                listconv = np.column_stack((listlpost.reshape(gdatmodi.numbsampactl, -1),
+                                            listnumbelem.reshape(gdatmodi.numbsampactl, -1), listparameter))
+                boolconv, maxmrhat, minmess = _retr_chain_convergence(
+                    listconv, maxmrhat=gdat.maxmconvrhat, minmess=gdat.numbsampconveffc)
+                gdatmodi.maxmconvrhat = maxmrhat
+                gdatmodi.numbsampconveffc = minmess
+                gdatmodi.numbconvpass = gdatmodi.numbconvpass + 1 if boolconv else 0
+                if gdat.typeverb > 0:
+                    print('Convergence check at %d samples: R-hat %.4f, minimum ESS %.1f, pass %d/%d.' %
+                          (gdatmodi.numbsampactl, maxmrhat, minmess, gdatmodi.numbconvpass, gdat.numbconvpass))
+                if gdatmodi.numbconvpass >= gdat.numbconvpass:
+                    gdatmodi.boolconv = True
+                    gdatmodi.boolstopconv = True
 
         # plot the current sample
         if thismakefram:
@@ -19124,9 +19286,15 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
         
         # update the sweep counter
         gdatmodi.cntrswep += 1
+        if gdatmodi.boolstopconv:
+            break
         
     for strgvarb in gdat.liststrgvarbarry + gdat.liststrgvarblistsamp:
         valu = workdict['list' + gdat.strgpdfn + strgvarb]
+        if strgvarb in gdat.liststrgvarbarryswep:
+            valu = valu[:gdatmodi.cntrswep]
+        elif strgvarb in gdat.liststrgvarbarrysamp:
+            valu = valu[:gdatmodi.numbsampactl]
         setattr(gdatmodi, 'list' + gdat.strgpdfn + strgvarb, valu)
 
     gdatmodi.timereal = time.time() - timereal
