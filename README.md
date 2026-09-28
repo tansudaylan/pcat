@@ -13,9 +13,9 @@ The primary scientific use cases are:
 
 The core method is introduced in Daylan, Portillo & Finkbeiner (2017) and extended for different image and catalog analysis workflows.
 
-## Repository role in the ecosystem
+## Catalog inference
 
-This repository is the core probabilistic cataloging engine in the broader astrophysics software stack. It is intended to work with the shared numerical and plotting infrastructure in [tdpy](../tdpy), and it is conceptually adjacent to time-domain and imaging workflows in repositories such as [miletos](../miletos), [lygos](../lygos), and [assos](../assos).
+PCAT compares catalog configurations with different numbers of sources, samples source and population parameters jointly, quantifies detection and membership probabilities, and evaluates posterior predictions against image or photon-count data.
 
 ## Installation
 
@@ -84,11 +84,3 @@ python -m sphinx -E -a -W --keep-going -b html docs docs/_build/html
 ## References
 
 - Daylan, Portillo, & Finkbeiner (2017), transdimensional Bayesian catalog inference
-
-## Related repositories
-
-- [tdpy](../tdpy): shared numerical utilities, plotting, and path handling
-- [miletos](../miletos): higher-level time-domain workflow orchestration
-- [lygos](../lygos): image-domain photometry and pipeline extraction
-- [assos](../assos): forward-modeling and imaging utilities
-
