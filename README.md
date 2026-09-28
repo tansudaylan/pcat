@@ -52,6 +52,13 @@ For the fixed seed, the approximate catalog classifier recovers 38% of injected 
 
 PCAT remains a research framework rather than a turnkey black-box package. Full transdimensional runs initialize a model configuration, define a likelihood and data product, and call `pcat.main.init(...)` with a populated configuration dictionary.
 
+## Daylan et al. 2016 reproduction
+
+The maintained synthetic reproduction of the original PCAT point-source analysis is in
+[`examples/daylan2016`](examples/daylan2016). It preserves the published 300-source
+population and flux-distribution slope while clearly separating this scaled,
+self-contained run from the archival Fermi-LAT data analysis.
+
 ## Output and visualization conventions
 
 PCAT is designed to write diagnostics into a project-specific output tree rooted at `PCAT_DATA_PATH` or a compatible fallback such as `TDGU_DATA_PATH`. The active code expects a directory structure with `data/` and `visuals/` subdirectories, and the plotting routines are designed to expose the main input, intermediate, and posterior-summary diagnostics rather than only final tables.

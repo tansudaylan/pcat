@@ -34,5 +34,6 @@ def test_voigt_profile_configuration_calls_pcat_pipeline(monkeypatch):
     assert configuration["truenumbelempop0"] == 2
     assert configuration["typeseed"] == 0
     assert configuration["typeseedelem"] == 17
+    assert configuration["inittype"] == "refr"
     assert configuration["dicttrue"]["typeelem"] == ["lghtlinevoig"]
     assert configuration["dictfitt"]["spectype"] == ["voig"]

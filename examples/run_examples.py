@@ -16,7 +16,7 @@ PIPELINE_EXAMPLES = [
     (ROOT / "gaussian_mixture" / "generate_demo.py", (), ROOT / "gaussian_mixture" / "pcat-output", "gmix_demo", True, True),
     (ROOT / "chandra_point_source" / "generate_demo.py", (), ROOT / "chandra_point_source" / "pcat-output", "chan_demo", True, False),
     (ROOT / "hst_lens" / "generate_demo.py", (), ROOT / "hst_lens" / "pcat-output", "hst_lens_demo", True, True),
-    (ROOT / "pcat_voigt_profile_detection.py", ("--smoke",), ROOT / "voigt-profile-output", "voigt_nomi", False, True),
+    (ROOT / "pcat_voigt_profile_detection.py", ("--smoke",), ROOT / "voigt-profile", "voigt_nomi", False, True),
 ]
 
 

@@ -26,6 +26,7 @@ def build_configurations():
         "probspmr": 0.0,
         "typeseed": 0,
         "typeseedelem": 17,
+        "inittype": "refr",
         "numbswep": 100000,
         "numbsamp": 1000,
     }
@@ -41,7 +42,7 @@ def run_voigt_profile_detection(configuration="nomi", smoke=False):
     common.update(variations[configuration])
     common.update(
         strgcnfg=f"voigt_{configuration}",
-        pathbase=str(Path(__file__).with_name("voigt-profile-output")),
+        pathbase=str(Path(__file__).with_name("voigt-profile")),
         truenumbelempop0=2,
         fittminmnumbelempop0=1,
         fittmaxmnumbelempop0=3,
@@ -65,11 +66,12 @@ def run_voigt_profile_detection(configuration="nomi", smoke=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--configuration", choices=("nomi", "s2nrhigh"), default="nomi")
-    parser.add_argument("--smoke", action="store_true", help="Run a short visualization smoke test.")
+    parser.add_argument(
+        "--smoke", action="store_true", help="Run a short visualization smoke test."
+    )
     arguments = parser.parse_args()
     run_voigt_profile_detection(arguments.configuration, smoke=arguments.smoke)
 
 
 if __name__ == "__main__":
     main()
-

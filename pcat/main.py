@@ -326,6 +326,19 @@ class _PCATMCMCCompat(object):
         plt.close(figr)
 
 
+def _retr_representative_atcr(atcr, timeatcr):
+    """Return the finite autocorrelation series with the longest correlation time."""
+    atcrflat = np.asarray(atcr, dtype=float).reshape(-1, np.asarray(atcr).shape[-1])
+    timeflat = np.asarray(timeatcr, dtype=float).reshape(-1)
+    numbseri = min(atcrflat.shape[0], timeflat.size)
+    boolvalid = np.isfinite(timeflat[:numbseri]) & np.all(np.isfinite(atcrflat[:numbseri]), axis=1)
+    indxvalid = np.flatnonzero(boolvalid)
+    if indxvalid.size == 0:
+        return None, None
+    indx = indxvalid[np.argmax(timeflat[indxvalid])]
+    return atcrflat[indx], timeflat[indx]
+
+
 if not hasattr(tdpy, 'mcmc'):
     tdpy.mcmc = _PCATMCMCCompat()
 
@@ -819,9 +832,9 @@ def initcompfromstat(gdat, gdatmodi, namerefr):
                 comp = getattr(gdat, namerefr + nameparagenrelem)[l][0, :]
                 if gmod.scalpara.genrelem[l][g] == 'self' or gmod.scalpara.genrelem[l][g] == 'logt':
                     if gmod.scalpara.genrelem[l][g] == 'self':
-                        compunit = cdfn_self(comp, minm, maxm)
+                        compunit = tdpy.cdfn_self(comp, minm, maxm)
                     if gmod.scalpara.genrelem[l][g] == 'logt':
-                        compunit = cdfn_logt(comp, minm, maxm)
+                        compunit = tdpy.cdfn_logt(comp, minm, maxm)
                 if gmod.scalpara.genrelem[l][g] == 'expo':
                     scal = getattr(gdat.fitt, 'gangdistsexp')
                     maxm = getattr(gdat.fitt.maxm, nameparagenrelem)
@@ -2386,7 +2399,8 @@ def retr_eerrnorm(minmvarb, maxmvarb, meanvarb, stdvvarb):
     
 
 def retr_condcatl(gdat):
-  
+    gmod = gdat.fitt
+
     # setup
     ## number of stacked samples
     numbstks = 0
@@ -2403,7 +2417,7 @@ def retr_condcatl(gdat):
                 indxstkssamptemp.append(numbstks)
                 indxtupl.append([n, l, k])
                 numbstks += 1
-        indxstkssamp.append(np.array(indxstkssamptemp))
+        indxstksparagenrscalfull.append(np.array(indxstkssamptemp, dtype=int))
     
     if gdat.typeverb > 1:
         print('indxstks')
@@ -2418,63 +2432,26 @@ def retr_condcatl(gdat):
     cntr = 0 
     arrystks = np.zeros((numbstks, gmod.numbparagenrelem))
     for n in gdat.indxsamptotl:
-        indxparagenrfullelem = retr_indxparagenrelemfull(gdat, gdat.listpostindxelemfull[n], 'fitt') 
         for l in gmod.indxpopl:
             for k in np.arange(len(gdat.listpostindxelemfull[n][l])):
                 for m, nameparagenrelem in enumerate(gmod.namepara.genrelem[l]):
-                    arrystks[indxstks[n][l][k], m] = gdat.listpostparagenrscalfull[n, gmodstat.indxparagenrelemfull[l][nameparagenrelem][k]]
+                    arrystks[indxstks[n][l][k], m] = gdat.listpostdictelem[n][l][nameparagenrelem][k]
 
     if gdat.typeverb > 0:
         print('Constructing the distance matrix for %d stacked samples...' % arrystks.shape[0])
         timeinit = gdat.functime()
     
-    gdat.distthrs = np.empty(gmod.numbparagenrelem)
-    for k, nameparagenrelem in enumerate(gmod.namepara.elem):
-       # temp
-       l = 0
-       gdat.distthrs[k] = gdat.stdp[getattr(gdat, 'indxstdppop%d' % l + nameparagenrelem)]
-    
-    # construct lists of samples for each proposal type
-    listdisttemp = [[] for k in range(gmod.numbparagenrelem)]
-    indxstksrows = [[] for k in range(gmod.numbparagenrelem)]
-    indxstkscols = [[] for k in range(gmod.numbparagenrelem)]
-    thisperc = 0
-    cntr = 0
-    for k in gmod.indxpara.genrelemtotl:
-        for n in range(numbstks):
-            dist = np.fabs(arrystks[n, k] - arrystks[:, k])
-            indxstks = np.where(dist < gdat.distthrs[k])[0]
-            if indxstks.size > 0:
-                for j in indxstks:
-                    cntr += 1
-                    listdisttemp[k].append(dist[j])
-                    indxstksrows[k].append(n)
-                    indxstkscols[k].append(j)
-            
-            nextperc = np.floor(100. * float(k * numbstks + n) / numbstks / gmod.numbparagenrelem)
-            if nextperc > thisperc:
-                thisperc = nextperc
-            if cntr > 1e6:
-                break
-        
-        listdisttemp[k] = np.array(listdisttemp[k])
-        indxstksrows[k] = np.array(indxstksrows[k])
-        indxstkscols[k] = np.array(indxstkscols[k])
-
-        if cntr > 1e6:
-            break
-    
-    listdist = [[] for k in range(gmod.numbparagenrelem)]
-    for k, nameparagenrelem in enumerate(gmod.namepara.elem):
-        listdist[k] = scipy.sparse.csr_matrix((listdisttemp[k], (indxstksrows[k], indxstkscols[k])), shape=(numbstks, numbstks))
-    
-    listindxstkspair = []
-    indxstksleft = []
+    indxposx = gmod.namepara.genrelem[0].index('xpos')
+    indxposy = gmod.namepara.genrelem[0].index('ypos')
+    distspat = np.hypot(
+        arrystks[:, None, indxposx] - arrystks[None, :, indxposx],
+        arrystks[:, None, indxposy] - arrystks[None, :, indxposy],
+    )
 
     if gdat.typeverb > 0:
         timefinl = gdat.functime()
     
-    indxstksleft = range(numbstks)
+    indxstksleft = list(range(numbstks))
 
     # list of sample lists of the labeled element
     indxstksassc = []
@@ -2487,8 +2464,7 @@ def retr_condcatl(gdat):
         # count number of associations
         numbdist = np.zeros(numbstks, dtype=int) - 1
         for p in range(len(indxstksleft)):
-            indxindx = np.where((listdist[0][indxstksleft[p], :].tonp.array().flatten() * 2. * gdat.maxmxpos < gdat.anglassc) & \
-                             (listdist[1][indxstksleft[p], :].tonp.array().flatten() * 2. * gdat.maxmypos < gdat.anglassc))[0]
+            indxindx = np.where(distspat[indxstksleft[p], :] < gdat.anglassc)[0]
             numbdist[indxstksleft[p]] = indxindx.size
             
         prvlmaxmesti = np.amax(numbdist) / float(gdat.numbsamptotl)
@@ -2526,39 +2502,12 @@ def retr_condcatl(gdat):
                     continue
                 
                 if indxstkstemp.size > 0:
-                    totl = np.zeros_like(indxstkstemp)
-                    for k in gmod.indxpara.genrelemtotl:
-                        temp = listdist[k][indxstkscntr, indxstkstemp].tonp.array()[0]
-                        totl = totl + temp**2
-
-                    indxleft = np.argsort(totl)[0]
+                    indxleft = np.argmin(distspat[indxstkscntr, indxstkstemp])
                     
                     indxstksthis = indxstkstemp[indxleft]
-                
-                    thisbool = True
-                    for k in gmod.indxpara.genrelemtotl:
-                        if listdist[k][indxstkscntr, indxstksthis] > gdat.distthrs[k]:
-                            thisbool = False
-
-                    if thisbool:
+                    if distspat[indxstkscntr, indxstksthis] < gdat.anglassc:
                         indxstksassc[cntr].append(indxstksthis)
                         indxstksleft.remove(indxstksthis)
-            
-                if gdat.boolmakeplot:
-                    gdatmodi = tdpy.gdatstrt()
-                    gdatmodi.this.indxelemfull = deepcopy(listindxelemfull[n])
-                    for r in range(len(indxstksassc)): 
-                        calc_poststkscond(gdat, indxstksassc)
-                    gdatmodi.this.indxelemfull = [[] for l in gmod.indxpopl]
-                    for indxstkstemp in indxstksleft:
-                        indxsamptotlcntr = indxtupl[indxstkstemp][0]
-                        indxpoplcntr = indxtupl[indxstkstemp][1]
-                        indxelemcntr = indxtupl[indxstkstemp][2]
-                        gdatmodi.this.paragenrscalfull = gdat.listparagenrscalfull[indxsamptotlcntr, :]
-                        gdatmodi.this.indxelemfull.append()
-
-                    plot_genemaps(gdat, gdatmodi, 'this', 'cntpdata', strgpdfn, indxenerplot=0, indxdqltplot=0, cond=True)
-                
             cntr += 1
         
     gdat.dictglob['poststkscond'] = []
@@ -2569,7 +2518,8 @@ def retr_condcatl(gdat):
         gdat.dictglob['liststkscond'][r] = {}
         gdat.dictglob['poststkscond'].append([])
         gdat.dictglob['poststkscond'][r] = {}
-        for strgfeat in gmod.namepara.genr.elem:
+        indxpoplcntr = indxtupl[indxstksassc[r][0]][1]
+        for strgfeat in gmod.namepara.genrelem[indxpoplcntr]:
             gdat.dictglob['liststkscond'][r][strgfeat] = []
 
         # for each associated sample associated with the central stacked sample 
@@ -2578,40 +2528,32 @@ def retr_condcatl(gdat):
             indxpoplcntr = indxtupl[indxstksassc[r][k]][1]
             indxelemcntr = indxtupl[indxstksassc[r][k]][2]
             
-            for strgfeat in gmod.namepara.genr.elem:
-                temp = getattr(gdat, 'list' + strgfeat)
-                if temp[indxsamptotlcntr][indxpoplcntr].size > 0:
-                    temp = temp[indxsamptotlcntr][indxpoplcntr][..., indxelemcntr]
+            for strgfeat in gmod.namepara.genrelem[indxpoplcntr]:
+                temp = gdat.listpostdictelem[indxsamptotlcntr][indxpoplcntr][strgfeat]
+                if np.size(temp) > indxelemcntr:
+                    temp = temp[..., indxelemcntr]
                     gdat.dictglob['liststkscond'][r][strgfeat].append(temp)
 
     for r in range(len(gdat.dictglob['liststkscond'])):
-        for strgfeat in gmod.namepara.genr.elem:
+        indxpoplcntr = indxtupl[indxstksassc[r][0]][1]
+        for strgfeat in gmod.namepara.genrelem[indxpoplcntr]:
             arry = np.stack(gdat.dictglob['liststkscond'][r][strgfeat], axis=0)
             gdat.dictglob['poststkscond'][r][strgfeat] = np.zeros(([3] + list(arry.shape[1:])))
-            gdat.dictglob['poststkscond'][r][strgfeat][0, ...] = median(arry, axis=0)
-            gdat.dictglob['poststkscond'][r][strgfeat][1, ...] = percennp.tile(arry, 16., axis=0)
-            gdat.dictglob['poststkscond'][r][strgfeat][2, ...] = percennp.tile(arry, 84., axis=0)
+            gdat.dictglob['poststkscond'][r][strgfeat][0, ...] = np.median(arry, axis=0)
+            gdat.dictglob['poststkscond'][r][strgfeat][1, ...] = np.percentile(arry, 16., axis=0)
+            gdat.dictglob['poststkscond'][r][strgfeat][2, ...] = np.percentile(arry, 84., axis=0)
             
     gdat.numbstkscond = len(gdat.dictglob['liststkscond'])
 
     gdat.indxstkscond = np.arange(gdat.numbstkscond)
     gdat.prvl = np.empty(gdat.numbstkscond)
     for r in gdat.indxstkscond:
-        gdat.prvl[r] = len(gdat.dictglob['liststkscond'][r]['deltllik'])
+        gdat.prvl[r] = len(np.unique([indxtupl[indx][0] for indx in indxstksassc[r]]))
     gdat.prvl /= gdat.numbsamptotl
     gdat.minmprvl = 0.
     gdat.maxmprvl = 1.
-    setp_varb(gdat, 'prvl')
+    gdat.blimpara.prvl = np.linspace(gdat.minmprvl, gdat.maxmprvl, 11)
     gdat.histprvl = np.histogram(gdat.prvl, bins=gdat.blimpara.prvl)[0]
-    if gdat.boolmakeplot:
-        pathcond = getattr(gdat, 'path' + strgpdfn + 'finlcond')
-        for k, nameparagenrelem in enumerate(gmod.namepara.elem):
-            path = pathcond + 'histdist' + nameparagenrelem 
-            listtemp = np.copy(listdist[k].tonp.array()).flatten()
-            listtemp = listtemp[np.where(listtemp != 1e20)[0]]
-            tdpy.mcmc.plot_hist(path, listtemp, r'$\Delta \tilde{' + getattr(gmod.lablrootpara, nameparagenrelem) + '}$')
-            path = pathcond + 'histprvl'
-            tdpy.mcmc.plot_hist(path, gdat.prvl, r'$p$')
     gdat.prvlthrs = 0.1 
     gdat.indxprvlhigh = np.where(gdat.prvl > gdat.prvlthrs)[0]
     gdat.numbprvlhigh = gdat.indxprvlhigh.size
@@ -3872,11 +3814,12 @@ def init_image( \
         # number of elements
         if strgmodl == 'true':
             for l in gmod.indxpopl:
-                if gmod.typeelem[l] == 'lens':
-                    numbelem = 2
-                else:
-                    numbelem = 2
-                setp_varb(gdat, 'numbelem', minm=0, maxm=3, labl=['N', ''], scal='drct', valu=numbelem, popl=l, strgmodl=strgmodl, strgstat='this')
+                name = 'numbelempop%d' % l
+                numbelem = int(getattr(gdat, 'true' + name, 2))
+                maxmnumbelem = max(numbelem, int(getattr(gdat, 'truemaxm' + name, 3)))
+                setp_varb(gdat, 'numbelem', minm=0, maxm=maxmnumbelem, labl=['N', ''], scal='drct', valu=numbelem, popl=l, strgmodl=strgmodl, strgstat='this')
+                setattr(gmod.this, name, numbelem)
+                setattr(gmod.maxmpara, name, maxmnumbelem)
         if strgmodl == 'fitt':
             minmnumbelemfitt = int(getattr(gdat, 'fittminmnumbelem', getattr(gdat, 'fittminmnumbelempop0', 0)))
             maxmnumbelemfitt = int(getattr(gdat, 'fittmaxmnumbelem', getattr(gdat, 'fittmaxmnumbelempop0', 3)))
@@ -4214,6 +4157,13 @@ def init_image( \
             for l in gmod.indxpopl:
                 setattr(gmod.minmpara, 'numbelempop%d' % l, minmnumbelemfitt)
                 setattr(gmod.maxmpara, 'numbelempop%d' % l, maxmnumbelemfitt)
+        elif strgmodl == 'true':
+            for l in gmod.indxpopl:
+                name = 'numbelempop%d' % l
+                numbelem = int(getattr(gdat, 'true' + name, 2))
+                maxmnumbelem = max(numbelem, int(getattr(gdat, 'truemaxm' + name, 3)))
+                setattr(gmod.this, name, numbelem)
+                setattr(gmod.maxmpara, name, maxmnumbelem)
         
         ## group the maximum number of elements for each population into an array 'temp' this repeats the generic process and need to be removed
         gmod.minmpara.numbelem = np.empty(gmod.numbpopl, dtype=int)
@@ -4405,11 +4355,17 @@ def init_image( \
                 if strgmodl == 'true':
                     name = 'numbelempop%d' % l
                     gmod.numbelem[l] = int(getattr(gmod.this, name, getattr(gdat, 'true' + name, 2)))
+                    gmod.maxmpara.numbelem[l] = max(
+                        gmod.maxmpara.numbelem[l], gmod.numbelem[l]
+                    )
                 if gmod.typemodltran == 'pois':
                     setattr(gdat.true.this, 'meanelempop%d' % l, getattr(gdat.true.this, 'numbelempop%d' % l))
 
                 if gmod.numbelem[l] > gmod.maxmpara.numbelem[l]:
-                    raise Exception('True number of elements is larger than maximum.')
+                    raise ValueError(
+                        'True population %d has %d elements, exceeding its maximum of %d.'
+                        % (l, gmod.numbelem[l], gmod.maxmpara.numbelem[l])
+                    )
 
         gdat.stdvhostsour = 0.04 / gdat.anglfact
         
@@ -8168,10 +8124,10 @@ def supr_fram(gdat, gdatmodi, strgstat, strgmodl, axis, indxpoplplot=-1, assc=Fa
         colr = retr_colr(gdat, strgstat, strgmodl, l)
         axis.scatter(gdat.anglfact * xpos, gdat.anglfact * ypos, s=mrkrsize, \
                                     label='Condensed', marker=gmod.listelemmrkr[l], color='black', lw=gdat.mrkrlinewdth)
-        for r in gdat.indxstkscond:
-            xpos = np.array([gdat.dictglob['liststkscond'][r]['xpos']])
-            ypos = np.array([gdat.dictglob['liststkscond'][r]['ypos']])
-            axis.scatter(gdat.anglfact * xpos, gdat.anglfact * ypos, s=mrkrsize, \
+        for indxcond, r in enumerate(gdat.indxprvlhigh):
+            xpos = np.asarray(gdat.dictglob['liststkscond'][r]['xpos']).reshape(-1)
+            ypos = np.asarray(gdat.dictglob['liststkscond'][r]['ypos']).reshape(-1)
+            axis.scatter(gdat.anglfact * xpos, gdat.anglfact * ypos, s=mrkrsize[indxcond], \
                                                 marker=gmod.listelemmrkr[l], color='black', alpha=0.1, lw=gdat.mrkrlinewdth)
 
 
@@ -8384,6 +8340,8 @@ def init_stat(gdat):
                                 hasattr(gdat.true.this, 'paragenrscalfull'):
                     indxnumbelemtrue = gdat.true.indxpara.numbelem[l]
                     gmod.this.paragenrunitfull[numbelemindx[l]] = gdat.true.this.paragenrscalfull[indxnumbelemtrue]
+                elif hasattr(gdat, 'true') and hasattr(gdat.true, 'this') and hasattr(gdat.true.this, 'numbelempopl'):
+                    gmod.this.paragenrunitfull[numbelemindx[l]] = gdat.true.this.numbelempopl[l]
         else:
             for l in gmod.indxpopl:
                 if gmod.typemodltran == 'pois':
@@ -8548,7 +8506,10 @@ def init_stat(gdat):
                         trueparascale = getattr(gmodstat, namepara)
                     if trueparascale is None:
                         continue
-                    gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat, 'fitt', trueparascale, k)
+                    try:
+                        gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat, 'fitt', trueparascale, k)
+                    except AttributeError:
+                        continue
         if gmod.numbpopl > 0:
             gmod.this.indxparagenrelemfull = retr_indxparagenrelemfull(gdat, gmod.this.indxelemfull, 'fitt')
         if gdat.typeverb > 1:
@@ -11582,15 +11543,11 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                     if gdatfinl.typeverb > 0:
                         print('Computing the autocorrelation of the chains...')
                         timeinit = gdatfinl.functime()
-                    numbatcr = int(getattr(gdatfinl, 'numbparagenrfull', maxmnumbparafinl) / 2)
-                    if hasattr(tdpy.mcmc, 'is_compat') and tdpy.mcmc.is_compat:
-                        numbatcr = 1
-                    if numbatcr < 1:
-                        numbatcr = 1
-                    gdatfinl.atcrcntp = np.empty((gdatfinl.numbproc, gdatfinl.numbener, gdatfinl.numbpixl, gdatfinl.numbdqlt, numbatcr))
-                    gdatfinl.timeatcrcntp = np.empty((gdatfinl.numbproc, gdatfinl.numbener, gdatfinl.numbpixl, gdatfinl.numbdqlt))
-                    gdatfinl.atcrpara = np.empty((gdatfinl.numbproc, maxmnumbparafinl, numbatcr))
-                    gdatfinl.timeatcrpara = np.empty((gdatfinl.numbproc, maxmnumbparafinl))
+                    numbatcr = max(1, listparagenrscalfull.shape[0] // 2)
+                    gdatfinl.atcrcntp = np.full((gdatfinl.numbproc, gdatfinl.numbener, gdatfinl.numbpixl, gdatfinl.numbdqlt, numbatcr), np.nan)
+                    gdatfinl.timeatcrcntp = np.full((gdatfinl.numbproc, gdatfinl.numbener, gdatfinl.numbpixl, gdatfinl.numbdqlt), np.nan)
+                    gdatfinl.atcrpara = np.full((gdatfinl.numbproc, maxmnumbparafinl, numbatcr), np.nan)
+                    gdatfinl.timeatcrpara = np.full((gdatfinl.numbproc, maxmnumbparafinl), np.nan)
                     for k in gdatfinl.indxproc:
                         atcrparatemp, timeparatemp = tdpy.mcmc.retr_timeatcr(listparagenrscalfull[:, k, :], typeverb=gdatfinl.typeverb)
                         atcrparatemp = np.asarray(atcrparatemp)
@@ -11601,8 +11558,6 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                             timeparatemp = np.mean(timeparatemp, axis=tuple(np.arange(1, timeparatemp.ndim)))
                         if timeparatemp.ndim == 0:
                             timeparatemp = np.full(maxmnumbparafinl, float(timeparatemp))
-                        gdatfinl.atcrpara[k, :, :] = 0.
-                        gdatfinl.timeatcrpara[k, :] = 0.
                         numbparause = min(gdatfinl.atcrpara.shape[1], atcrparatemp.shape[0], timeparatemp.shape[0])
                         numbatcruse = min(gdatfinl.atcrpara.shape[2], atcrparatemp.shape[1])
                         gdatfinl.atcrpara[k, :numbparause, :numbatcruse] = atcrparatemp[:numbparause, :numbatcruse]
@@ -11613,12 +11568,13 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                         timeatcrcntptemp = np.asarray(timeatcrcntptemp)
                         if atcrcntptemp.ndim == 3:
                             atcrcntptemp = atcrcntptemp[..., None]
-                        gdatfinl.atcrcntp[k, :] = 0.
                         numbatcruse = min(gdatfinl.atcrcntp.shape[-1], atcrcntptemp.shape[-1])
                         gdatfinl.atcrcntp[k, ..., :numbatcruse] = atcrcntptemp[..., :numbatcruse]
                         gdatfinl.timeatcrcntp[k, :] = np.broadcast_to(timeatcrcntptemp, gdatfinl.timeatcrcntp[k].shape)
-                    timeatcrcntpmaxm = np.amax(gdatfinl.timeatcrcntp)
-                    gdatfinl.timeatcrcntpmaxm = np.amax(timeatcrcntpmaxm)
+                    if np.any(np.isfinite(gdatfinl.timeatcrcntp)):
+                        gdatfinl.timeatcrcntpmaxm = np.nanmax(gdatfinl.timeatcrcntp)
+                    else:
+                        gdatfinl.timeatcrcntpmaxm = np.nan
                     
                     if gdatfinl.typeverb > 0:
                         timefinl = gdatfinl.functime()
@@ -12474,6 +12430,8 @@ def make_fold(gdat):
                 continue
             if 'fram' in attr and not getattr(gdat, 'boolmakeplotfram', False):
                 continue
+            if os.path.basename(os.path.dirname(os.path.normpath(valu))) == 'lpac' or os.path.basename(os.path.normpath(valu)) == 'lpac':
+                continue
             if attr.endswith('opti') and not getattr(gdat, 'boolmakeplotopti', False):
                 continue
             make_directory(valu)
@@ -12894,6 +12852,12 @@ def proc_anim(strgcnfg, pathbase=None):
     filestat.close()
     
 
+def _should_plot_spatial_count_histograms(gdat):
+    """Return whether count-per-pixel histograms suit the analysis mode."""
+
+    return getattr(gdat, 'anlytype', None) != 'spec'
+
+
 def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gdatsimu=None, booltile=False):
     
     print('  Plotting sample data (stat: %s, model: %s, phase: %s, pdfn: %s)...' % (strgstat, strgmodl, strgphas, strgpdfn))
@@ -13129,23 +13093,24 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                             for l in gmod.indxpopl:
                                 plot_genemaps(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, 'cntpdata', i, m, indxpoplplot=l)
         
-            ## histograms of the number of counts per pixel
-            limtxdat = [gdat.minmpara.cntpmodl, gdat.maxmpara.cntpmodl]
-            for nameecom in gmod.listnameecomtotl:
-                name = 'histcntp' + nameecom
-                for m in gdat.indxdqlt: 
-                    for i in gdat.indxener:
-                        if gdat.numbener > 1:
-                            name += 'en%02d' % (i)
-                        if gdat.numbdqlt > 1:
-                            name += 'evt%d' % (m)
-                            
-                        try:
-                            plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, \
-                                                 name, 'bctrcntpdata', scalydat='logt', scalxdat='logt', lablxdat=gdat.lablcnts, histodim=True, \
-                                                 lablydat='$N_{pix}$', limtydat=[0.5, gdat.numbener], limtxdat=limtxdat)
-                        except Exception as excp:
-                            print('Warning: skipping %s plot due to plotting error: %s' % (name, str(excp)))
+            ## Histograms across spatial pixels are not meaningful for spectra.
+            if _should_plot_spatial_count_histograms(gdat):
+                limtxdat = [gdat.minmpara.cntpmodl, gdat.maxmpara.cntpmodl]
+                for nameecom in gmod.listnameecomtotl:
+                    for m in gdat.indxdqlt:
+                        for i in gdat.indxener:
+                            name = 'histcntp' + nameecom
+                            if gdat.numbener > 1:
+                                name += 'en%02d' % (i)
+                            if gdat.numbdqlt > 1:
+                                name += 'evt%d' % (m)
+
+                            try:
+                                plot_gene(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, \
+                                                     name, 'bctrcntpdata', scalydat='logt', scalxdat='logt', lablxdat=gdat.lablcnts, histodim=True, \
+                                                     lablydat='$N_{pix}$', limtydat=[0.5, gdat.numbener], limtxdat=limtxdat)
+                            except Exception as excp:
+                                print('Warning: skipping %s plot due to plotting error: %s' % (name, str(excp)))
 
             
             ## highest amplitude element
@@ -13802,15 +13767,15 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
             listparaflat = getattr(gdat, 'list' + strgpdfn + 'paragenrscalfull', None)
             if listparaflat is not None and np.size(listparaflat) > 0:
                 numbpara = listparaflat.shape[1]
-                gdat.atcrpara = np.zeros((1, numbpara, 1))
-                gdat.timeatcrpara = np.zeros((1, numbpara))
+                gdat.atcrpara = np.full((1, numbpara, 1), np.nan)
+                gdat.timeatcrpara = np.full((1, numbpara), np.nan)
             else:
-                gdat.atcrpara = np.zeros((1, 1, 1))
-                gdat.timeatcrpara = np.zeros((1, 1))
+                gdat.atcrpara = np.full((1, 1, 1), np.nan)
+                gdat.timeatcrpara = np.full((1, 1), np.nan)
         if not hasattr(gdat, 'atcrcntp') or not hasattr(gdat, 'timeatcrcntp'):
             shapcntp = (1, gdat.numbener, gdat.numbpixl, gdat.numbdqlt)
-            gdat.atcrcntp = np.zeros(shapcntp + (1,))
-            gdat.timeatcrcntp = np.zeros(shapcntp)
+            gdat.atcrcntp = np.full(shapcntp + (1,), np.nan)
+            gdat.timeatcrcntp = np.full(shapcntp, np.nan)
 
         # terms in the log-acceptance probability
         listindxsamptotlproptotl = getattr(gdat, 'list' + strgpdfn + 'indxsamptotlproptotl')
@@ -13823,14 +13788,17 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
                 labl = gdat.listlabltermlacp[k]
                 
                 if listindxsamptotlproptotl[n].size > 0 and (varb[listindxsamptotlproptotl[n]] != 0.).any():
+                    make_directory(pathfinlprop)
                     path = pathfinlprop + gdat.listnametermlacp[k] + 'totl'
                     tdpy.mcmc.plot_trac(path, varb[listindxsamptotlproptotl[n]], labl, titl=gdat.nameproptype[n] + ', Total')
                 
                 if listindxsamptotlpropaccp[n].size > 0 and (varb[listindxsamptotlpropaccp[n]] != 0.).any():
+                    make_directory(pathfinlprop)
                     path = pathfinlprop + gdat.listnametermlacp[k] + 'accp'
                     tdpy.mcmc.plot_trac(path, varb[listindxsamptotlpropaccp[n]], labl, titl=gdat.nameproptype[n] + ', Accepted')
                 
                 if listindxsamptotlpropreje[n].size > 0 and (varb[listindxsamptotlpropreje[n]] != 0.).any():
+                    make_directory(pathfinlprop)
                     path = pathfinlprop + gdat.listnametermlacp[k] + 'reje'
                     tdpy.mcmc.plot_trac(path, varb[listindxsamptotlpropreje[n]], labl, titl=gdat.nameproptype[n] + ', Rejected')
             
@@ -13911,11 +13879,27 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
         if gdat.typeverb > 0:
             print('Autocorrelation...')
         if hasattr(gdat, 'atcrcntp') and hasattr(gdat, 'timeatcrcntp') and np.size(gdat.atcrcntp) > 0 and np.size(gdat.timeatcrcntp) > 0:
-            tdpy.mcmc.plot_atcr(pathdiag, gdat.atcrcntp[0, 0, 0, 0, :], gdat.timeatcrcntp[0, 0, 0, 0], strgextn='cntp')
+            atcrplot, timeatcrplot = _retr_representative_atcr(gdat.atcrcntp, gdat.timeatcrcntp)
+            if atcrplot is not None:
+                tdpy.mcmc.plot_atcr(pathdiag, atcrplot, timeatcrplot, strgextn='cntp')
+            else:
+                print('Skipping count-map autocorrelation plot because all sampled count maps are constant.')
         else:
             print('Skipping count-map autocorrelation plot because autocorrelation arrays are empty.')
-        if hasattr(gdat, 'atcrpara') and hasattr(gdat, 'timeatcrpara') and np.size(gdat.atcrpara) > 0 and np.size(gdat.timeatcrpara) > 0 and gdat.atcrpara.shape[1] > 0 and gdat.timeatcrpara.shape[1] > 0:
-            tdpy.mcmc.plot_atcr(pathdiag, gdat.atcrpara[0, 0, :], gdat.timeatcrpara[0, 0], strgextn='para')
+        if gmod.numbpopl > 0 and hasattr(gdat, 'list' + strgpdfn + 'lpostotl'):
+            listlpostotl = np.asarray(getattr(gdat, 'list' + strgpdfn + 'lpostotl'))
+            atcrplot, timeatcrplot = tdpy.mcmc.retr_timeatcr(listlpostotl, typeverb=gdat.typeverb)
+            atcrplot, timeatcrplot = _retr_representative_atcr(atcrplot, timeatcrplot)
+            if atcrplot is not None:
+                tdpy.mcmc.plot_atcr(pathdiag, atcrplot, timeatcrplot, strgextn='lpostotl')
+            else:
+                print('Skipping log-posterior autocorrelation plot because the sampled values are constant.')
+        elif hasattr(gdat, 'atcrpara') and hasattr(gdat, 'timeatcrpara') and np.size(gdat.atcrpara) > 0 and np.size(gdat.timeatcrpara) > 0 and gdat.atcrpara.shape[1] > 0 and gdat.timeatcrpara.shape[1] > 0:
+            atcrplot, timeatcrplot = _retr_representative_atcr(gdat.atcrpara, gdat.timeatcrpara)
+            if atcrplot is not None:
+                tdpy.mcmc.plot_atcr(pathdiag, atcrplot, timeatcrplot, strgextn='para')
+            else:
+                print('Skipping parameter autocorrelation plot because all sampled parameters are constant.')
             print('Autocorrelation times:')
             if isinstance(gmod.namepara, (list, tuple, np.ndarray)):
                 listnameparaatcr = list(gmod.namepara)
@@ -15046,6 +15030,16 @@ def plot_scatcntp(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, indxdqltplot, in
         else:
             axis.plot(xener, cntpmodl, marker='o', markersize=3, color=colr, label='Model')
 
+        enerfact = 1e-6 if gdat.typeexpr == 'fire' else 1.
+        if gdat.typedata == 'simu' and hasattr(gdat, 'refr') and hasattr(gdat.refr, 'dictelem'):
+            boollabl = True
+            for l in gmod.indxpopl:
+                if gmod.typeelem[l].startswith('lghtline') and 'elin' in gdat.refr.dictelem[l]:
+                    for elin in np.asarray(gdat.refr.dictelem[l]['elin']).reshape(-1):
+                        axis.axvline(elin * enerfact, color='tab:green', ls='--', alpha=0.9, \
+                                     label='True line' if boollabl else None)
+                        boollabl = False
+
         if gdatmodi is not None and hasattr(gdatmodi, strgstat):
             gmodstat = getattr(gdatmodi, strgstat)
             if hasattr(gmodstat, 'dictelem'):
@@ -15053,8 +15047,8 @@ def plot_scatcntp(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, indxdqltplot, in
                 for l in gmod.indxpopl:
                     if gmod.typeelem[l].startswith('lghtline') and 'elin' in gmodstat.dictelem[l]:
                         for elin in np.atleast_1d(gmodstat.dictelem[l]['elin']):
-                            axis.axvline(elin * (1e-6 if gdat.typeexpr == 'fire' else 1.), color=gmod.colrelem[l], \
-                                         ls=':', alpha=0.8, label='Line center' if boollabl else None)
+                            axis.axvline(elin * enerfact, color=gmod.colrelem[l], ls=':', alpha=0.8, \
+                                         label='Fitted line' if boollabl else None)
                             boollabl = False
         axis.set_xlabel(lablxaxi)
         axis.set_ylabel('Counts per spectral bin')
@@ -15438,11 +15432,11 @@ def plot_mosa(gdat, strgpdfn):
                                 proc_samp(gdat, gdatmodi, 'this', 'fitt')
 
                             if a == numbrows - 1:
-                                axis.set_xlabel(gdat.lablxpostotl)
+                                axis.set_xlabel(getattr(gdat, 'lablxpostotl', '$x$'))
                             else:
                                 axis.set_xticklabels([])
                             if b == 0:
-                                axis.set_ylabel(gdat.lablypostotl)
+                                axis.set_ylabel(getattr(gdat, 'lablypostotl', '$y$'))
                             else:
                                 axis.set_yticklabels([])
                             
@@ -17073,7 +17067,8 @@ def init( \
                 _set_stdp_by_attr('indxstdppop0gwdt', 5e-1)
 
             if gdat.typeexpr == 'fire':
-                pass
+                numbstdpbase = gdat.fitt.numbparagenrbase - gdat.fitt.numbpopl
+                gdat.stdp[numbstdpbase:] = 1e-4
         
         if (gdat.stdp > 1e100).any():
             raise Exception('')
@@ -17108,7 +17103,6 @@ def init( \
             if len(typeelemfitt) < gdat.fitt.numbpopl:
                 raise RuntimeError('gdat.fitt.typeelem length is inconsistent with gdat.fitt.numbpopl while initializing sampler state.')
         _require_nonempty('gdat.indxener', _require_attr(gdat, 'indxener', 'initializing sampler state'), 'initializing sampler state')
-        init_stat(gdat)
 
         if gdat.typedata == 'simu' and not gdat.typeexpr.startswith('HST_WFC3'):
             truenumbelem = np.array([
@@ -17167,12 +17161,16 @@ def init( \
             gdat.refr.namepara.elemonly = [
                 [[] for _ in gdat.true.indxpopl] for _ in gdat.indxrefr
             ]
+            for parameter in gdat.true.namepara.genrelem[0]:
+                setattr(gdat, 'refr' + parameter, [population[parameter] for population in gdat.refr.dictelem])
             gdat.refr.indxpoplfittassc = np.asarray(gdat.fitt.indxpopl, dtype=int)
             gdat.fitt.indxpoplrefrassc = np.asarray(gdat.fitt.indxpopl, dtype=int)
             if gdat.true.numbpopl > 0 and 'elin' in gdat.refr.dictelem[0]:
                 gdat.refrelin = [gdat.refr.dictelem[0]['elin']]
                 if gdat.anglassc is None:
                     gdat.anglassc = 2. * np.median(np.diff(gdat.bctrpara.ener)) / np.median(gdat.bctrpara.ener)
+
+            init_stat(gdat)
 
         if gdat.typeexpr.startswith('HST_WFC3') and gdat.typedata == 'simu' and hasattr(gdat, 'fitt') and getattr(gdat.fitt, 'numbpopl', 0) > 0:
             if not hasattr(gdat.fitt.this, 'indxelemfull') or len(getattr(gdat.fitt.this, 'indxelemfull', [])) != gdat.fitt.numbpopl:

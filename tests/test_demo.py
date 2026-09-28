@@ -20,7 +20,9 @@ def load_example_module(name, path):
 
 def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch):
     captured = {}
-    monkeypatch.setattr(demo.pcat_main, "sample", lambda **configuration: captured.update(configuration))
+    monkeypatch.setattr(
+        demo.pcat_main, "sample", lambda **configuration: captured.update(configuration)
+    )
     output_root = tmp_path / "pcat-output"
 
     demo.run_pipeline_demo(output_root, typeexpr="gmix", numbswep=3)
@@ -44,7 +46,10 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
     ("example_name", "expected"),
     [
         ("chandra_point_source", {"typeexpr": "chan", "typeelem": ["lghtpnts"]}),
-        ("gaussian_mixture", {"typeexpr": "gmix", "typeelem": ["clusvari"], "numbspatdims": 2}),
+        (
+            "gaussian_mixture",
+            {"typeexpr": "gmix", "typeelem": ["clusvari"], "numbspatdims": 2},
+        ),
         ("hst_lens", {"typeexpr": "HST_WFC3_IR", "typeelem": ["lens"]}),
     ],
 )
@@ -73,7 +78,11 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
     script_path = REPOSITORY_ROOT / "examples" / "pcat_voigt_profile_detection.py"
     module = load_example_module("pcat_voigt_example", script_path)
     captured = {}
-    monkeypatch.setattr(module.pcat.main, "sample", lambda **configuration: captured.update(configuration))
+    monkeypatch.setattr(
+        module.pcat.main,
+        "sample",
+        lambda **configuration: captured.update(configuration),
+    )
 
     module.run_voigt_profile_detection(smoke=True)
 
@@ -83,6 +92,34 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
     assert captured["makeanim"] is True
     assert captured["truenumbelempop0"] == 2
     assert captured["dictfitt"]["typeelem"] == ["lghtlinevoig"]
+
+
+def test_daylan2016_configuration_preserves_published_mock_assumptions():
+    script_path = (
+        REPOSITORY_ROOT / "examples" / "daylan2016" / "generate_reproduction.py"
+    )
+    module = load_example_module("pcat_daylan2016_reproduction", script_path)
+
+    full = module.build_configuration()
+    smoke = module.build_configuration(smoke=True, typefileplot="pdf")
+
+    assert full["truenumbelempop0"] == 300
+    assert full["truemaxmnumbelempop0"] == 300
+    assert full["numbelempop0reg0"] == 300
+    assert full["truefluxdistslop"] == pytest.approx(-1.8)
+    assert full["typeelem"] == ["lghtpnts"]
+    assert full["typepixl"] == "cart"
+    assert full["numbswep"] == 1_000_000
+    assert full["numbsamp"] == 10_000
+    assert full["boolcondcatl"] is True
+    assert smoke["truenumbelempop0"] == 12
+    assert smoke["numbelempop0reg0"] == 12
+    assert smoke["numbswep"] == 10_000
+    assert smoke["numbsamp"] == 1_000
+    assert smoke["numbswepplot"] == 1_000
+    assert smoke["boolcondcatl"] is True
+    assert smoke["makeanim"] is True
+    assert smoke["typefileplot"] == "pdf"
 
 
 def test_example_output_verification_requires_multiframe_animation(tmp_path):
