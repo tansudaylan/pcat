@@ -1,5 +1,7 @@
 # PCAT
 
+<img src="docs/_static/pcat_logo.png" alt="PCAT logo" width="160">
+
 ## Purpose
 
 PCAT is a Bayesian framework for inferring catalogs and physical models from

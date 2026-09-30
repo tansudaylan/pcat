@@ -13,7 +13,9 @@ language = "en"
 exclude_patterns = ["_build", "_site", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_rtd_theme"
-html_static_path = []
+html_static_path = ["_static"]
+html_logo = "_static/pcat_logo.png"
+html_favicon = "_static/pcat_logo.png"
 htmlhelp_basename = "PCATdoc"
 
 latex_documents = [
