@@ -208,6 +208,8 @@ def test_daylan2018_smoke_configuration_skips_animation(tmp_path, monkeypatch):
 
     assert module.build_configuration()["makeanim"] is True
     assert module.build_configuration(smoke=True)["makeanim"] is False
+    assert module.build_configuration()["boolmakeplotfinlpost"] is True
+    assert module.build_configuration(smoke=True)["boolmakeplotfinlpost"] is False
     cached_output = tmp_path / "daylan2018_catalog"
     cached_output.mkdir()
     (cached_output / "stale.txt").touch()

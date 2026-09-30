@@ -42,10 +42,9 @@ acceptance, persistence, convergence, and final-processing pipeline as
 transdimensional catalog models:
 
 ```python
-from pcat.main import sample
+from pcat import sample_fixed
 
-result = sample(
-	typeexpr="gener",
+result = sample_fixed(
 	retr_llik=log_likelihood,
 	parameter_names=("mean", "scale"),
 	prior_types=("self", "gaus"),
