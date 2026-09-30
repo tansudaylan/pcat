@@ -34,6 +34,7 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `catalog_association_completeness_purity/`: completeness and purity across catalog-matching radii
 - `voigt_spectral_line_catalog/`: nominal and high-signal Voigt-profile line detection in simulated spectra
 - `jwst_miri_ngc7027_line_catalog/`: transdimensional emission-line catalog of the planetary nebula NGC 7027 from a real JWST MIRI MRS spectrum
+- `variable_number_stellar_flares/`: transdimensional catalog of a variable number of stellar flares in a simulated photometric time series
 - `proposal_profiling/`: execution time, prior-support fraction, and acceptance of each proposal type on the simulated Voigt spectrum
 - `sampler_comparison_emcee_dynesty/`: PCAT, emcee, and dynesty on one simulated sinusoid posterior
 - `population_grid/`: corner, histogram, and pair plots of two simulated sample populations
@@ -50,6 +51,18 @@ The chain shown has 19 (+1/&minus;2) lines. Six lines appear in every sampled ca
 ![Posterior line catalog samples](jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_catalog_samples.png)
 
 ![Posterior of the number of lines](jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_count_posterior.png)
+
+## Variable number of stellar flares
+
+The data are simulated: a quiescent star observed at a TESS-like 2 minute cadence for 1 day, with 3 to 6 injected fast-rise, exponential-decay (FRED) flares (`nicomedia.retr_lcurmodl_flarsing`) at random peak times, amplitudes, and rise/decay time scales, and Poisson counts drawn around the expected count rate. PCAT reuses its 1D spectral-line machinery for this time series: time plays the role of the energy axis, and each flare is one Voigt-profile burst on top of a fixed, flat quiescent baseline (30,000 sweeps, about 80 s on one core).
+
+The injected FRED shape is asymmetric (fast rise, slow decay), but PCAT's Voigt profile is symmetric, so a single component only approximates one flare. All 6 injected flares are recovered at their correct times and roughly the correct integrated counts, but the posterior favors 8 to 9 components overall: extra low-amplitude Voigt components absorb the asymmetric residual structure visible around each flare's decay, illustrating the mismatch between the approximating template and the injected shape.
+
+![Simulated light curve and PCAT model](variable_number_stellar_flares/visuals/variable_number_stellar_flares_light_curve_fit.png)
+
+![Posterior flare catalog samples](variable_number_stellar_flares/visuals/variable_number_stellar_flares_catalog_samples.png)
+
+![Posterior of the number of flares](variable_number_stellar_flares/visuals/variable_number_stellar_flares_count_posterior.png)
 
 ## Proposal profiling
 
