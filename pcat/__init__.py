@@ -14,6 +14,7 @@ if not hasattr(tdpy, 'retr_labltotlsing') and hasattr(tdpy, 'retr_labltotl'):
 	tdpy.retr_labltotlsing = tdpy.retr_labltotl
 
 from .main import *
+from . import collect_garbage, comp_rtag, submit_batch
 from .associate import associate_catalogs
 from .diagnostics import posterior_convergence
 from .paths import get_data_path, get_repository_path, get_visuals_path

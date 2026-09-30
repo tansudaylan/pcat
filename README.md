@@ -126,6 +126,32 @@ plot_grid(
 )
 ```
 
+## Fixed-dimensional evidence
+
+`pcat.diagnostics.estimate_evidence` estimates the marginal likelihood for a
+fixed-dimensional PCAT run with normalized bounded (`self`) or Gaussian (`gaus`)
+priors. It fits a proposal to posterior draws and evaluates the likelihood on
+independent draws from a mixture of that proposal and the prior:
+
+```python
+from pcat.diagnostics import estimate_evidence
+
+evidence = estimate_evidence(
+    result.listpostparagenrscalbase,
+    lambda values: -0.5 * ((values[0] - 0.3) / 0.1) ** 2,
+    prior_types=('self',),
+    prior_minima=(0.0,),
+    prior_maxima=(1.0,),
+)
+print(evidence['log_evidence'], evidence['relative_error'])
+```
+
+The result also includes `effective_sample_size`. The relative error describes
+Monte Carlo uncertainty in the evidence, approximately the uncertainty in log
+evidence when small. Repeat the estimate with more draws if the effective sample
+size is low. A custom prior needs its normalized density and sampling rule before
+evidence can be estimated this way.
+
 ## Documentation
 
 The user guide begins at [`docs/index.rst`](docs/index.rst) and covers
