@@ -72,6 +72,8 @@ def main() -> None:
             require_multiframe=require_multiframe,
         )
 
+    run_script(ROOT / "make_posterior_animation_collage.py")
+
     roman_root = ROOT / "roman_lens_catalog"
     roman_output = roman_root / "roman_lens_catalog_diagnostic.png"
     if roman_output.exists():

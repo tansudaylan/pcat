@@ -13,6 +13,15 @@ The primary scientific use cases are:
 
 The core method is introduced in Daylan, Portillo & Finkbeiner (2017) and extended for different image and catalog analysis workflows.
 
+## Posterior samples
+
+![Posterior samples from four PCAT example problems](examples/pcat_posterior_samples.gif)
+
+Each frame combines posterior-chain draws from simulated Gaussian-mixture,
+point-source imaging, strong-lensing imaging, and spectral-line examples. The
+animation demonstrates PCAT's shared inference and visualization pipeline. The
+simulations are pipeline examples rather than measurements of observed systems.
+
 ## Catalog inference
 
 PCAT compares catalog configurations with different numbers of sources, samples source and population parameters jointly, quantifies detection and membership probabilities, and evaluates posterior predictions against image or photon-count data.
@@ -33,7 +42,9 @@ result = sample(
 	prior_maxima=(5.0, 5.0),
 	prior_means=(0.0, 1.0),
 	prior_stdvs=(1.0, 0.2),
+	initial_values=(0.0, 1.0),
 	proposal_scales=(0.05, 0.05),
+	proposal_correlation=((1.0, 0.3), (0.3, 1.0)),
 	pathbase="/path/to/run-root",
 	strgcnfg="fixed-example",
 )
@@ -45,6 +56,12 @@ proposes in unit-prior coordinates and applies its existing inverse-CDF
 transforms. Generic runs set birth/death and split/merge probabilities to zero,
 so only the native type-0 within-model proposal is active. The returned object
 is the normal persisted ``gdatfinlpost`` state.
+
+By default, type-0 moves perturb one parameter at a time. Set
+``probpropblock`` above zero to mix in correlated block moves using
+``proposal_correlation``; ``factpropblock`` scales those block increments.
+These moves retain PCAT's standard acceptance, adaptation, persistence, and
+final-processing machinery.
 
 ## Installation
 
@@ -91,6 +108,23 @@ self-contained run from the archival Fermi-LAT data analysis.
 ## Outputs
 
 PCAT writes serialized posterior states under `data/` and figures under `visuals/`, rooted at `PCAT_DATA_PATH` or `TDGU_DATA_PATH`. The figures show the input data, model realization, residual, source population, parameter distributions, and convergence diagnostics.
+
+## Posterior plotting
+
+PCAT can render every one- and two-parameter posterior projection without an
+external corner-plot package:
+
+```python
+from pcat import plot_grid
+
+plot_grid(
+	"/path/to/posterior",
+	"model",
+	result.listpostparagenrscalbase,
+	("mean", "scale"),
+	typefileplot="pdf",
+)
+```
 
 ## Documentation
 

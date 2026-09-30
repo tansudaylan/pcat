@@ -61,6 +61,8 @@ import tdpy.util as tdpy_util
 from tdpy.paths import make_directory, make_symlink, open_narr
 from tdpy.util import summgene
 
+from .plotting import plot_grid as plot_grid_native
+
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _REPO_ROOT not in sys.path:
     sys.path.append(_REPO_ROOT)
@@ -319,38 +321,18 @@ class _PCATMCMCCompat(object):
 
     @staticmethod
     def plot_grid(path, name, listpara, listlablparatotl, scalpara=None, truepara=None, join=False, listvarbdraw=None, typefileplot='pdf', **kwargs):
-        arr = np.asarray(listpara)
-        if arr.size == 0:
-            return
-        if arr.ndim == 1:
-            arr = arr[:, None]
-        elif arr.ndim > 2:
-            arr = arr.reshape(arr.shape[0], -1)
-        numbvarb = arr.shape[1]
-        if numbvarb == 0:
-            return
-        listlabl = list(listlablparatotl) if listlablparatotl is not None else []
-        if len(listlabl) < numbvarb:
-            listlabl += ['para%04d' % k for k in range(len(listlabl), numbvarb)]
-        if numbvarb == 1:
-            _PCATMCMCCompat.plot_hist(path + '_' + name, arr[:, 0], listlabl[0], truepara=truepara,
-                                      listvarbdraw=listvarbdraw, typefileplot=typefileplot)
-            return
-        figr, axis = plt.subplots(figsize=(5, 5))
-        axis.scatter(arr[:, 0], arr[:, 1], s=2, alpha=0.3)
-        if truepara is not None:
-            truearray = np.asarray([np.nan if value is None else value for value in truepara], dtype=float).reshape(-1)
-            if truearray.size >= 2 and np.all(np.isfinite(truearray[:2])):
-                axis.scatter(truearray[0], truearray[1], color='g', marker='x', s=50, linewidths=1.5)
-        for draw in listvarbdraw or []:
-            drawarray = np.asarray(draw, dtype=float).reshape(-1)
-            if drawarray.size >= 2 and np.all(np.isfinite(drawarray[:2])):
-                axis.scatter(drawarray[0], drawarray[1], color='r', marker='x', s=50, linewidths=1.5)
-        axis.set_xlabel(listlabl[0])
-        axis.set_ylabel(listlabl[1])
-        plt.tight_layout()
-        figr.savefig(_PCATMCMCCompat._path_with_ext(path + '_' + name, typefileplot))
-        plt.close(figr)
+        return plot_grid_native(
+            path,
+            name,
+            listpara,
+            listlablparatotl,
+            scalpara=scalpara,
+            truepara=truepara,
+            join=join,
+            listvarbdraw=listvarbdraw,
+            typefileplot=typefileplot,
+            **kwargs,
+        )
 
     @staticmethod
     def plot_atcr(path, atcr, timeatcr, strgextn='', typefileplot='pdf', **kwargs):
@@ -1770,7 +1752,9 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                 boolforceimag = True
 
         if gdat.propwithsing and thisindxsampfull.size > 1:
-            thisindxsampfull = np.array([np.random.choice(thisindxsampfull)], dtype=int)
+            probpropblock = getattr(gdat, 'probpropblock', 0.)
+            if np.random.rand() >= probpropblock:
+                thisindxsampfull = np.array([np.random.choice(thisindxsampfull)], dtype=int)
         
         thisindxstdp = np.full(thisindxsampfull.size, -1, dtype=int)
         if hasattr(gdat, 'indxstdppara') and gdat.indxstdppara is not None and np.size(gdat.indxstdppara) > 0:
@@ -1842,7 +1826,17 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                     gdatmodi.this.stdp = stdpcomp / (np.minimum(thiscompampl, compampl) / minmcompampl)**0.5
         
         ## propose a step
-        diffparagenrunitfull = np.random.normal(size=thisindxsampfull.size) * thisstdp
+        if gdat.typeexpr == 'gener' and hasattr(gdat, 'proposal_correlation'):
+            correlation = gdat.proposal_correlation[
+                np.ix_(thisindxsampfull, thisindxsampfull)
+            ]
+            block_factor = getattr(gdat, 'factpropblock', 1.) if thisindxsampfull.size > 1 else 1.
+            covariance = correlation * np.outer(thisstdp, thisstdp) * block_factor**2
+            diffparagenrunitfull = np.random.multivariate_normal(
+                np.zeros(thisindxsampfull.size), covariance
+            )
+        else:
+            diffparagenrunitfull = np.random.normal(size=thisindxsampfull.size) * thisstdp
         gmodnext.paragenrunitfull[thisindxsampfull] = gmodthis.paragenrunitfull[thisindxsampfull] + diffparagenrunitfull
         
         if gdat.booldiag:
@@ -18178,6 +18172,9 @@ def _sample_generic(**kwargs):
     prior_means = np.asarray(kwargs.pop('prior_means', np.zeros(parameter_count)), dtype=float)
     prior_stdvs = np.asarray(kwargs.pop('prior_stdvs', np.ones(parameter_count)), dtype=float)
     proposal_scales = np.asarray(kwargs.pop('proposal_scales', np.full(parameter_count, 0.05)), dtype=float)
+    proposal_correlation = np.asarray(
+        kwargs.pop('proposal_correlation', np.eye(parameter_count)), dtype=float
+    )
     initial_values = kwargs.pop('initial_values', None)
     for name, values in (
         ('prior_means', prior_means),
@@ -18192,6 +18189,11 @@ def _sample_generic(**kwargs):
             raise ValueError('initial_values must have one entry per parameter.')
         for name, value in zip(parameter_names, initial_values):
             kwargs['init' + name] = float(value)
+    if proposal_correlation.shape != (parameter_count, parameter_count):
+        raise ValueError('proposal_correlation must be square with one row per parameter.')
+    if not np.allclose(proposal_correlation, proposal_correlation.T):
+        raise ValueError('proposal_correlation must be symmetric.')
+    np.linalg.cholesky(proposal_correlation)
 
     indxpara = tdpy.gdatstrt()
     indxpara.bacp = np.array([], dtype=int)
@@ -18225,6 +18227,7 @@ def _sample_generic(**kwargs):
         'typedata': 'inpt',
         'dictfitt': dictfitt,
         'stdvpropbase': proposal_scales,
+        'proposal_correlation': proposal_correlation,
         'probtran': 0.,
         'probspmr': 0.,
         'boolcondcatl': False,
@@ -19273,8 +19276,9 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
                 if gdat.typeexpr == 'fire' and indxstdp < gmod.numbparagenrbase - gmod.numbpopl:
                     continue
                 gdatmodi.numbpropstdp[indxstdp] += 1
+                target = 0.234 if gdatmodi.this.indxstdpprop.size > 1 else 0.44
                 gdatmodi.stdp[indxstdp] = _retr_adapted_proposal_scale(
-                    gdatmodi.stdp[indxstdp], booltemp, gdatmodi.numbpropstdp[indxstdp])
+                    gdatmodi.stdp[indxstdp], booltemp, gdatmodi.numbpropstdp[indxstdp], target=target)
 
         if gdat.booldiag:
             if gdatmodi.this.indxproptype == 0:

@@ -30,10 +30,16 @@ Sampling
    parameters. ``prior_types`` accepts ``"self"`` for bounded uniform priors
    and ``"gaus"`` for Gaussian priors. ``prior_minima``, ``prior_maxima``,
    ``prior_means``, ``prior_stdvs``, and ``proposal_scales`` each contain one
-   value per parameter. The callback ``retr_llik(gdat, strgmodl, values)``
+   value per parameter. ``initial_values`` optionally supplies a finite
+   physical initial state through PCAT's native initializer. The callback
+   ``retr_llik(gdat, strgmodl, values)``
    returns the log likelihood only. PCAT's unit-coordinate transforms encode
    the priors. Generic runs use the standard type-0 proposal and set
    transdimensional proposal probabilities to zero. See :doc:`capabilities`
+
+   ``proposal_correlation`` optionally defines correlated type-0 block moves.
+   Set ``probpropblock`` to their mixture probability and ``factpropblock`` to
+   their scale relative to the adapted per-parameter proposal scales.
    for a complete example and the image and spectral model families.
 
 .. py:function:: pcat.main.init(configuration)
@@ -41,6 +47,17 @@ Sampling
    Lower-level initialization and execution engine. New image-analysis code
    should normally call :func:`pcat.main.sample`, which performs experiment
    dispatch before invoking this function.
+
+Plotting
+--------
+
+.. py:function:: pcat.plotting.plot_grid(path, name, listpara, listlablparatotl, truepara=None, listvarbdraw=None, typefileplot="pdf")
+
+   Render the diagonal marginal distributions and every lower-triangle pairwise
+   posterior projection. ``listpara`` contains one row per sample and one
+   column per parameter. ``truepara`` marks injected values and
+   ``listvarbdraw`` can mark maximum-likelihood or other reference vectors.
+   The output path is ``path_name.pdf`` or ``path_name.png``.
 
 Example analyses
 ----------------

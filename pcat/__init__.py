@@ -15,5 +15,7 @@ if not hasattr(tdpy, 'retr_labltotlsing') and hasattr(tdpy, 'retr_labltotl'):
 
 from .main import *
 from .associate import associate_catalogs
+from .diagnostics import posterior_convergence
 from .paths import get_data_path, get_repository_path, get_visuals_path
+from .plotting import plot_grid
 from .psf import psf_poly_fit
