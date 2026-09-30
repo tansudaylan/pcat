@@ -37,7 +37,7 @@ papers' numerical posterior values.
 
 ## Package organization
 
-New sampling integrations should use `pcat.sampling` for the public entry
+PCAT is the sole posterior sampler in this software ecosystem. New sampling integrations should use `pcat.sampling` for the public entry
 points. `pcat.main` remains the implementation and backward-compatible access
 path while its tightly coupled engine is decomposed. Fixed-dimensional sampling,
 diagnostics, plotting, catalog association, paths, and PSF utilities live in
