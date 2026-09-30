@@ -119,19 +119,6 @@ Analysis utilities
       :width: 640px
       :align: center
 
-``subpixel_psf_reconstruction``
-   Reconstruction of an oversampled point-spread function with PCAT's
-   piecewise-cubic detector-pixel model, including interpolation residuals.
-
-   .. code-block:: bash
-
-      python examples/subpixel_psf_reconstruction/subpixel_psf_reconstruction.py
-
-   .. image:: ../examples/subpixel_psf_reconstruction/visuals/subpixel_psf_reconstruction.png
-      :alt: Cubic subpixel point-spread-function reconstruction and residuals
-      :width: 640px
-      :align: center
-
 Scientific interpretation
 -------------------------
 

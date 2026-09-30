@@ -13,6 +13,82 @@ EXAMPLES_ROOT = Path(__file__).resolve().parents[1] / "examples"
 DEFAULT_POSTERIOR_COLLAGE = EXAMPLES_ROOT / "pcat_posterior_samples.gif"
 
 
+def plot_lens_image_fit(
+    output_path: Path,
+    observed: np.ndarray,
+    model: np.ndarray,
+    variance: np.ndarray,
+    pixel_scale_arcsec: float,
+    typefileplot: str = "png",
+) -> Path:
+    """Write observed, median-model, and standardized-residual lens maps."""
+    if typefileplot not in ("png", "pdf"):
+        raise ValueError("typefileplot must be 'png' or 'pdf'")
+    residual = (observed - model) / np.sqrt(variance)
+    half_width_arcsec = observed.shape[0] * pixel_scale_arcsec / 2.0  # [arcsec]
+    extent = (-half_width_arcsec, half_width_arcsec, -half_width_arcsec, half_width_arcsec)
+    count_limit = np.nanpercentile(observed, 99.5)
+    figure, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=True)
+    for axis, image, title, bounds, colorbar_label in zip(
+        axes,
+        (observed, model, residual),
+        ("Simulated observation", "PCAT median model", "Standardized residual"),
+        ((0.0, count_limit), (0.0, count_limit), (-5.0, 5.0)),
+        ("Electrons [pixel$^{-1}$]", "Electrons [pixel$^{-1}$]", "Residual [$\\sigma$]"),
+    ):
+        shown = axis.imshow(
+            image,
+            origin="lower",
+            extent=extent,
+            cmap="Greys" if title != "Standardized residual" else "RdBu_r",
+            vmin=bounds[0],
+            vmax=bounds[1],
+            interpolation="nearest",
+        )
+        axis.set_title(title)
+        axis.set_xlabel("Offset [arcsec]")
+        axis.set_ylabel("Offset [arcsec]")
+        axis.grid(False)
+        figure.colorbar(shown, ax=axis, label=colorbar_label, shrink=0.8)
+    output_path = Path(output_path).with_suffix(f".{typefileplot}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Writing to {output_path}...")
+    figure.savefig(output_path, dpi=300 if typefileplot == "png" else None, bbox_inches="tight")
+    plt.close(figure)
+    return output_path
+
+
+def plot_lens_parameter_recovery(
+    output_path: Path,
+    draws: np.ndarray,
+    true_parameters: np.ndarray,
+    typefileplot: str = "png",
+) -> Path:
+    """Write marginal lens-parameter distributions with injected values."""
+    if typefileplot not in ("png", "pdf"):
+        raise ValueError("typefileplot must be 'png' or 'pdf'")
+    labels = ("Einstein radius [arcsec]", "Source x [arcsec]", "Source y [arcsec]")
+    medians = np.median(draws, axis=0)
+    figure, axes = plt.subplots(1, 3, figsize=(11, 3.3), constrained_layout=True)
+    for index, (axis, label) in enumerate(zip(axes, labels)):
+        axis.hist(draws[:, index], bins=22, density=True, color="#007360", alpha=0.75,
+                  label="PCAT samples")
+        axis.axvline(true_parameters[index], color="#A51417", linewidth=2,
+                     label="Injected value")
+        axis.axvline(medians[index], color="black", linestyle="--", linewidth=1.5,
+                     label="Posterior median")
+        axis.set_xlabel(label)
+        axis.set_ylabel("Density [arcsec$^{-1}$]")
+        axis.grid(False)
+    axes[0].legend(loc="upper left", frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
+    output_path = Path(output_path).with_suffix(f".{typefileplot}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Writing to {output_path}...")
+    figure.savefig(output_path, dpi=300 if typefileplot == "png" else None, bbox_inches="tight")
+    plt.close(figure)
+    return output_path
+
+
 @dataclass(frozen=True)
 class PosteriorAnimationPanel:
     """Describe one posterior-frame sequence in an animation collage."""

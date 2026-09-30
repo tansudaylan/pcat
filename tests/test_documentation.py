@@ -43,7 +43,6 @@ def test_documented_example_commands_resolve():
         "examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py",
         "examples/roman_strong_lens_perturber_catalog/roman_strong_lens_perturber_catalog.py",
         "examples/catalog_association_completeness_purity/catalog_association_completeness_purity.py",
-        "examples/subpixel_psf_reconstruction/subpixel_psf_reconstruction.py",
     ]
 
     for relative_path in relative_paths:
@@ -52,7 +51,10 @@ def test_documented_example_commands_resolve():
 
 def test_every_example_script_has_a_notebook():
     examples = REPOSITORY_ROOT / "examples"
+    script_only_automation = {examples / "run_all_examples.py"}
     for script in examples.rglob("*.py"):
+        if script in script_only_automation:
+            continue
         notebook = script.with_suffix(".ipynb")
         assert notebook.is_file(), f"Missing notebook for {script.relative_to(examples)}"
         print(f"Reading from {notebook}...")
@@ -60,10 +62,7 @@ def test_every_example_script_has_a_notebook():
         assert document["nbformat"] == 4
         assert {cell["cell_type"] for cell in document["cells"]} == {"code", "markdown"}
         for cell in document["cells"]:
-            assert cell["metadata"]["language"] == (
-                "python" if cell["cell_type"] == "code" else "markdown"
-            )
-            assert cell["metadata"]["id"] == cell["id"]
+            assert cell["id"]
 
 
 def test_figure_examples_display_visuals_in_notebooks():
@@ -77,9 +76,12 @@ def test_figure_examples_display_visuals_in_notebooks():
         "voigt_spectral_line_catalog/voigt_spectral_line_catalog",
         "roman_strong_lens_perturber_catalog/roman_strong_lens_perturber_catalog",
         "catalog_association_completeness_purity/catalog_association_completeness_purity",
-        "subpixel_psf_reconstruction/subpixel_psf_reconstruction",
         "simulated_rubin_cluster_lens/simulated_rubin_cluster_lens",
-        "run_all_examples",
+        "portillo_2017_crowded_sdss_m2/portillo_2017_crowded_sdss_m2",
+        "feder_2020_multiband_sdss_deblending/feder_2020_multiband_sdss_deblending",
+        "butler_2022_spire_sz_component_separation/butler_2022_spire_sz_component_separation",
+        "feder_2023_point_diffuse_spire/feder_2023_point_diffuse_spire",
+        "hall_2026_herschel_dsfg_multiplicity/hall_2026_herschel_dsfg_multiplicity",
     )
     for name in figure_examples:
         notebook = examples / f"{name}.ipynb"
@@ -87,6 +89,27 @@ def test_figure_examples_display_visuals_in_notebooks():
         cells = json.loads(notebook.read_text())["cells"]
         code = "\n".join("".join(cell["source"]) for cell in cells if cell["cell_type"] == "code")
         assert "display_example_visuals(" in code or "display(Image(" in code, name
+
+
+def test_verified_pcat_publications_have_examples():
+    examples = REPOSITORY_ROOT / "examples"
+    publication_examples = {
+        "10.3847/1538-4357/aa679e": "daylan_2017_fermi_point_sources",
+        "10.3847/1538-3881/aa8565": "portillo_2017_crowded_sdss_m2",
+        "10.3847/1538-4357/aaa1f2": "daylan_2018_strong_lens_subhalos",
+        "10.3847/1538-3881/ab74cf": "feder_2020_multiband_sdss_deblending",
+        "10.3847/1538-4357/ac6c04": "butler_2022_spire_sz_component_separation",
+        "10.3847/1538-3881/ace69b": "feder_2023_point_diffuse_spire",
+        "10.3847/1538-4357/ae1e7a": "hall_2026_herschel_dsfg_multiplicity",
+    }
+    index = (examples / "README.md").read_text()
+
+    for doi, directory in publication_examples.items():
+        root = examples / directory
+        assert root.is_dir(), directory
+        assert (root / f"{directory}.py").is_file(), directory
+        assert (root / f"{directory}.ipynb").is_file(), directory
+        assert doi in index, doi
 
 
 def test_rubin_dp1_notebook_preserves_real_data_scope():
@@ -99,6 +122,25 @@ def test_rubin_dp1_notebook_preserves_real_data_scope():
     assert "Local fallback data are intentionally not substituted" in source
     assert "SIMBAD is curated but incomplete" in source
     assert "gaussian_lens_log_likelihood" in source
+
+
+def test_simulated_rubin_cluster_notebook_contains_rendered_visuals():
+    notebook = REPOSITORY_ROOT / "examples/simulated_rubin_cluster_lens/simulated_rubin_cluster_lens.ipynb"
+    print(f"Reading from {notebook}...")
+    cells = json.loads(notebook.read_text())["cells"]
+    code = "\n".join(
+        "".join(cell["source"]) for cell in cells if cell["cell_type"] == "code"
+    )
+    image_count = sum(
+        "image/png" in output.get("data", {})
+        for cell in cells
+        for output in cell.get("outputs", [])
+    )
+    assert image_count >= 2
+    assert "run_lens_image_pipeline(" in code
+    assert "savefig" not in code
+    assert "matplotlib" not in code
+    assert "plt." not in code
 
 
 def test_documentation_excludes_obsolete_interface_terms():

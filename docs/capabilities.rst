@@ -41,11 +41,6 @@ Functionality overview
      - Positions, values, confidence, and significance
      - Completeness and purity versus matching criteria
      - ``catalog_association_completeness_purity``
-   * - Instrument response
-     - Oversampled point-spread function
-     - Piecewise-cubic subpixel reconstruction
-     - ``subpixel_psf_reconstruction``
-
 Inference and proposal engine
 -----------------------------
 

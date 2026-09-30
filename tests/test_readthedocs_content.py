@@ -32,7 +32,6 @@ def test_readthedocs_embeds_maintained_visuals():
     visual_paths = {
         "../examples/pcat_posterior_samples.gif",
         "../examples/catalog_association_completeness_purity/visuals/catalog_association_completeness_purity.png",
-        "../examples/subpixel_psf_reconstruction/visuals/subpixel_psf_reconstruction.png",
         "../examples/roman_strong_lens_perturber_catalog/visuals/roman_strong_lens_perturber_catalog.png",
     }
     source = "\n".join(path.read_text() for path in DOCS_ROOT.glob("*.rst"))

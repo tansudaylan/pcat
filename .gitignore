@@ -7,8 +7,6 @@ data/
 visuals/
 !examples/catalog_association_completeness_purity/visuals/
 !examples/catalog_association_completeness_purity/visuals/*.png
-!examples/subpixel_psf_reconstruction/visuals/
-!examples/subpixel_psf_reconstruction/visuals/*.png
 !examples/roman_strong_lens_perturber_catalog/visuals/
 !examples/roman_strong_lens_perturber_catalog/visuals/*.png
 !examples/simulated_rubin_cluster_lens/visuals/

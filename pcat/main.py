@@ -1227,6 +1227,12 @@ def retr_psfpchan(gdat, gmod):
     #                       0.40 / gdat.anglfact, 1.0e-1, 2.0, \
     #                       0.60 / gdat.anglfact, 1.0e-1, 2.0, \
     #                       0.70 / gdat.anglfact, 1.0e-1, 2.0])
+
+
+def retr_psfpsdss(gdat, gmod):
+    """Set representative Gaussian PSF widths for the five SDSS bands."""
+    fwhm_arcsec = np.array([1.35, 1.25, 1.20, 1.30, 1.45])  # [arcsec], z i r g u
+    gmod.psfpexpr = fwhm_arcsec / 2.355 / gdat.anglfact
    
 
 def retr_psfpsdyn(gmod):
@@ -3486,6 +3492,8 @@ def init_image( \
         gdat.lablenerunit = ''
     if gdat.typeexpr == 'fire':
         gdat.lablenerunit = r'$\mu$m^{-1}'
+    if gdat.typeexpr == 'sdss':
+        gdat.lablenerunit = ''
     
     # energy axis
     if gdat.typeexpr == 'ferm':
@@ -3508,6 +3516,8 @@ def init_image( \
         blim = np.array([750, 1000.])
     elif gdat.typeexpr == 'gmix':
         blim = None
+    elif gdat.typeexpr == 'sdss':
+        blim = np.arange(1.0, 7.0)
     else:
         print('')
         print('')
@@ -3641,6 +3651,8 @@ def init_image( \
         typeback = [1.]
     if gdat.typeexpr == 'fire':
         typeback = [1.]
+    if gdat.typeexpr == 'sdss':
+        typeback = [1.]
     setp_varb(gdat, 'typeback', valu=typeback)
     
     # number of Sersic components for the lensing galaxy
@@ -3658,6 +3670,8 @@ def init_image( \
         typeelem = ['lghtpnts']
     if gdat.typeexpr == 'chan':
         typeelem = ['lghtpnts']
+    if gdat.typeexpr == 'sdss':
+        typeelem = ['lghtpnts']
     if gdat.typeexpr.startswith('HST_WFC3'):
         typeelem = ['lens']
         #typeelem = ['lghtpnts', 'lens', 'lghtgausbgrd']
@@ -3667,7 +3681,7 @@ def init_image( \
     
     if gdat.typeexpr == 'gmix':
         legdelem = ['Cluster']
-    elif gdat.typeexpr == 'ferm' or gdat.typeexpr == 'tess' or gdat.typeexpr == 'chan':
+    elif gdat.typeexpr in ['ferm', 'tess', 'chan', 'sdss']:
         legdelem = ['Point source']
     elif gdat.typeexpr.startswith('HST_WFC3'):
         legdelem = ['Subhalo']
@@ -3838,6 +3852,8 @@ def init_image( \
         if gdat.maxmgangdata is None:
             if gdat.typeexpr == 'chan':
                 gdat.maxmgangdata = 0.492 / gdat.anglfact * gdat.numbsidecarthalf
+            if gdat.typeexpr == 'sdss':
+                gdat.maxmgangdata = 0.396 / gdat.anglfact * gdat.numbsidecarthalf
             if gdat.typeexpr == 'ferm':
                 gdat.maxmgangdata = 15. / gdat.anglfact
             if gdat.typeexpr == 'tess':
@@ -3856,6 +3872,8 @@ def init_image( \
         if gdat.typepixl == 'cart':
             if gdat.typeexpr == 'chan':
                 gdat.sizepixl = 0.492  # [arcsec]
+            if gdat.typeexpr == 'sdss':
+                gdat.sizepixl = 0.396  # [arcsec]
             if gdat.typeexpr in ['ferm', 'gmix']:
                 gdat.sizepixl = 2. * gdat.maxmgangdata / gdat.numbsidecart
             if gdat.typeexpr == 'HST_WFC3_UVIS':
@@ -3913,6 +3931,8 @@ def init_image( \
                                                                                        ['en03', 'ergs', '0508', 0.5,  8.], \
                                                                                        ['en03', 'ergs', '0207',  2.,  7.], \
                                                                                        ['en03', 'ergs', '0507', 0.5,  7.]]
+    if gdat.typeexpr == 'sdss':
+        gdat.listspecconvunit = []
     if gdat.typeexpr.startswith('HST_WFC3'):
         gdat.listspecconvunit = [['en03', 'ergs']]
     if gdat.typeexpr == 'fire':
@@ -4183,7 +4203,7 @@ def init_image( \
                 if not hasattr(gmod, 'psfpexpr') or not hasattr(gdat, 'fermscalfact'):
                     tdpy.retr_psfpferm(gdat, gmod)
             if gdat.typeexpr == 'sdss':
-                retr_psfpsdss(gmod)
+                retr_psfpsdss(gdat, gmod)
             if gdat.typeexpr.startswith('HST_WFC3'):
                 retr_psfphubb(gdat, gmod)
             if gdat.typeexpr == 'tess':
@@ -6481,10 +6501,10 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
         gmod.maxmpara.numbelem = np.array([getattr(gmod.maxmpara, 'numbelempop%d' % l, max(1, getattr(gmod.minmpara, 'numbelempop%d' % l, 1))) for l in gmod.indxpopl], dtype=int)
         gmod.numbparagenrelempopl = gmod.maxmpara.numbelem * gmod.numbparagenrelemsing
         gmod.numbparagenrelem = int(np.sum(gmod.numbparagenrelempopl))
-    if gdat.typeexpr in ['chan', 'ferm'] and gmod.numbpopl > 0 and all(len(names) == 0 for names in gmod.namepara.genrelem):
+    if gdat.typeexpr in ['chan', 'ferm', 'sdss'] and gmod.numbpopl > 0 and all(len(names) == 0 for names in gmod.namepara.genrelem):
         names = ['xpos', 'ypos', 'flux', 'sind', 'curv', 'expc']
         names += ['sindcolr%04d' % i for i in gdat.indxenerinde]
-        energy_cutoff_bounds = (0.1, 100.) if gdat.typeexpr == 'chan' else (0.1, 1e3)
+        energy_cutoff_bounds = (0.1, 100.) if gdat.typeexpr in ['chan', 'sdss'] else (0.1, 1e3)
         bounds = {
             'xpos': (-gdat.maxmgangdata, gdat.maxmgangdata),
             'ypos': (-gdat.maxmgangdata, gdat.maxmgangdata),
@@ -18265,7 +18285,7 @@ def sample(**kwargs):
     typeexpr = kwargs.get('typeexpr')
     if typeexpr == 'gener':
         return _sample_generic(**kwargs)
-    if isinstance(typeexpr, str) and (typeexpr in ['chan', 'ferm', 'fire', 'gmix'] or typeexpr.startswith('HST_WFC3')):
+    if isinstance(typeexpr, str) and (typeexpr in ['chan', 'ferm', 'fire', 'gmix', 'sdss'] or typeexpr.startswith('HST_WFC3')):
         gdat = init_image(**kwargs)
         return init(gdat.__dict__)
     return init(kwargs)

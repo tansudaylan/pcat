@@ -11,9 +11,38 @@ from pcat.roman_lens import (
     poisson_lens_log_likelihood,
     render_lens,
     render_lens_counts,
+    run_lens_image_pipeline,
     simulate_population,
     summarize_population,
 )
+
+
+def test_lens_image_pipeline_writes_fit_and_parameter_visuals(tmp_path, monkeypatch):
+    from pcat import main
+
+    config = RomanLensConfig(number_side=24, pixel_scale=0.2, psf_fwhm=0.7)
+    truth = np.array((1.2, 0.1, -0.2))  # [arcsec]
+    observed = render_lens_counts(config, truth, 0.3, 0.7, 0.4)
+    draws = np.tile(truth, (20, 1)) + np.linspace(-0.02, 0.02, 20)[:, None]
+    posterior = SimpleNamespace(listpostparagenrscalbase=draws)
+    monkeypatch.setattr(main, "sample", lambda **configuration: posterior)
+
+    result = run_lens_image_pipeline(
+        config=config,
+        observed_counts=observed,
+        source_size=0.3,
+        source_axis_ratio=0.7,
+        source_angle=0.4,
+        true_parameters=truth,
+        output_root=tmp_path,
+        run_name="lens_test",
+        visual_stem="lens_test",
+    )
+
+    assert result.posterior is posterior
+    assert result.image_fit_path.is_file()
+    assert result.parameter_path.is_file()
+    assert result.model_counts.shape == observed.shape
 
 
 def test_cluster_poisson_likelihood_prefers_the_injected_lens():

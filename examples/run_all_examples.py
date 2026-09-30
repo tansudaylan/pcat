@@ -26,10 +26,6 @@ UTILITY_EXAMPLES = [
         ROOT / "catalog_association_completeness_purity" / "visuals" / "catalog_association_completeness_purity.png",
     ),
     (
-        ROOT / "subpixel_psf_reconstruction" / "subpixel_psf_reconstruction.py",
-        ROOT / "subpixel_psf_reconstruction" / "visuals" / "subpixel_psf_reconstruction.png",
-    ),
-    (
         ROOT / "roman_strong_lens_perturber_catalog" / "roman_strong_lens_perturber_catalog.py",
         ROOT / "roman_strong_lens_perturber_catalog" / "visuals" / "roman_strong_lens_perturber_catalog.png",
     ),

@@ -25,6 +25,18 @@ class RomanLensConfig:
     number_candidates: int = 12
 
 
+@dataclass(frozen=True)
+class LensImagePipelineResult:
+    """Posterior state and visual products from a PCAT lens-image run."""
+
+    posterior: object
+    draws: np.ndarray
+    median_parameters: np.ndarray
+    model_counts: np.ndarray
+    image_fit_path: Path
+    parameter_path: Path
+
+
 def coordinate_grid(config: RomanLensConfig) -> tuple[np.ndarray, np.ndarray]:
     """Return a square image grid centered on zero in arcseconds."""
     coordinate = (np.arange(config.number_side) - (config.number_side - 1) / 2) * config.pixel_scale
@@ -115,6 +127,82 @@ def gaussian_lens_log_likelihood(state: object, model_name: str, parameters: np.
     variance = state.lens_variance
     valid = np.isfinite(residual) & np.isfinite(variance) & (variance > 0.0)
     return float(-0.5 * np.sum(residual[valid] ** 2 / variance[valid] + np.log(variance[valid])))
+
+
+def run_lens_image_pipeline(
+    config: RomanLensConfig,
+    observed_counts: np.ndarray,
+    source_size: float,
+    source_axis_ratio: float,
+    source_angle: float,
+    true_parameters: np.ndarray,
+    output_root: Path,
+    run_name: str,
+    visual_stem: str,
+    typefileplot: str = "png",
+    numbswep: int = 400,
+    numbburn: int = 150,
+    numbsamp: int = 250,
+) -> LensImagePipelineResult:
+    """Sample a Poisson lens image and write PCAT fit and posterior figures."""
+    from .main import sample
+    from .plotting import plot_lens_image_fit, plot_lens_parameter_recovery
+
+    output_root = Path(output_root)
+    posterior = sample(
+        typeexpr="gener",
+        retr_llik=poisson_lens_log_likelihood,
+        lens_config=config,
+        lens_observed_counts=observed_counts,
+        lens_source_size=source_size,
+        lens_source_axis_ratio=source_axis_ratio,
+        lens_source_angle=source_angle,
+        parameter_names=("einstein_radius", "source_x", "source_y"),
+        prior_types=("self", "self", "self"),
+        prior_minima=(8.0, -2.0, -2.0),  # [arcsec]
+        prior_maxima=(13.0, 2.0, 2.0),  # [arcsec]
+        initial_values=(10.0, 0.0, 0.0),  # [arcsec]
+        proposal_scales=(0.08, 0.03, 0.03),  # [arcsec]
+        propwithsing=True,
+        probpropblock=0.0,
+        pathbase=str(output_root),
+        strgcnfg=run_name,
+        numbproc=1,
+        numbswep=numbswep,
+        numbburn=numbburn,
+        numbsamp=numbsamp,
+        booladaptstdp=True,
+        typeseed=42,
+        typeverb=-1,
+    )
+    draws = np.asarray(posterior.listpostparagenrscalbase)
+    median_parameters = np.median(draws, axis=0)  # [arcsec]
+    model_counts = render_lens_counts(
+        config, median_parameters, source_size, source_axis_ratio, source_angle
+    )
+    visual_root = output_root / "visuals"
+    image_fit_path = plot_lens_image_fit(
+        visual_root / f"{visual_stem}_image_fit",
+        observed_counts,
+        model_counts,
+        model_counts,
+        config.pixel_scale,
+        typefileplot,
+    )
+    parameter_path = plot_lens_parameter_recovery(
+        visual_root / f"{visual_stem}_posterior",
+        draws,
+        np.asarray(true_parameters),
+        typefileplot,
+    )
+    return LensImagePipelineResult(
+        posterior=posterior,
+        draws=draws,
+        median_parameters=median_parameters,
+        model_counts=model_counts,
+        image_fit_path=image_fit_path,
+        parameter_path=parameter_path,
+    )
 
 
 def candidate_positions(einstein_radius: float, number_candidates: int) -> np.ndarray:
