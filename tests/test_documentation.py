@@ -36,14 +36,14 @@ def test_documentation_pages_are_in_the_toctree():
 
 def test_documented_example_commands_resolve():
     relative_paths = [
-        "examples/chan_demo/generate_demo.py",
-        "examples/hst_lens/generate_demo.py",
-        "examples/run_examples.py",
-        "examples/Daylan+2017/generate_reproduction.py",
-        "examples/voigt-profile/pcat_voigt_profile_detection.py",
-        "examples/roman_lens_catalog/roman_lens_catalog_diagnostic.py",
-        "examples/catalog_association/catalog_association.py",
-        "examples/psf_subpixel/psf_subpixel.py",
+        "examples/chandra_point_source_catalog/chandra_point_source_catalog.py",
+        "examples/simulated_hst_strong_lens/simulated_hst_strong_lens.py",
+        "examples/run_all_examples.py",
+        "examples/daylan_2017_fermi_point_sources/daylan_2017_fermi_point_sources.py",
+        "examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py",
+        "examples/roman_strong_lens_perturber_catalog/roman_strong_lens_perturber_catalog.py",
+        "examples/catalog_association_completeness_purity/catalog_association_completeness_purity.py",
+        "examples/subpixel_psf_reconstruction/subpixel_psf_reconstruction.py",
     ]
 
     for relative_path in relative_paths:
@@ -69,17 +69,17 @@ def test_every_example_script_has_a_notebook():
 def test_figure_examples_display_visuals_in_notebooks():
     examples = REPOSITORY_ROOT / "examples"
     figure_examples = (
-        "gmix_demo/generate_demo",
-        "chan_demo/generate_demo",
-        "hst_lens/generate_demo",
-        "Daylan+2017/generate_reproduction",
-        "Daylan+2018/generate_reproduction",
-        "voigt-profile/pcat_voigt_profile_detection",
-        "roman_lens_catalog/roman_lens_catalog_diagnostic",
-        "catalog_association/catalog_association",
-        "psf_subpixel/psf_subpixel",
-        "rubin_cluster_lens/rubin_cluster_lens",
-        "run_examples",
+        "gaussian_mixture_catalog/gaussian_mixture_catalog",
+        "chandra_point_source_catalog/chandra_point_source_catalog",
+        "simulated_hst_strong_lens/simulated_hst_strong_lens",
+        "daylan_2017_fermi_point_sources/daylan_2017_fermi_point_sources",
+        "daylan_2018_strong_lens_subhalos/daylan_2018_strong_lens_subhalos",
+        "voigt_spectral_line_catalog/voigt_spectral_line_catalog",
+        "roman_strong_lens_perturber_catalog/roman_strong_lens_perturber_catalog",
+        "catalog_association_completeness_purity/catalog_association_completeness_purity",
+        "subpixel_psf_reconstruction/subpixel_psf_reconstruction",
+        "simulated_rubin_cluster_lens/simulated_rubin_cluster_lens",
+        "run_all_examples",
     )
     for name in figure_examples:
         notebook = examples / f"{name}.ipynb"
@@ -90,7 +90,7 @@ def test_figure_examples_display_visuals_in_notebooks():
 
 
 def test_rubin_dp1_notebook_preserves_real_data_scope():
-    notebook = REPOSITORY_ROOT / "examples/rubin_dp1_observed_lenses/rubin_dp1_observed_lenses.ipynb"
+    notebook = REPOSITORY_ROOT / "examples/rubin_dp1_confirmed_strong_lenses/rubin_dp1_confirmed_strong_lenses.ipynb"
     print(f"Reading from {notebook}...")
     source = notebook.read_text()
     assert "get_siav2_service('dp1')" in source

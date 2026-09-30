@@ -99,10 +99,10 @@ pip install -e .
 The executable example uses the compact PCAT Roman benchmark to simulate 100 strong-lens images. Half contain one dark-matter perturber drawn at a candidate position around the macro Einstein ring, and half contain no perturber. The catalog approximation compares zero- and one-perturber models after Roman point-spread-function convolution and Poisson plus read noise. Its diagnostic follows one representative lens from simulated detector input through the macro-only model and residual, then summarizes the final population-level catalog probabilities.
 
 ```bash
-python examples/roman_lens_catalog/roman_lens_catalog_diagnostic.py --typefileplot png
+python examples/roman_strong_lens_perturber_catalog/roman_strong_lens_perturber_catalog.py --typefileplot png
 ```
 
-![Simulated Roman strong-lens catalog benchmark](examples/roman_lens_catalog/visuals/roman_lens_catalog_diagnostic.png)
+![Simulated Roman strong-lens catalog benchmark](examples/roman_strong_lens_perturber_catalog/visuals/roman_strong_lens_perturber_catalog.png)
 
 For the fixed seed, the approximate catalog classifier recovers 38% of injected perturbers above a posterior threshold of 0.5, with a 68% Wilson interval of 31% to 45%. It produces no false positives among the 50 null lenses, with an upper interval bound of 2%, and localizes 84% of injected perturbers to the correct candidate position. The mean one-perturber posterior probability is 0.37 for injected systems and $4.6\times10^{-5}$ for null systems. These values characterize this clearly labeled simulation and are not forecasts from real Roman observations.
 
@@ -111,13 +111,13 @@ Full transdimensional runs initialize a model configuration, define a likelihood
 ## Rubin-like cluster lens
 
 The interactive
-[`rubin_cluster_lens.ipynb`](examples/rubin_cluster_lens/rubin_cluster_lens.ipynb)
+[`simulated_rubin_cluster_lens.ipynb`](examples/simulated_rubin_cluster_lens/simulated_rubin_cluster_lens.ipynb)
 notebook fits a synthetic, single-band image of a circular cluster-scale lens.
 The simulation uses 0.2 arcsec pixels and 0.7 arcsec Gaussian seeing. PCAT
 samples the Einstein radius and two source coordinates with a Poisson image
 likelihood.
 
-![Synthetic Rubin-like cluster-lens observation, PCAT model, and residual](examples/rubin_cluster_lens/visuals/rubin_cluster_image_fit.png)
+![Synthetic Rubin-like cluster-lens observation, PCAT model, and residual](examples/simulated_rubin_cluster_lens/visuals/rubin_cluster_image_fit.png)
 
 The example fixes the source morphology, total brightness, sky background, and
 seeing at their injected values. It omits foreground galaxy light, neighboring
@@ -128,7 +128,7 @@ rather than a forecast for Rubin Observatory or an analysis of observed data.
 ## Daylan et al. 2017 reproduction
 
 The synthetic reproduction of the original PCAT point-source analysis is in
-[`examples/Daylan+2017`](examples/Daylan+2017). It preserves the published 300-source
+[`examples/daylan_2017_fermi_point_sources`](examples/daylan_2017_fermi_point_sources). It preserves the published 300-source
 population and flux-distribution slope while clearly separating this scaled,
 self-contained run from the archival Fermi-LAT data analysis.
 

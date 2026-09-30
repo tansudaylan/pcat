@@ -8,19 +8,19 @@ import matplotlib.pyplot as plt
 EXAMPLE_SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "examples"
-    / "roman_lens_catalog"
-    / "roman_lens_catalog_diagnostic.py"
+    / "roman_strong_lens_perturber_catalog"
+    / "roman_strong_lens_perturber_catalog.py"
 )
 SPECIFICATION = importlib.util.spec_from_file_location(
-    "pcat_roman_lens_catalog_diagnostic", EXAMPLE_SCRIPT
+    "pcat_roman_strong_lens_perturber_catalog", EXAMPLE_SCRIPT
 )
 example = importlib.util.module_from_spec(SPECIFICATION)
 SPECIFICATION.loader.exec_module(example)
 
 
-def test_roman_lens_catalog_example_runs_pipeline(tmp_path, capsys, monkeypatch):
+def test_roman_strong_lens_perturber_catalog_example_runs_pipeline(tmp_path, capsys, monkeypatch):
     monkeypatch.setitem(plt.rcParams, 'text.usetex', False)
-    output_path = tmp_path / "roman_lens_catalog_diagnostic.png"
+    output_path = tmp_path / "roman_strong_lens_perturber_catalog.png"
 
     summary = example.run_example(output_path, number_lenses=20)
 

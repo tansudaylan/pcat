@@ -7,11 +7,11 @@ import pytest
 EXAMPLE_SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "examples"
-    / "voigt-profile"
-    / "pcat_voigt_profile_detection.py"
+    / "voigt_spectral_line_catalog"
+    / "voigt_spectral_line_catalog.py"
 )
 SPECIFICATION = importlib.util.spec_from_file_location(
-    "pcat_voigt_profile_detection", EXAMPLE_SCRIPT
+    "pcat_voigt_spectral_line_catalog", EXAMPLE_SCRIPT
 )
 example = importlib.util.module_from_spec(SPECIFICATION)
 SPECIFICATION.loader.exec_module(example)

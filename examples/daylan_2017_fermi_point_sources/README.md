@@ -13,13 +13,13 @@ and hyperparameter diagnostics.
 Run the publication-scale configuration with:
 
 ```bash
-python 'examples/Daylan+2017/generate_reproduction.py' --fresh
+python 'examples/daylan_2017_fermi_point_sources/daylan_2017_fermi_point_sources.py' --fresh
 ```
 
 Use `--typefileplot pdf` for PDF figures. A fast end-to-end check is available:
 
 ```bash
-python 'examples/Daylan+2017/generate_reproduction.py' --smoke --fresh
+python 'examples/daylan_2017_fermi_point_sources/daylan_2017_fermi_point_sources.py' --smoke --fresh
 ```
 
 The original analysis used Pass 7 source-class exposure from weeks 9--217 and

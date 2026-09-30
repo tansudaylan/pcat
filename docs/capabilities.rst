@@ -24,27 +24,27 @@ Functionality overview
    * - Point-source imaging
      - Catalog, background, exposure, and point-spread function
      - Variable source count and source parameters
-     - ``chan_demo`` and ``Daylan+2017``
+     - ``chandra_point_source_catalog`` and ``daylan_2017_fermi_point_sources``
    * - Gaussian mixtures
      - Variable-width components in two-dimensional data
      - Birth and death catalog transitions
-     - ``gmix_demo``
+     - ``gaussian_mixture_catalog``
    * - Strong-lens imaging
      - Lens mass, foreground light, source light, and lensed emission
      - Fixed or variable perturber catalog
-     - ``hst_lens``, ``Daylan+2018``, and ``roman_lens_catalog``
+     - ``simulated_hst_strong_lens``, ``daylan_2018_strong_lens_subhalos``, and ``roman_strong_lens_perturber_catalog``
    * - Spectral lines
      - Voigt profiles in spectral data
      - Variable line count and profile parameters
-     - ``voigt-profile``
+     - ``voigt_spectral_line_catalog``
    * - Catalog association
      - Positions, values, confidence, and significance
      - Completeness and purity versus matching criteria
-     - ``catalog_association``
+     - ``catalog_association_completeness_purity``
    * - Instrument response
      - Oversampled point-spread function
      - Piecewise-cubic subpixel reconstruction
-     - ``psf_subpixel``
+     - ``subpixel_psf_reconstruction``
 
 Inference and proposal engine
 -----------------------------
@@ -112,10 +112,10 @@ The compact Chandra-style example is directly runnable:
 
 .. code-block:: bash
 
-   python examples/chan_demo/generate_demo.py
+   python examples/chandra_point_source_catalog/chandra_point_source_catalog.py
 
 The :doc:`getting_started` page gives its configuration, while the
-``Daylan+2017`` example demonstrates a larger synthetic point-source catalog.
+``daylan_2017_fermi_point_sources`` example demonstrates a larger synthetic point-source catalog.
 
 Lenses and lensed emission in imaging data
 ------------------------------------------
@@ -131,9 +131,9 @@ Run the Hubble Space Telescope Wide Field Camera 3 demonstration with:
 
 .. code-block:: bash
 
-   python examples/hst_lens/generate_demo.py
+   python examples/simulated_hst_strong_lens/simulated_hst_strong_lens.py
 
-The ``roman_lens_catalog`` example provides a seeded population benchmark for
+The ``roman_strong_lens_perturber_catalog`` example provides a seeded population benchmark for
 catalog-level perturber detection. These examples use simulations and validate
 the pipeline. They are not measurements or performance forecasts for observed
 systems.
@@ -150,7 +150,7 @@ Run the nominal line-detection analysis with:
 
 .. code-block:: bash
 
-   python examples/voigt-profile/pcat_voigt_profile_detection.py --configuration nomi
+   python examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py --configuration nomi
 
 This example compares catalogs containing different numbers of lines. Its
 short modes are pipeline checks, while scientific analyses require adequate

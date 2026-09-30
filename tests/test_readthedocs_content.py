@@ -17,7 +17,7 @@ def test_readthedocs_covers_public_workflows():
         "posterior_convergence",
         "estimate_evidence",
         "psf_poly_fit",
-        "Daylan+2018",
+        "daylan_2018_strong_lens_subhalos",
         "lghtpnts",
         "lensed emission",
         "lghtlinevoig",
@@ -31,9 +31,9 @@ def test_readthedocs_covers_public_workflows():
 def test_readthedocs_embeds_maintained_visuals():
     visual_paths = {
         "../examples/pcat_posterior_samples.gif",
-        "../examples/catalog_association/visuals/catalog_association.png",
-        "../examples/psf_subpixel/visuals/psf_subpixel.png",
-        "../examples/roman_lens_catalog/visuals/roman_lens_catalog_diagnostic.png",
+        "../examples/catalog_association_completeness_purity/visuals/catalog_association_completeness_purity.png",
+        "../examples/subpixel_psf_reconstruction/visuals/subpixel_psf_reconstruction.png",
+        "../examples/roman_strong_lens_perturber_catalog/visuals/roman_strong_lens_perturber_catalog.png",
     }
     source = "\n".join(path.read_text() for path in DOCS_ROOT.glob("*.rst"))
 

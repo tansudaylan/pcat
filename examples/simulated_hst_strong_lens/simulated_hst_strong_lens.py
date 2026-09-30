@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-RUN_NAME = "hst_lens_demo"
+RUN_NAME = "simulated_hst_strong_lens"
 OUTPUT_ROOT = Path(__file__).resolve().parent
 
 

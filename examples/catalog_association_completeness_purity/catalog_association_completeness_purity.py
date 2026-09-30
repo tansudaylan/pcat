@@ -126,7 +126,7 @@ def main() -> int:
     parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
     arguments = parser.parse_args()
     output_path = Path(__file__).with_name("visuals") / (
-        f"catalog_association.{arguments.typefileplot}"
+        f"catalog_association_completeness_purity.{arguments.typefileplot}"
     )
     print(run_example(output_path))
     return 0

@@ -4,18 +4,18 @@ These notebooks apply probabilistic cataloging to point-source images, Gaussian 
 
 ## Layout
 
-- `gmix_demo/`: transdimensional inference of a compact Gaussian mixture
-- `chan_demo/`: point-source inference in a simulated Chandra-style image
-- `Daylan+2017/`: a scaled mock-catalog reproduction of Daylan et al. (2017)
-- `Daylan+2018/`: a simulated HST strong-lens catalog and one-subhalo comparison inspired by Daylan et al. (2018)
-- `hst_lens/`: catalog inference in a simulated Hubble Space Telescope lens image
-- `roman_lens_catalog/`: a seeded Roman strong-lens benchmark and its generated diagnostic
-- `rubin_cluster_lens/`: a synthetic Rubin-like cluster-scale lens fitted with PCAT's Poisson image sampler
-- `rubin_dp1_observed_lenses/`: an RSP-only workflow that crossmatches confirmed SIMBAD lens systems to real Rubin DP1 imaging, retrieves all catalog-footprint matches, and runs demonstration PCAT fits
-- `catalog_association/`: completeness and purity across catalog-matching radii
-- `psf_subpixel/`: cubic reconstruction of an oversampled point-spread function
-- `voigt-profile/`: nominal and high-signal Voigt-profile line detection in simulated spectra
-- `fermi_lat_pg1553/`: a Fermi Large Area Telescope event-filter configuration for PG 1553+113
+- `gaussian_mixture_catalog/`: transdimensional inference of a compact Gaussian mixture
+- `chandra_point_source_catalog/`: point-source inference in a simulated Chandra-style image
+- `daylan_2017_fermi_point_sources/`: a scaled mock-catalog reproduction of Daylan et al. (2017)
+- `daylan_2018_strong_lens_subhalos/`: a simulated HST strong-lens catalog and one-subhalo comparison inspired by Daylan et al. (2018)
+- `simulated_hst_strong_lens/`: catalog inference in a simulated Hubble Space Telescope lens image
+- `roman_strong_lens_perturber_catalog/`: a seeded Roman strong-lens benchmark and its generated diagnostic
+- `simulated_rubin_cluster_lens/`: a synthetic Rubin-like cluster-scale lens fitted with PCAT's Poisson image sampler
+- `rubin_dp1_confirmed_strong_lenses/`: an RSP-only workflow that crossmatches confirmed SIMBAD lens systems to real Rubin DP1 imaging, retrieves all catalog-footprint matches, and runs demonstration PCAT fits
+- `catalog_association_completeness_purity/`: completeness and purity across catalog-matching radii
+- `subpixel_psf_reconstruction/`: cubic reconstruction of an oversampled point-spread function
+- `voigt_spectral_line_catalog/`: nominal and high-signal Voigt-profile line detection in simulated spectra
+- `fermi_lat_pg1553_event_filter/`: a Fermi Large Area Telescope event-filter configuration for PG 1553+113
 
 ## Running
 
@@ -23,14 +23,14 @@ From the repository root:
 
 ```bash
 cd /path/to/pcat
-python examples/run_examples.py
+python examples/run_all_examples.py
 ```
 
-The equivalent interactive entry point is [run_examples.ipynb](run_examples.ipynb). Both aggregate entry points replace cached figure outputs for the included analyses. They evaluate the image analyses, the Roman strong-lens benchmark, the two utility examples, and the reduced Voigt configuration. The output includes static posterior diagnostics and posterior animations.
+The equivalent interactive entry point is [run_all_examples.ipynb](run_all_examples.ipynb). Both aggregate entry points replace cached figure outputs for the included analyses. They evaluate the image analyses, the Roman strong-lens benchmark, the two utility examples, and the reduced Voigt configuration. The output includes static posterior diagnostics and posterior animations.
 
 Run either Voigt configuration at its full sampling depth with:
 
 ```bash
-python examples/voigt-profile/pcat_voigt_profile_detection.py --configuration nomi
-python examples/voigt-profile/pcat_voigt_profile_detection.py --configuration s2nrhigh
+python examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py --configuration nomi
+python examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py --configuration s2nrhigh
 ```

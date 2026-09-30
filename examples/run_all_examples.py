@@ -13,25 +13,25 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent
 
 PIPELINE_EXAMPLES = [
-    (ROOT / "gmix_demo" / "generate_demo.py", (), ROOT / "gmix_demo", "gmix_demo", True, True),
-    (ROOT / "chan_demo" / "generate_demo.py", (), ROOT / "chan_demo", "chan_demo", True, False),
-    (ROOT / "Daylan+2017" / "generate_reproduction.py", ("--smoke",), ROOT / "Daylan+2017", "daylan2017_mock", True, True),
-    (ROOT / "hst_lens" / "generate_demo.py", (), ROOT / "hst_lens", "hst_lens_demo", True, True),
-    (ROOT / "voigt-profile" / "pcat_voigt_profile_detection.py", ("--smoke",), ROOT / "voigt-profile", "voigt_nomi", False, True),
+    (ROOT / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py", (), ROOT / "gaussian_mixture_catalog", "gaussian_mixture_catalog", True, True),
+    (ROOT / "chandra_point_source_catalog" / "chandra_point_source_catalog.py", (), ROOT / "chandra_point_source_catalog", "chandra_point_source_catalog", True, False),
+    (ROOT / "daylan_2017_fermi_point_sources" / "daylan_2017_fermi_point_sources.py", ("--smoke",), ROOT / "daylan_2017_fermi_point_sources", "daylan2017_mock", True, True),
+    (ROOT / "simulated_hst_strong_lens" / "simulated_hst_strong_lens.py", (), ROOT / "simulated_hst_strong_lens", "simulated_hst_strong_lens", True, True),
+    (ROOT / "voigt_spectral_line_catalog" / "voigt_spectral_line_catalog.py", ("--smoke",), ROOT / "voigt_spectral_line_catalog", "voigt_nomi", False, True),
 ]
 
 UTILITY_EXAMPLES = [
     (
-        ROOT / "catalog_association" / "catalog_association.py",
-        ROOT / "catalog_association" / "visuals" / "catalog_association.png",
+        ROOT / "catalog_association_completeness_purity" / "catalog_association_completeness_purity.py",
+        ROOT / "catalog_association_completeness_purity" / "visuals" / "catalog_association_completeness_purity.png",
     ),
     (
-        ROOT / "psf_subpixel" / "psf_subpixel.py",
-        ROOT / "psf_subpixel" / "visuals" / "psf_subpixel.png",
+        ROOT / "subpixel_psf_reconstruction" / "subpixel_psf_reconstruction.py",
+        ROOT / "subpixel_psf_reconstruction" / "visuals" / "subpixel_psf_reconstruction.png",
     ),
     (
-        ROOT / "roman_lens_catalog" / "roman_lens_catalog_diagnostic.py",
-        ROOT / "roman_lens_catalog" / "visuals" / "roman_lens_catalog_diagnostic.png",
+        ROOT / "roman_strong_lens_perturber_catalog" / "roman_strong_lens_perturber_catalog.py",
+        ROOT / "roman_strong_lens_perturber_catalog" / "visuals" / "roman_strong_lens_perturber_catalog.png",
     ),
 ]
 

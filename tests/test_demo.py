@@ -53,7 +53,7 @@ def test_notebook_example_launcher_restores_arguments(monkeypatch):
         captured.update(path=path, run_name=run_name, arguments=list(os.sys.argv))
 
     monkeypatch.setattr(demo.runpy, "run_path", fake_run_path)
-    demo.run_example_script("chan_demo/generate_demo.py", "--smoke")
+    demo.run_example_script("chandra_point_source_catalog/chandra_point_source_catalog.py", "--smoke")
 
     assert Path(captured["path"]).is_file()
     assert captured["run_name"] == "__main__"
@@ -83,19 +83,23 @@ def test_notebook_visuals_display_saved_figures(tmp_path, monkeypatch):
 @pytest.mark.parametrize(
     ("example_name", "run_name", "expected"),
     [
-        ("chan_demo", "chan_demo", {"typeexpr": "chan", "typeelem": ["lghtpnts"]}),
         (
-            "gmix_demo",
-            "gmix_demo",
+            "chandra_point_source_catalog",
+            "chandra_point_source_catalog",
+            {"typeexpr": "chan", "typeelem": ["lghtpnts"], "probspmr": 0.0},
+        ),
+        (
+            "gaussian_mixture_catalog",
+            "gaussian_mixture_catalog",
             {"typeexpr": "gmix", "typeelem": ["clusvari"], "numbspatdims": 2},
         ),
-        ("hst_lens", "hst_lens_demo", {"typeexpr": "HST_WFC3_IR", "typeelem": ["lens"]}),
+        ("simulated_hst_strong_lens", "simulated_hst_strong_lens", {"typeexpr": "HST_WFC3_IR", "typeelem": ["lens"]}),
     ],
 )
 def test_demo_entrypoint_preserves_scientific_configuration(
     example_name, run_name, expected, monkeypatch
 ):
-    script_path = REPOSITORY_ROOT / "examples" / example_name / "generate_demo.py"
+    script_path = REPOSITORY_ROOT / "examples" / example_name / f"{example_name}.py"
     module = load_example_module(f"pcat_{example_name}_demo", script_path)
     captured = {}
     monkeypatch.setattr(
@@ -110,13 +114,13 @@ def test_demo_entrypoint_preserves_scientific_configuration(
 
     expected_output_root = (
         script_path.parent
-        if example_name == "hst_lens"
+        if example_name == "simulated_hst_strong_lens"
         else script_path.parents[1] / run_name
     )
     assert captured["output_root"] == expected_output_root
     for key, value in expected.items():
         assert captured[key] == value
-    if example_name == "gmix_demo":
+    if example_name == "gaussian_mixture_catalog":
         assert captured["dicttrue"]["typeelem"] == ["clusvari"]
         assert captured["dictfitt"]["typeelem"] == ["clusvari"]
         assert captured["strgexpo"] == pytest.approx(50.0)
@@ -131,8 +135,8 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
     script_path = (
         REPOSITORY_ROOT
         / "examples"
-        / "voigt-profile"
-        / "pcat_voigt_profile_detection.py"
+        / "voigt_spectral_line_catalog"
+        / "voigt_spectral_line_catalog.py"
     )
     module = load_example_module("pcat_voigt_example", script_path)
     captured = {}
@@ -157,7 +161,8 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
 
 def test_daylan2017_configuration_preserves_published_mock_assumptions():
     script_path = (
-        REPOSITORY_ROOT / "examples" / "Daylan+2017" / "generate_reproduction.py"
+        REPOSITORY_ROOT / "examples" / "daylan_2017_fermi_point_sources"
+        / "daylan_2017_fermi_point_sources.py"
     )
     module = load_example_module("pcat_daylan2017_reproduction", script_path)
 
@@ -181,7 +186,9 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
     assert full["numbsidecart"] == 100
     assert full["numbswep"] == 1_000_000
     assert full["numbsamp"] == 10_000
-    assert full["pathbase"] == str(REPOSITORY_ROOT / "examples" / "Daylan+2017")
+    assert full["pathbase"] == str(
+        REPOSITORY_ROOT / "examples" / "daylan_2017_fermi_point_sources"
+    )
     assert full["boolcondcatl"] is True
     assert smoke["truenumbelempop0"] == 40
     assert smoke["numbelempop0reg0"] == 40
@@ -202,7 +209,8 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
 
 def test_daylan2018_smoke_configuration_skips_animation(tmp_path, monkeypatch):
     script_path = (
-        REPOSITORY_ROOT / "examples" / "Daylan+2018" / "generate_reproduction.py"
+        REPOSITORY_ROOT / "examples" / "daylan_2018_strong_lens_subhalos"
+        / "daylan_2018_strong_lens_subhalos.py"
     )
     module = load_example_module("pcat_daylan2018_reproduction", script_path)
 
@@ -231,7 +239,7 @@ def test_daylan2018_smoke_configuration_skips_animation(tmp_path, monkeypatch):
 
 
 def test_example_output_verification_requires_multiframe_animation(tmp_path):
-    script_path = REPOSITORY_ROOT / "examples" / "run_examples.py"
+    script_path = REPOSITORY_ROOT / "examples" / "run_all_examples.py"
     module = load_example_module("pcat_example_runner", script_path)
     visual_root = tmp_path / "visuals"
     for relative_path in ["init", "post/fram", "post/finl", "post/anim"]:

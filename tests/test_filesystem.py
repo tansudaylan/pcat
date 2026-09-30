@@ -33,32 +33,32 @@ def test_retr_pathcnfg_rejects_path_traversal(tmp_path):
 
 
 def test_run_paths_are_self_contained_under_parent(tmp_path):
-    run_root = tmp_path / 'pcat_runs' / 'gmix_demo'
+    run_root = tmp_path / 'pcat_runs' / 'gaussian_mixture_catalog'
 
-    assert retr_pathrun(tmp_path, 'gmix_demo') == str(run_root)
-    assert retr_pathoutpcnfg(tmp_path, 'gmix_demo') == (
-        str(run_root / 'data' / 'outp' / 'gmix_demo') + '/'
+    assert retr_pathrun(tmp_path, 'gaussian_mixture_catalog') == str(run_root)
+    assert retr_pathoutpcnfg(tmp_path, 'gaussian_mixture_catalog') == (
+        str(run_root / 'data' / 'outp' / 'gaussian_mixture_catalog') + '/'
     )
-    assert retr_pathplotcnfg(tmp_path, 'gmix_demo') == (
+    assert retr_pathplotcnfg(tmp_path, 'gaussian_mixture_catalog') == (
         str(run_root / 'visuals') + '/'
     )
 
 
 def test_run_paths_do_not_repeat_existing_runs_root(tmp_path):
     runs_root = tmp_path / 'pcat_runs'
-    run_root = runs_root / 'gmix_demo'
+    run_root = runs_root / 'gaussian_mixture_catalog'
 
-    assert retr_pathrun(runs_root, 'gmix_demo') == str(run_root)
+    assert retr_pathrun(runs_root, 'gaussian_mixture_catalog') == str(run_root)
 
 
 def test_run_paths_do_not_repeat_existing_run_root(tmp_path):
-    run_root = tmp_path / 'pcat_runs' / 'gmix_demo'
+    run_root = tmp_path / 'pcat_runs' / 'gaussian_mixture_catalog'
 
-    assert retr_pathrun(run_root, 'gmix_demo') == str(run_root)
-    assert retr_pathoutpcnfg(run_root, 'gmix_demo') == (
-        str(run_root / 'data' / 'outp' / 'gmix_demo') + '/'
+    assert retr_pathrun(run_root, 'gaussian_mixture_catalog') == str(run_root)
+    assert retr_pathoutpcnfg(run_root, 'gaussian_mixture_catalog') == (
+        str(run_root / 'data' / 'outp' / 'gaussian_mixture_catalog') + '/'
     )
-    assert retr_pathplotcnfg(run_root, 'gmix_demo') == (
+    assert retr_pathplotcnfg(run_root, 'gaussian_mixture_catalog') == (
         str(run_root / 'visuals') + '/'
     )
 

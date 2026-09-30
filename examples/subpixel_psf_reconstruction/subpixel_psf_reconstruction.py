@@ -89,7 +89,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
     arguments = parser.parse_args()
-    output_path = Path(__file__).with_name("visuals") / f"psf_subpixel.{arguments.typefileplot}"
+    output_path = Path(__file__).with_name("visuals") / f"subpixel_psf_reconstruction.{arguments.typefileplot}"
     print(run_example(output_path))
     return 0
 

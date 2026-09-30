@@ -49,9 +49,9 @@ the object from the extension-free path:
    from pcat.main import readfile
 
     project_root = Path("examples")
-    run_root = project_root / "pcat_runs" / "gmix_demo"
+    run_root = project_root / "pcat_runs" / "gaussian_mixture_catalog"
    state = readfile(
-       str(run_root / "data" / "outp" / "gmix_demo" / "gdatfinlpost")
+       str(run_root / "data" / "outp" / "gaussian_mixture_catalog" / "gdatfinlpost")
    )
    print(state.numbsamp)
 

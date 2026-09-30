@@ -6,16 +6,16 @@ import matplotlib.pyplot as plt
 
 
 EXAMPLE_SCRIPT = (
-    Path(__file__).resolve().parents[1] / "examples" / "psf_subpixel" / "psf_subpixel.py"
+    Path(__file__).resolve().parents[1] / "examples" / "subpixel_psf_reconstruction" / "subpixel_psf_reconstruction.py"
 )
-SPECIFICATION = importlib.util.spec_from_file_location("pcat_psf_subpixel_example", EXAMPLE_SCRIPT)
+SPECIFICATION = importlib.util.spec_from_file_location("pcat_subpixel_psf_reconstruction_example", EXAMPLE_SCRIPT)
 example = importlib.util.module_from_spec(SPECIFICATION)
 SPECIFICATION.loader.exec_module(example)
 
 
-def test_psf_subpixel_example_writes_accurate_nonblank_figure(tmp_path, capsys, monkeypatch):
+def test_subpixel_psf_reconstruction_example_writes_accurate_nonblank_figure(tmp_path, capsys, monkeypatch):
     monkeypatch.setitem(plt.rcParams, "text.usetex", False)
-    output_path = tmp_path / "psf_subpixel.png"
+    output_path = tmp_path / "subpixel_psf_reconstruction.png"
 
     summary = example.run_example(output_path)
 

@@ -23,7 +23,7 @@ def main() -> int:
     parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
     arguments = parser.parse_args()
     output_path = Path(__file__).with_name("visuals") / (
-        f"roman_lens_catalog_diagnostic.{arguments.typefileplot}"
+        f"roman_strong_lens_perturber_catalog.{arguments.typefileplot}"
     )
     summary = run_example(output_path)
     print(summary)

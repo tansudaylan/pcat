@@ -31,7 +31,7 @@ Run the compact Chandra-style demonstration from the repository root:
 
 .. code-block:: bash
 
-   python examples/chan_demo/generate_demo.py
+   python examples/chandra_point_source_catalog/chandra_point_source_catalog.py
 
 The script uses :func:`pcat.demo.run_pipeline_demo` to supply plotting defaults
 and calls :func:`pcat.main.sample`. Its source is intentionally short and is a

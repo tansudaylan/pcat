@@ -24,19 +24,19 @@ class PosteriorAnimationPanel:
 POSTERIOR_ANIMATION_PANELS = (
     PosteriorAnimationPanel(
         "Gaussian mixture | model intensity",
-        "gmix_demo/visuals/post/fram/thiscntpmodl_*.png",
+        "gaussian_mixture_catalog/visuals/post/fram/thiscntpmodl_*.png",
     ),
     PosteriorAnimationPanel(
         "Point sources | model counts",
-        "Daylan+2017/visuals/post/fram/thiscntpmodlen00evt0_*.png",
+        "daylan_2017_fermi_point_sources/visuals/post/fram/thiscntpmodlen00evt0_*.png",
     ),
     PosteriorAnimationPanel(
         "Strong lens | model counts",
-        "hst_lens/visuals/post/fram/thiscntpmodl_*.png",
+        "simulated_hst_strong_lens/visuals/post/fram/thiscntpmodl_*.png",
     ),
     PosteriorAnimationPanel(
         "Spectral lines | model and data",
-        "voigt-profile/visuals/post/fram/thisscatcntpevt0_*.png",
+        "voigt_spectral_line_catalog/visuals/post/fram/thisscatcntpevt0_*.png",
     ),
 )
 
@@ -57,7 +57,7 @@ def _animation_frame_paths(
     if len(paths) < 2:
         raise RuntimeError(
             f"{panel.label} requires at least two posterior frames matching "
-            f"{examples_root / panel.pattern}. Run examples/run_examples.py first."
+            f"{examples_root / panel.pattern}. Run examples/run_all_examples.py first."
         )
     return paths
 

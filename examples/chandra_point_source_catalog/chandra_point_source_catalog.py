@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-RUN_NAME = "chan_demo"
+RUN_NAME = "chandra_point_source_catalog"
 OUTPUT_ROOT = Path(__file__).resolve().parents[1] / RUN_NAME
 
 
@@ -25,6 +25,7 @@ def main() -> None:
         "fittmaxmnumbelempop0": 3,
         "dicttrue": {"typeelemspateval": ["full"]},
         "dictfitt": {"typeelemspateval": ["full"]},
+        "probspmr": 0.0,
         "numbswep": 4,
         "numbsamp": 2,
         "numbsidecart": 8,

@@ -8,19 +8,19 @@ import matplotlib.pyplot as plt
 EXAMPLE_SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "examples"
-    / "catalog_association"
-    / "catalog_association.py"
+    / "catalog_association_completeness_purity"
+    / "catalog_association_completeness_purity.py"
 )
 SPECIFICATION = importlib.util.spec_from_file_location(
-    "pcat_catalog_association_example", EXAMPLE_SCRIPT
+    "pcat_catalog_association_completeness_purity_example", EXAMPLE_SCRIPT
 )
 example = importlib.util.module_from_spec(SPECIFICATION)
 SPECIFICATION.loader.exec_module(example)
 
 
-def test_catalog_association_example_writes_nonblank_figure(tmp_path, capsys, monkeypatch):
+def test_catalog_association_completeness_purity_example_writes_nonblank_figure(tmp_path, capsys, monkeypatch):
     monkeypatch.setitem(plt.rcParams, "text.usetex", False)
-    output_path = tmp_path / "catalog_association.png"
+    output_path = tmp_path / "catalog_association_completeness_purity.png"
 
     summary = example.run_example(output_path)
 
