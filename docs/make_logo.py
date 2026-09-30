@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Draw the PCAT logo in Harvard Crimson and black.
 
-Three stacked catalog planes hold one, two, and three sources, each drawn as a small cloud of
-posterior samples. Arrows hop between the planes, the birth and death moves that let PCAT change
-the dimension of its model. The script writes a stacked logo with the name, a wide banner, and a
-square icon without text for favicons and social previews.
+A point, a line segment, a square, and a cube are parameter spaces of dimension zero to three.
+Reversible arrows jump between them, the birth and death moves with which PCAT changes the
+dimension of its model, and a black dot in each space marks the sampled state. The script writes
+a stacked logo with the name, a wide banner, and a square icon without text for favicons and
+social previews.
 """
 
 from tdpy.verbosity import print
@@ -20,46 +21,52 @@ PATH_STATIC = Path(__file__).resolve().parent / "_static"
 CRIMSON = "#A51C30"  # Harvard Crimson
 BLACK = "#000000"
 WHITE = "#FFFFFF"
-# plane shear and size in icon coordinates
-SHEAR = 0.35
-HALFWIDTH = 0.62
-HALFDEPTH = 0.17
-PLANE_HEIGHTS = (-0.52, 0.0, 0.52)
-# source positions in plane coordinates (x across, y into the plane)
-SOURCES = (
-    [(0.05, 0.1)],
-    [(-0.3, -0.2), (0.3, 0.25)],
-    [(-0.38, 0.15), (0.02, -0.35), (0.38, 0.2)],
-)
+# centers of the 0-, 1-, 2-, and 3-dimensional spaces in icon coordinates, read in a Z pattern
+CENTERS = np.array([[-0.55, 0.52], [0.4, 0.52], [-0.56, -0.44], [0.5, -0.5]])
+SIZE = 0.46  # edge length of the segment, square, and cube
+DEPTH = np.array([0.18, 0.15])  # oblique offset of the cube's back face
 
 
-def to_icon(x, y, height):
-    """Project plane coordinates onto the icon with a sheared oblique view."""
-    return x + SHEAR * y * HALFDEPTH / 0.5, height + y * HALFDEPTH
-
-
-def draw_icon(axis, rng):
-    """Draw the crimson tile with three catalog planes and the transdimensional hops."""
+def draw_icon(axis, rng=None):
+    """Draw the crimson tile with spaces of increasing dimension joined by transdimensional jumps."""
     axis.add_patch(FancyBboxPatch((-1.0, -1.0), 2.0, 2.0, boxstyle="round,pad=0,rounding_size=0.28",
                                   color=CRIMSON, zorder=0))
-    for height, sources in zip(PLANE_HEIGHTS, SOURCES):
-        corners = [to_icon(x, y, height) for x, y in [(-HALFWIDTH, -1.), (HALFWIDTH, -1.), (HALFWIDTH, 1.),
-                                                        (-HALFWIDTH, 1.)]]
-        axis.add_patch(Polygon(corners, closed=True, facecolor=WHITE, edgecolor=BLACK, lw=2.2, zorder=1))
-        for x, y in sources:
-            # each source is a cloud of posterior samples around its position
-            cloud = np.array([x, y]) + np.array([0.07, 0.25]) * rng.standard_normal((70, 2))
-            # keep every sample on its plane
-            cloud = cloud[(np.abs(cloud[:, 0]) < HALFWIDTH - 0.08) & (np.abs(cloud[:, 1]) < 0.8)]
-            axis.scatter(*to_icon(cloud[:, 0], cloud[:, 1], height), s=2.5, color=CRIMSON, alpha=0.6, lw=0, zorder=2)
-            axis.scatter(*to_icon(x, y, height), s=38, color=BLACK, lw=0, zorder=3)
-    # birth (up) and death (down) hops between catalogs of different dimension
-    for start, end, sign in [((0.8, -0.44), (0.8, -0.08), -1), ((0.8, 0.08), (0.8, 0.44), -1),
-                             ((-0.8, 0.44), (-0.8, 0.08), -1), ((-0.8, -0.08), (-0.8, -0.44), -1)]:
-        axis.add_patch(FancyArrowPatch(start, end, connectionstyle=f"arc3,rad={0.5 * sign}", arrowstyle="-|>",
-                                       mutation_scale=11, lw=1.8, color=WHITE, zorder=4))
-    axis.text(0.87, 0.26, "+", color=WHITE, fontsize=13, fontweight="bold", ha="center", va="center", zorder=4)
-    axis.text(-0.87, -0.26, "\u2212", color=WHITE, fontsize=13, fontweight="bold", ha="center", va="center", zorder=4)
+    line = dict(color=WHITE, lw=3.2, solid_capstyle="round", zorder=2)
+    half = 0.5 * SIZE
+
+    # 0-D: a point
+    axis.scatter(*CENTERS[0], s=260, color=WHITE, zorder=2)
+    axis.scatter(*CENTERS[0], s=70, color=BLACK, zorder=3)
+
+    # 1-D: a segment with end caps
+    x, y = CENTERS[1]
+    axis.plot([x - half, x + half], [y, y], **line)
+    for end in (x - half, x + half):
+        axis.plot([end, end], [y - 0.07, y + 0.07], **line)
+    axis.scatter(x + 0.1, y, s=70, color=BLACK, zorder=3)
+
+    # 2-D: a square
+    x, y = CENTERS[2]
+    axis.add_patch(Polygon([(x - half, y - half), (x + half, y - half), (x + half, y + half), (x - half, y + half)],
+                           closed=True, facecolor="none", edgecolor=WHITE, lw=3.2, joinstyle="round", zorder=2))
+    axis.scatter(x - 0.08, y + 0.07, s=70, color=BLACK, zorder=3)
+
+    # 3-D: a wireframe cube in oblique projection
+    x, y = CENTERS[3] - 0.5 * DEPTH
+    front = np.array([(x - half, y - half), (x + half, y - half), (x + half, y + half), (x - half, y + half)])
+    back = front + DEPTH
+    for face in (back, front):
+        axis.add_patch(Polygon(face, closed=True, facecolor="none", edgecolor=WHITE, lw=3.2 if face is front else 2.,
+                               joinstyle="round", zorder=2))
+    for corner in range(4):
+        axis.plot(*np.array([front[corner], back[corner]]).T, color=WHITE, lw=2., zorder=2)
+    axis.scatter(x + 0.12, y + 0.02, s=70, color=BLACK, zorder=3)
+
+    # reversible jumps between neighboring dimensions
+    jumps = [((-0.4, 0.52), (0.08, 0.52), 0.), ((0.15, 0.32), (-0.3, -0.12), 0.), ((-0.26, -0.44), (0.16, -0.44), 0.)]
+    for start, end, rad in jumps:
+        axis.add_patch(FancyArrowPatch(start, end, connectionstyle=f"arc3,rad={rad}", arrowstyle="<|-|>",
+                                       mutation_scale=13, lw=2., color=BLACK, zorder=4))
 
 
 def save(figure, path_stem):
