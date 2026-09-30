@@ -13,13 +13,13 @@ and hyperparameter diagnostics.
 Run the publication-scale configuration with:
 
 ```bash
-python 'examples/daylan_2017_fermi_point_sources/daylan_2017_fermi_point_sources.py' --fresh
+python 'examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py' --fresh
 ```
 
 Use `--typefileplot pdf` for PDF figures. A fast end-to-end check is available:
 
 ```bash
-python 'examples/daylan_2017_fermi_point_sources/daylan_2017_fermi_point_sources.py' --smoke --fresh
+python 'examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py' --smoke --fresh
 ```
 
 The original analysis used Pass 7 source-class exposure from weeks 9--217 and
@@ -28,3 +28,15 @@ this repository. This self-contained example uses constant exposure and a
 deterministic, dust-like high-latitude morphology as an explicit synthetic proxy
 for the diffuse template. It does not reproduce the paper's numerical Fermi-LAT
 measurements or claim agreement with its posterior values.
+
+The notebook runs the smoke configuration, loads the finalized posterior, and
+saves posterior-derived count maps, source catalogs, source-count probabilities,
+and likelihood traces directly under `visuals/`.
+
+![Simulated counts, posterior model, and residual](visuals/fermi_posterior_count_maps.png)
+
+![Posterior source positions and fluxes](visuals/fermi_posterior_source_catalog.png)
+
+![Posterior probability of the source count](visuals/fermi_posterior_source_count.png)
+
+![Posterior log-likelihood trace](visuals/fermi_posterior_log_likelihood.png)

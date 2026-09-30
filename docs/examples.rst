@@ -56,23 +56,23 @@ sources and a strong lens, and the model with data for spectral lines.
 Publication and instrument examples
 -----------------------------------
 
-``daylan_2017_fermi_point_sources``
+``daylan+2017_fermi_point_sources``
    Scaled mock-catalog reproduction of Daylan, Portillo, and Finkbeiner (2017).
    The smoke mode preserves the inference pattern while reducing the source
    count and chain length.
 
    .. code-block:: bash
 
-      python 'examples/daylan_2017_fermi_point_sources/daylan_2017_fermi_point_sources.py' --smoke --fresh
+      python 'examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py' --smoke --fresh
 
-``daylan_2018_strong_lens_subhalos``
+``daylan+2018_strong_lens_subhalos``
    Simulated Hubble Space Telescope Wide Field Camera 3 strong-lens analysis
    comparing a variable subhalo catalog with a fixed one-subhalo fit.
 
    .. code-block:: bash
 
-      python 'examples/daylan_2018_strong_lens_subhalos/daylan_2018_strong_lens_subhalos.py' --smoke
-      python 'examples/daylan_2018_strong_lens_subhalos/daylan_2018_strong_lens_subhalos.py' --smoke --one-subhalo
+      python 'examples/daylan+2018_strong_lens_subhalos/daylan+2018_strong_lens_subhalos.py' --smoke
+      python 'examples/daylan+2018_strong_lens_subhalos/daylan+2018_strong_lens_subhalos.py' --smoke --one-subhalo
 
 ``voigt_spectral_line_catalog``
    Transdimensional detection of an unknown number of Voigt-profile emission
@@ -125,5 +125,5 @@ Scientific interpretation
 Generated examples are deterministic pipeline demonstrations unless their
 README explicitly states otherwise. Synthetic outputs validate computation and
 visualization but do not constitute measurements of real astrophysical systems.
-The daylan_2017_fermi_point_sources README distinguishes its scaled simulation from the
+The daylan+2017_fermi_point_sources README distinguishes its scaled simulation from the
 archival Fermi-LAT analysis in the publication.

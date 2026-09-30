@@ -4,8 +4,8 @@ from pathlib import Path
 
 EXAMPLE_SCRIPT = (
     Path(__file__).resolve().parents[1]
-    / "examples" / "daylan_2018_strong_lens_subhalos"
-    / "daylan_2018_strong_lens_subhalos.py"
+    / "examples" / "daylan+2018_strong_lens_subhalos"
+    / "daylan+2018_strong_lens_subhalos.py"
 )
 specification = importlib.util.spec_from_file_location("daylan2018_example", EXAMPLE_SCRIPT)
 example = importlib.util.module_from_spec(specification)

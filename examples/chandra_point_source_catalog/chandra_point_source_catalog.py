@@ -25,9 +25,10 @@ def main() -> None:
         "fittmaxmnumbelempop0": 3,
         "dicttrue": {"typeelemspateval": ["full"]},
         "dictfitt": {"typeelemspateval": ["full"]},
-        "probspmr": 0.0,
-        "numbswep": 4,
-        "numbsamp": 2,
+        "probspmr": 0.4,
+        "numbswep": 250,
+        "numbsamp": 50,
+        "numbswepplot": 25,
         "numbsidecart": 8,
         "strgcnfg": RUN_NAME,
     }

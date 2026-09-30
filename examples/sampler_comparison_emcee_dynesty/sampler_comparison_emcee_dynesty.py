@@ -104,9 +104,13 @@ def run_pcat(likelihood, numbswep):
         numbburn=numbburn,
         numbsamp=numbswep - numbburn,
         boolmakeplot=False,
+        makeanim=False,
         typeverb=0,
     )
     elapsed = time.perf_counter() - start
+    # Keep proposal-animation rendering outside the measured sampler runtime.
+    from pcat.main import proc_anim
+    proc_anim(RUN_NAME, pathbase=str(EXAMPLE_PATH))
     samples = np.asarray(result.listpostparagenrscalbase)
     return samples, elapsed, effective_sample_size(samples[:, None, :])
 
@@ -286,14 +290,19 @@ def run_pcat_planets(time_obs, velocity, stdv, numbswep):
 
     strgcnfg = RUN_NAME + "_variable_planet_count"
     dictpcat = retr_dictpcatrvel(time_obs, velocity, stdv, np.zeros(time_obs.size, int), str(EXAMPLE_PATH), strgcnfg,
-                                 maxmnumbplan=MAXM_NUMB_PLAN, factpriodoff=0.0, probjump=0.2, numbswep=numbswep,
-                                 numbsamp=numbswep // 50, inittype="rand", typeseed=0,
+                                 maxmnumbplan=MAXM_NUMB_PLAN, factpriodoff=0.0, probtran=0.7, probspmr=0.4,
+                                 probjump=0.2, numbswep=numbswep, numbsamp=numbswep // 50,
+                                 numbswepplot=max(numbswep // 40, 1), inittype="rand", typeseed=0,
                                  stdvpropelemfire=[1e-2, 1e-4, 3e-2, 3e-2, 3e-2], boolmakeplot=False,
-                                 boolmakeplotinit=False, typeverb=0, retr_llik=pcat_planet_log_likelihood)
+                                 boolmakeplotinit=False, makeanim=False, typeverb=0,
+                                 retr_llik=pcat_planet_log_likelihood)
     PCAT_PLANET_CALLS[0] = 0
     start = time.perf_counter()
     sampling.sample(**dictpcat)
     elapsed = time.perf_counter() - start
+    # Keep proposal-animation rendering outside the measured sampler runtime.
+    from pcat.main import proc_anim
+    proc_anim(strgcnfg, pathbase=str(EXAMPLE_PATH))
     pathrun = Path(retr_pathrun(str(EXAMPLE_PATH), strgcnfg))
     posterior = readfile(str(pathrun / "data" / "outp" / strgcnfg / "gdatfinlpost"))
     numbelem = np.asarray(posterior.listpostnumbelem).astype(int).ravel()

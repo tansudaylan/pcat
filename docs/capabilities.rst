@@ -24,7 +24,7 @@ Functionality overview
    * - Point-source imaging
      - Catalog, background, exposure, and point-spread function
      - Variable source count and source parameters
-     - ``chandra_point_source_catalog`` and ``daylan_2017_fermi_point_sources``
+    - ``chandra_point_source_catalog`` and ``daylan+2017_fermi_point_sources``
    * - Gaussian mixtures
      - Variable-width components in two-dimensional data
      - Birth and death catalog transitions
@@ -32,7 +32,7 @@ Functionality overview
    * - Strong-lens imaging
      - Lens mass, foreground light, source light, and lensed emission
      - Fixed or variable perturber catalog
-     - ``simulated_hst_strong_lens``, ``daylan_2018_strong_lens_subhalos``, and ``roman_strong_lens_perturber_catalog``
+    - ``simulated_hst_strong_lens``, ``daylan+2018_strong_lens_subhalos``, and ``roman_strong_lens_perturber_catalog``
    * - Spectral lines
      - Voigt profiles in spectral data
      - Variable line count and profile parameters
@@ -111,7 +111,7 @@ The compact Chandra-style example is directly runnable:
    python examples/chandra_point_source_catalog/chandra_point_source_catalog.py
 
 The :doc:`getting_started` page gives its configuration, while the
-``daylan_2017_fermi_point_sources`` example demonstrates a larger synthetic point-source catalog.
+``daylan+2017_fermi_point_sources`` example demonstrates a larger synthetic point-source catalog.
 
 Lenses and lensed emission in imaging data
 ------------------------------------------

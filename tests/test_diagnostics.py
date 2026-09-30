@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 from types import SimpleNamespace
 
+from PIL import Image
+
 from pcat.diagnostics import (
     autocorrelation_time,
     binomial_wilson_interval,
@@ -17,10 +19,12 @@ from pcat.main import (
     _retr_population_legend_label,
     _retr_parameter_label,
     _retr_posterior_summary_channels,
+    _retr_proposal_sweep_label,
     _retr_proposal_type_labels,
     _retr_representative_atcr,
     _retr_true_parameter_value,
     _set_element_amplitude_indices,
+    _write_proposal_activity_animation,
 )
 
 
@@ -224,6 +228,27 @@ def test_proposal_labels_support_legacy_saved_identifiers():
         "Split proposal",
         "Merge proposal",
     ]
+
+
+def test_proposal_animation_uses_recorded_types_and_acceptance(tmp_path):
+    labels = [
+        "Within-model proposal",
+        "Birth proposal",
+        "Death proposal",
+        "Split proposal",
+        "Merge proposal",
+    ]
+    proposals = np.arange(5)[:, None]
+    accepted = np.array([True, True, False, True, False])[:, None]
+
+    assert _retr_proposal_sweep_label(3, proposals, accepted, labels) == (
+        "Sweep 4 | Split proposal | accepted"
+    )
+    output_path = tmp_path / "visuals" / "proposal_activity.gif"
+    assert _write_proposal_activity_animation(proposals, accepted, labels, str(output_path))
+    with Image.open(output_path) as animation:
+        assert animation.n_frames == 5
+        assert animation.size[0] > 800
 
 
 def test_element_parameter_labels_are_descriptive():

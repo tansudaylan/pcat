@@ -39,10 +39,32 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
     assert captured["boolmakeplotfram"] is True
     assert captured["boolmakeplotfinlpost"] is True
     assert captured["makeanim"] is True
-    assert captured["numbswepplot"] == 1
+    assert captured["numbswepplot"] == 10
+    assert captured["probtran"] == pytest.approx(0.7)
+    assert captured["probspmr"] == pytest.approx(0.4)
     assert captured["typefileplot"] == "png"
     assert captured["numbswep"] == 3
     assert captured["pathbase"] == str(output_root)
+
+
+def test_publication_examples_use_proposal_rich_animated_runs(tmp_path, monkeypatch):
+    from pcat import publication_examples
+
+    calls = []
+    monkeypatch.setattr(
+        demo.pcat_main,
+        "sample",
+        lambda **configuration: calls.append(configuration),
+    )
+
+    publication_examples.run_optical_catalog_example(tmp_path / "optical", "optical", 10)
+    publication_examples.run_spire_component_example(tmp_path / "spire", "spire", 10, 0.5)
+
+    for configuration in calls:
+        assert configuration["probtran"] == pytest.approx(0.7)
+        assert configuration["probspmr"] == pytest.approx(0.4)
+        assert configuration["makeanim"] is True
+        assert configuration["numbswepplot"] > 1
 
 
 def test_notebook_example_launcher_restores_arguments(monkeypatch):
@@ -68,14 +90,22 @@ def test_notebook_visuals_display_saved_figures(tmp_path, monkeypatch):
     figure_path.parent.mkdir(parents=True)
     print(f"Writing to {figure_path}...")
     Image.new("RGB", (8, 8), "red").save(figure_path)
+    animation_path = (
+        tmp_path / "examples" / "mock" / "pcat_runs" / "mock" / "visuals"
+        / "post" / "anim" / "proposal_activity.gif"
+    )
+    animation_path.parent.mkdir(parents=True)
+    frames = [Image.new("RGB", (8, 8), color) for color in ("red", "blue")]
+    frames[0].save(animation_path, save_all=True, append_images=frames[1:])
     shown = []
     monkeypatch.setattr(demo, "__file__", str(tmp_path / "pcat" / "demo.py"))
     monkeypatch.setattr(IPython.display, "display", shown.append)
 
     demo.display_example_visuals("mock", "visuals/*.png")
 
-    assert len(shown) == 1
+    assert len(shown) == 2
     assert shown[0].filename == str(figure_path)
+    assert shown[1].filename == str(animation_path)
     with pytest.raises(FileNotFoundError, match="missing"):
         demo.display_example_visuals("mock", "visuals/missing*.png")
 
@@ -86,14 +116,33 @@ def test_notebook_visuals_display_saved_figures(tmp_path, monkeypatch):
         (
             "chandra_point_source_catalog",
             "chandra_point_source_catalog",
-            {"typeexpr": "chan", "typeelem": ["lghtpnts"], "probspmr": 0.0},
+            {
+                "typeexpr": "chan",
+                "typeelem": ["lghtpnts"],
+                "probspmr": 0.4,
+                "numbswep": 250,
+                "numbsamp": 50,
+                "numbswepplot": 25,
+            },
         ),
         (
             "gaussian_mixture_catalog",
             "gaussian_mixture_catalog",
             {"typeexpr": "gmix", "typeelem": ["clusvari"], "numbspatdims": 2},
         ),
-        ("simulated_hst_strong_lens", "simulated_hst_strong_lens", {"typeexpr": "HST_WFC3_IR", "typeelem": ["lens"]}),
+        (
+            "simulated_hst_strong_lens",
+            "simulated_hst_strong_lens",
+            {
+                "typeexpr": "HST_WFC3_IR",
+                "typeelem": ["lens"],
+                "numbswep": 100,
+                "numbsamp": 20,
+                "numbswepplot": 10,
+                "probtran": 0.7,
+                "probspmr": 0.4,
+            },
+        ),
     ],
 )
 def test_demo_entrypoint_preserves_scientific_configuration(
@@ -125,7 +174,7 @@ def test_demo_entrypoint_preserves_scientific_configuration(
         assert captured["dictfitt"]["typeelem"] == ["clusvari"]
         assert captured["strgexpo"] == pytest.approx(50.0)
         assert captured["typeseedelem"] == 2_293
-        assert captured["probspmr"] == pytest.approx(0.0)
+        assert captured["probspmr"] == pytest.approx(0.4)
         assert captured["numbswep"] == 1_000
         assert captured["numbsamp"] == 100
         assert captured["numbswepplot"] == 100
@@ -161,8 +210,8 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
 
 def test_daylan2017_configuration_preserves_published_mock_assumptions():
     script_path = (
-        REPOSITORY_ROOT / "examples" / "daylan_2017_fermi_point_sources"
-        / "daylan_2017_fermi_point_sources.py"
+        REPOSITORY_ROOT / "examples" / "daylan+2017_fermi_point_sources"
+        / "daylan+2017_fermi_point_sources.py"
     )
     module = load_example_module("pcat_daylan2017_reproduction", script_path)
 
@@ -187,7 +236,7 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
     assert full["numbswep"] == 1_000_000
     assert full["numbsamp"] == 10_000
     assert full["pathbase"] == str(
-        REPOSITORY_ROOT / "examples" / "daylan_2017_fermi_point_sources"
+        REPOSITORY_ROOT / "examples" / "daylan+2017_fermi_point_sources"
     )
     assert full["boolcondcatl"] is True
     assert smoke["truenumbelempop0"] == 40
@@ -196,7 +245,8 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
     assert smoke["numbswep"] == 10_000
     assert smoke["numbsamp"] == 1_000
     assert smoke["numbswepplot"] == 1_000
-    assert smoke["probspmr"] == pytest.approx(0.0)
+    assert smoke["probtran"] == pytest.approx(0.7)
+    assert smoke["probspmr"] == pytest.approx(0.4)
     assert smoke["boolcondcatl"] is True
     assert smoke["makeanim"] is True
     assert smoke["typefileplot"] == "pdf"
@@ -207,17 +257,20 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
     assert np.std(diffuse_template[1, :, 0]) > 0.15
 
 
-def test_daylan2018_smoke_configuration_skips_animation(tmp_path, monkeypatch):
+def test_daylan2018_smoke_configuration_generates_proposal_animation(tmp_path, monkeypatch):
     script_path = (
-        REPOSITORY_ROOT / "examples" / "daylan_2018_strong_lens_subhalos"
-        / "daylan_2018_strong_lens_subhalos.py"
+        REPOSITORY_ROOT / "examples" / "daylan+2018_strong_lens_subhalos"
+        / "daylan+2018_strong_lens_subhalos.py"
     )
     module = load_example_module("pcat_daylan2018_reproduction", script_path)
 
     assert module.build_configuration()["makeanim"] is True
-    assert module.build_configuration(smoke=True)["makeanim"] is False
+    smoke_configuration = module.build_configuration(smoke=True)
+    assert smoke_configuration["makeanim"] is True
+    assert smoke_configuration["numbswep"] == 200
+    assert smoke_configuration["numbswepplot"] == 10
     assert module.build_configuration()["boolmakeplotfinlpost"] is True
-    assert module.build_configuration(smoke=True)["boolmakeplotfinlpost"] is False
+    assert module.build_configuration(smoke=True)["boolmakeplotfinlpost"] is True
     cached_output = tmp_path / "daylan2018_catalog"
     cached_output.mkdir()
     (cached_output / "stale.txt").touch()
@@ -235,7 +288,7 @@ def test_daylan2018_smoke_configuration_skips_animation(tmp_path, monkeypatch):
 
     assert not (cached_output / "stale.txt").exists()
     assert captured["output_root"] == cached_output
-    assert captured["makeanim"] is False
+    assert captured["makeanim"] is True
 
 
 def test_example_output_verification_requires_multiframe_animation(tmp_path):
@@ -250,6 +303,11 @@ def test_example_output_verification_requires_multiframe_animation(tmp_path):
     frames = [Image.new("RGB", (2, 2), color) for color in ["red", "blue"]]
     frames[0].save(
         visual_root / "post" / "anim" / "posterior.gif",
+        save_all=True,
+        append_images=frames[1:],
+    )
+    frames[0].save(
+        visual_root / "post" / "anim" / "proposal_activity.gif",
         save_all=True,
         append_images=frames[1:],
     )

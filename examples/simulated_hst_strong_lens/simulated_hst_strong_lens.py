@@ -30,6 +30,11 @@ def main() -> None:
         "fittminmnumbelem": 1,
         "fittminmnumbelempop0": 1,
         "fittmaxmnumbelempop0": 3,
+        "numbswep": 100,
+        "numbsamp": 20,
+        "numbswepplot": 10,
+        "probtran": 0.7,
+        "probspmr": 0.4,
         "fittminmdefs": 0.005 / (3600.0 * 180.0 / 3.141592653589793),
         "minmdefs": 0.005 / (3600.0 * 180.0 / 3.141592653589793),
     }

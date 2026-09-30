@@ -17,7 +17,7 @@ def test_readthedocs_covers_public_workflows():
         "posterior_convergence",
         "estimate_evidence",
         "psf_poly_fit",
-        "daylan_2018_strong_lens_subhalos",
+        "daylan+2018_strong_lens_subhalos",
         "lghtpnts",
         "lensed emission",
         "lghtlinevoig",

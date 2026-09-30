@@ -7,7 +7,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from tdpy.util import save_figure
 
 
@@ -191,16 +191,48 @@ POSTERIOR_ANIMATION_PANELS = (
         "gaussian_mixture_catalog/visuals/post/fram/thiscntpmodl_*.png",
     ),
     PosteriorAnimationPanel(
-        "Point sources | model counts",
-        "daylan_2017_fermi_point_sources/visuals/post/fram/thiscntpmodlen00evt0_*.png",
+        "Chandra | residual counts",
+        "chandra_point_source_catalog/visuals/post/fram/thiscntpresien02evt0_swep*.png",
     ),
     PosteriorAnimationPanel(
-        "Strong lens | model counts",
+        "Fermi-LAT | Daylan+2017 source model",
+        "daylan+2017_fermi_point_sources/pcat_runs/daylan2017_mock/visuals/post/fram/thiscntpmodlen00evt0_*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Daylan+2018 | subhalo lens model",
+        "daylan+2018_strong_lens_subhalos/daylan2018_catalog/visuals/post/fram/thiscntpmodl_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "HST | simulated strong-lens model",
         "simulated_hst_strong_lens/visuals/post/fram/thiscntpmodl_*.png",
     ),
     PosteriorAnimationPanel(
-        "Spectral lines | model and data",
-        "voigt_spectral_line_catalog/visuals/post/fram/thisscatcntpevt0_*.png",
+        "Portillo+2017 | crowded SDSS residual",
+        "portillo+2017_crowded_sdss_m2/pcat_runs/portillo2017_sdss_m2/visuals/post/fram/thiscntpresien02evt0_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Feder+2020 | multiband SDSS residual",
+        "feder+2020_multiband_sdss_deblending/pcat_runs/feder2020_multiband_sdss/visuals/post/fram/thiscntpresien02evt0_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Butler+2022 | SPIRE component residual",
+        "butler+2022_spire_sz_component_separation/pcat_runs/butler2022_spire_sz/visuals/post/fram/thiscntpresien01evt1_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Feder+2023 | SPIRE point-diffuse residual",
+        "feder+2023_point_diffuse_spire/pcat_runs/feder2023_point_diffuse_spire/visuals/post/fram/thiscntpresien01evt1_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Hall+2026 | Herschel multiplicity residual",
+        "hall+2026_herschel_dsfg_multiplicity/pcat_runs/hall2026_dsfg_multiplicity/visuals/post/fram/thiscntpresien01evt1_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Stellar flares | variable time-series model",
+        "variable_number_stellar_flares/visuals/post/fram/thisscatcntpevt0_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Voigt lines | spectral model",
+        "voigt_spectral_line_catalog/pcat_runs/voigt_nomi/visuals/post/fram/thisscatcntpevt0_swep*.png",
     ),
 )
 
@@ -310,18 +342,18 @@ def make_posterior_animation_collage(
     output_path: Path = DEFAULT_POSTERIOR_COLLAGE,
     examples_root: Path = EXAMPLES_ROOT,
     panels: tuple[PosteriorAnimationPanel, ...] = POSTERIOR_ANIMATION_PANELS,
-    frame_count: int = 10,
-    duration_ms: int = 500,
-    panel_size: int = 480,
+    frame_count: int = 16,
+    duration_ms: int = 120,
+    panel_size: int = 560,
 ) -> Path:
-    """Write a synchronized two-column collage of posterior frame sequences."""
+    """Write a synchronized, high-resolution collage of posterior frame sequences."""
     if frame_count < 2:
         raise ValueError("frame_count must be at least two.")
     if not panels:
         raise ValueError("panels must contain at least one frame sequence.")
 
     sequences = [_animation_frame_paths(panel, examples_root) for panel in panels]
-    column_count = min(2, len(panels))
+    column_count = min(3, len(panels))
     row_count = int(np.ceil(len(panels) / column_count))
     margin = 20
     title_height = 66
@@ -339,7 +371,7 @@ def make_posterior_animation_collage(
         canvas = Image.new("RGB", canvas_size, "white")
         draw = ImageDraw.Draw(canvas)
         draw.text((margin, margin), "PCAT posterior samples", fill="black", font=title_font)
-        counter = f"draw {frame_index + 1:02d} / {frame_count:02d}"
+        counter = f"frame {frame_index + 1:02d} / {frame_count:02d}"
         counter_box = draw.textbbox((0, 0), counter, font=counter_font)
         draw.text(
             (canvas.width - margin - (counter_box[2] - counter_box[0]), margin + 6),
@@ -356,10 +388,16 @@ def make_posterior_animation_collage(
             source_path = paths[source_index]
             print(f"Reading from {source_path}...")
             with Image.open(source_path) as source:
-                panel_image = source.convert("RGB").resize(
-                    (panel_size, panel_size), Image.Resampling.LANCZOS
+                panel_image = ImageOps.contain(
+                    source.convert("RGB"),
+                    (panel_size, panel_size),
+                    Image.Resampling.LANCZOS,
                 )
-            canvas.paste(panel_image, (x, y))
+            canvas.paste(
+                panel_image,
+                (x + (panel_size - panel_image.width) // 2,
+                 y + (panel_size - panel_image.height) // 2),
+            )
             draw.rectangle(
                 (x, y, x + panel_size - 1, y + panel_size - 1),
                 outline="#c4cccc",

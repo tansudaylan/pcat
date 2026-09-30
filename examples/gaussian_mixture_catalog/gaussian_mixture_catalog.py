@@ -30,7 +30,7 @@ def main() -> None:
         "strgexpo": 50.0,  # [arbitrary exposure units]
         "typeseedelem": 2_293,
         "inittype": "refr",
-        "probspmr": 0.0,
+        "probspmr": 0.4,
         "numbswep": 1_000,
         "numbsamp": 100,
         "numbswepplot": 100,

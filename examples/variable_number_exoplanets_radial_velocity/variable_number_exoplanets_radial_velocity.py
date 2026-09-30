@@ -67,12 +67,16 @@ def run_pcat(time, rvel, stdv, indxinst, numbswep):
 
     dictpcat = retr_dictpcatrvel(
         time, rvel, stdv, indxinst, str(EXAMPLE_PATH), RUN_NAME, maxmnumbplan=5,
-        numbswep=numbswep, numbsamp=max(numbswep // 50, 20), inittype='rand', typeseed=0, probjump=0.2,
+        numbswep=numbswep, numbsamp=max(numbswep // 50, 20),
+        numbswepplot=max(numbswep // 20, 1), inittype='rand', typeseed=0,
+        probtran=0.7, probspmr=0.4, probjump=0.2, makeanim=False,
         # unit-cube proposal scales for K, P, phase, eccentricity, and argument of periastron
         stdvpropelemfire=[1e-2, 1e-4, 3e-2, 3e-2, 3e-2],
         boolmakeplot=False, boolmakeplotinit=False, typeverb=0,
     )
     sampling.sample(**dictpcat)
+    from pcat.main import proc_anim
+    proc_anim(RUN_NAME, pathbase=str(EXAMPLE_PATH))
 
 
 def read_posterior():

@@ -13029,6 +13029,96 @@ def copytdgu(varb):
         return deepcopy(varb)
 
 
+def _retr_proposal_sweep_label(sweep, indxproptype, boolpropaccp, lablproptype):
+    """Describe the proposal recorded for one zero-based sampler sweep."""
+    listindx = np.asarray(indxproptype)
+    if listindx.ndim > 1:
+        listindx = listindx[:, 0]
+    if listindx.size == 0:
+        return 'Sweep %d' % (int(sweep) + 1)
+    indx = min(max(int(sweep), 0), listindx.size - 1)
+    indxpropt = int(listindx[indx])
+    listlabl = list(lablproptype)
+    if 0 <= indxpropt < len(listlabl):
+        labl = str(listlabl[indxpropt])
+    else:
+        labl = 'Proposal %d' % indxpropt
+    listaccp = np.asarray(boolpropaccp)
+    if listaccp.ndim > 1:
+        listaccp = listaccp[:, 0]
+    strgaccp = 'accepted' if indx < listaccp.size and bool(listaccp[indx]) else 'rejected'
+    return 'Sweep %d | %s | %s' % (int(sweep) + 1, labl, strgaccp)
+
+
+def _write_proposal_activity_animation(indxproptype, boolpropaccp, lablproptype, pathout):
+    """Animate cumulative proposal attempts and acceptances from a saved chain."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    if indxproptype is None or boolpropaccp is None:
+        return False
+    listindx = np.asarray(indxproptype).reshape(-1).astype(int)
+    listaccp = np.asarray(boolpropaccp).reshape(-1).astype(bool)
+    numbmove = min(listindx.size, listaccp.size)
+    if numbmove < 2:
+        return False
+    listindx = listindx[:numbmove]
+    listaccp = listaccp[:numbmove]
+    listlabl = [] if lablproptype is None else list(lablproptype)
+    if not listlabl:
+        return False
+
+    width = 960
+    rowheight = 40
+    top = 68
+    height = top + rowheight * len(listlabl) + 20
+    colors = [(42, 120, 190), (45, 155, 95), (210, 80, 75),
+              (210, 155, 45), (135, 90, 175), (30, 150, 155)]
+    font = ImageFont.load_default()
+    listframe = []
+    listindexframe = np.unique(np.linspace(0, numbmove - 1, min(numbmove, 40), dtype=int))
+    for index in listindexframe:
+        types = listindx[:index + 1]
+        valid = (types >= 0) & (types < len(listlabl))
+        attempted = np.bincount(types[valid], minlength=len(listlabl))
+        accepted = np.bincount(types[valid & listaccp[:index + 1]], minlength=len(listlabl))
+        max_attempted = max(1, int(attempted.max()))
+        image = Image.new('RGB', (width, height), (255, 255, 255))
+        draw = ImageDraw.Draw(image)
+        draw.text((14, 12), 'PCAT proposal activity', fill=(20, 20, 20), font=font)
+        draw.text((14, 34), 'Sweep %d of %d' % (index + 1, numbmove), fill=(50, 50, 50), font=font)
+        for indxpropt, labl in enumerate(listlabl):
+            ypos = top + indxpropt * rowheight
+            count = int(attempted[indxpropt])
+            countaccp = int(accepted[indxpropt])
+            barwidth = round(460. * count / max_attempted)
+            accpwidth = round(460. * countaccp / max_attempted)
+            draw.text((14, ypos + 8), str(labl), fill=(30, 30, 30), font=font)
+            draw.rectangle((190, ypos + 4, 650, ypos + 28), fill=(232, 235, 239))
+            if barwidth > 0:
+                draw.rectangle(
+                    (190, ypos + 4, 190 + barwidth, ypos + 28),
+                    fill=(190, 195, 202),
+                )
+            if accpwidth > 0:
+                draw.rectangle(
+                    (190, ypos + 4, 190 + accpwidth, ypos + 28),
+                    fill=colors[indxpropt % len(colors)],
+                )
+            rate = 100. * countaccp / count if count else 0.
+            draw.text(
+                (670, ypos + 8),
+                '%d/%d accepted (%.0f%%)' % (countaccp, count, rate),
+                fill=(30, 30, 30),
+                font=font,
+            )
+        listframe.append(image)
+
+    make_directory(os.path.dirname(pathout))
+    print('Writing to %s...' % pathout)
+    listframe[0].save(pathout, save_all=True, append_images=listframe[1:], duration=200, loop=0)
+    return True
+
+
 def proc_anim(strgcnfg, pathbase=None):
 
     if pathbase is None:
@@ -13041,6 +13131,11 @@ def proc_anim(strgcnfg, pathbase=None):
     
     path = pathoutpcnfg + 'gdatinit'
     gdat = readfile(path)
+    pathfinlpost = pathoutpcnfg + 'gdatfinlpost'
+    if os.path.isfile(pathfinlpost + '.p') and os.path.isfile(pathfinlpost + '.h5'):
+        gdatfinlpost = readfile(pathfinlpost)
+    else:
+        gdatfinlpost = None
     for strgpdfn in gdat.liststrgpdfn:
         from PIL import Image
 
@@ -13057,6 +13152,23 @@ def proc_anim(strgcnfg, pathbase=None):
                 key = (pathrela, match.group(1))
                 dictpathfram.setdefault(key, []).append((int(match.group(2)), os.path.join(pathroot, namefile)))
 
+        proposal_sequence = None
+        if strgpdfn == 'post' and gdatfinlpost is not None:
+            listsequence = [
+                (key, sorted(listfram))
+                for key, listfram in dictpathfram.items()
+                if len(listfram) > 1
+            ]
+            if listsequence:
+                proposal_sequence = max(
+                    listsequence,
+                    key=lambda item: (
+                        'cntpmodl' in item[0][1],
+                        'scatcntp' in item[0][1],
+                        len(item[1]),
+                    ),
+                )[1]
+
         for (pathrela, name), listfram in sorted(dictpathfram.items()):
             if len(listfram) < 2:
                 continue
@@ -13072,6 +13184,54 @@ def proc_anim(strgcnfg, pathbase=None):
                     listimag.append(imag.convert('RGB'))
             print('Writing to %s...' % namegiff)
             listimag[0].save(namegiff, save_all=True, append_images=listimag[1:], duration=200, loop=0)
+
+        if proposal_sequence is not None and hasattr(gdatfinlpost, 'listpostindxproptype'):
+            from PIL import ImageDraw, ImageFont
+
+            listimag = []
+            for sweep, pathframtemp in proposal_sequence:
+                print('Reading from %s...' % pathframtemp)
+                with Image.open(pathframtemp) as imag:
+                    imag = imag.convert('RGB')
+                height = 32
+                frame = Image.new('RGB', (imag.width, imag.height + height), (20, 20, 20))
+                frame.paste(imag, (0, 0))
+                draw = ImageDraw.Draw(frame)
+                draw.text(
+                    (8, imag.height + 9),
+                    _retr_proposal_sweep_label(
+                        sweep,
+                        gdatfinlpost.listpostindxproptype,
+                        getattr(gdatfinlpost, 'listpostboolpropaccp', []),
+                        getattr(gdatfinlpost, 'lablproptype', []),
+                    ),
+                    fill=(255, 255, 255),
+                    font=ImageFont.load_default(),
+                )
+                listimag.append(frame)
+            pathanimproptype = os.path.join(pathanim, 'proposal_sequence.gif')
+            print('Writing to %s...' % pathanimproptype)
+            listimag[0].save(
+                pathanimproptype,
+                save_all=True,
+                append_images=listimag[1:],
+                duration=200,
+                loop=0,
+            )
+
+        if strgpdfn == 'post' and gdatfinlpost is not None and \
+                hasattr(gdatfinlpost, 'listpostindxproptype') and \
+                hasattr(gdatfinlpost, 'listpostboolpropaccp'):
+            lablproptype = getattr(gdatfinlpost, 'lablproptype', None)
+            if lablproptype is None:
+                nameproptype = getattr(gdatfinlpost, 'nameproptype', None)
+                lablproptype = [] if nameproptype is None else _retr_proposal_type_labels(nameproptype)
+            _write_proposal_activity_animation(
+                gdatfinlpost.listpostindxproptype,
+                gdatfinlpost.listpostboolpropaccp,
+                lablproptype,
+                os.path.join(pathanim, 'proposal_activity.gif'),
+            )
     
     filestat = open_narr(pathoutpcnfg + 'stat.txt', 'a')
     filestat.write('animfinl written.\n')

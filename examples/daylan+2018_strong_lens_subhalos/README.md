@@ -10,13 +10,13 @@ and writes image, residual, deflection, convergence, and parameter plots.
 From the PCAT root, run:
 
 ```bash
-python 'examples/daylan_2018_strong_lens_subhalos/daylan_2018_strong_lens_subhalos.py'
-python 'examples/daylan_2018_strong_lens_subhalos/daylan_2018_strong_lens_subhalos.py' --one-subhalo
+python 'examples/daylan+2018_strong_lens_subhalos/daylan+2018_strong_lens_subhalos.py'
+python 'examples/daylan+2018_strong_lens_subhalos/daylan+2018_strong_lens_subhalos.py' --one-subhalo
 ```
 
 Use `--typefileplot pdf` for PDF output or `--smoke` for a short pipeline check.
-The two fits write separately under `examples/daylan_2018_strong_lens_subhalos/daylan2018_catalog/`
-and `examples/daylan_2018_strong_lens_subhalos/daylan2018_one_subhalo/`. A full run may take a long
+The two fits write separately under `examples/daylan+2018_strong_lens_subhalos/daylan2018_catalog/`
+and `examples/daylan+2018_strong_lens_subhalos/daylan2018_one_subhalo/`. A full run may take a long
 time; inspect chain convergence before interpreting its posterior figures.
 
 The built-in simulation uses a different random seed and instrument/background

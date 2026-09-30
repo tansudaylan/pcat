@@ -39,7 +39,7 @@ def test_make_collage_combines_posterior_sequences(tmp_path):
 
     with Image.open(output_path) as animation:
         assert animation.n_frames == 4
-        assert animation.size == (300, 450)
+        assert animation.size == (440, 814)
         assert animation.info["duration"] == 100
 
 
@@ -67,7 +67,9 @@ def test_readme_embeds_multiframe_collage():
     readme_path = EXAMPLES_ROOT.parent / "README.md"
     readme = readme_path.read_text()
     assert DEFAULT_POSTERIOR_COLLAGE.is_file()
-    assert "![Posterior samples from four PCAT example problems]" in readme
+    assert "![Posterior samples from twelve PCAT example problems]" in readme
     assert str(DEFAULT_POSTERIOR_COLLAGE.relative_to(EXAMPLES_ROOT.parent)) in readme
     with Image.open(DEFAULT_POSTERIOR_COLLAGE) as animation:
-        assert animation.n_frames >= 4
+        assert animation.n_frames >= 16
+        assert animation.info["duration"] <= 150
+        assert animation.width >= 1700

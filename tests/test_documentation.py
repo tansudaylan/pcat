@@ -39,7 +39,7 @@ def test_documented_example_commands_resolve():
         "examples/chandra_point_source_catalog/chandra_point_source_catalog.py",
         "examples/simulated_hst_strong_lens/simulated_hst_strong_lens.py",
         "examples/run_all_examples.py",
-        "examples/daylan_2017_fermi_point_sources/daylan_2017_fermi_point_sources.py",
+        "examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py",
         "examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py",
         "examples/roman_strong_lens_perturber_catalog/roman_strong_lens_perturber_catalog.py",
         "examples/catalog_association_completeness_purity/catalog_association_completeness_purity.py",
@@ -71,17 +71,17 @@ def test_figure_examples_display_visuals_in_notebooks():
         "gaussian_mixture_catalog/gaussian_mixture_catalog",
         "chandra_point_source_catalog/chandra_point_source_catalog",
         "simulated_hst_strong_lens/simulated_hst_strong_lens",
-        "daylan_2017_fermi_point_sources/daylan_2017_fermi_point_sources",
-        "daylan_2018_strong_lens_subhalos/daylan_2018_strong_lens_subhalos",
+        "daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources",
+        "daylan+2018_strong_lens_subhalos/daylan+2018_strong_lens_subhalos",
         "voigt_spectral_line_catalog/voigt_spectral_line_catalog",
         "roman_strong_lens_perturber_catalog/roman_strong_lens_perturber_catalog",
         "catalog_association_completeness_purity/catalog_association_completeness_purity",
         "simulated_rubin_cluster_lens/simulated_rubin_cluster_lens",
-        "portillo_2017_crowded_sdss_m2/portillo_2017_crowded_sdss_m2",
-        "feder_2020_multiband_sdss_deblending/feder_2020_multiband_sdss_deblending",
-        "butler_2022_spire_sz_component_separation/butler_2022_spire_sz_component_separation",
-        "feder_2023_point_diffuse_spire/feder_2023_point_diffuse_spire",
-        "hall_2026_herschel_dsfg_multiplicity/hall_2026_herschel_dsfg_multiplicity",
+        "portillo+2017_crowded_sdss_m2/portillo+2017_crowded_sdss_m2",
+        "feder+2020_multiband_sdss_deblending/feder+2020_multiband_sdss_deblending",
+        "butler+2022_spire_sz_component_separation/butler+2022_spire_sz_component_separation",
+        "feder+2023_point_diffuse_spire/feder+2023_point_diffuse_spire",
+        "hall+2026_herschel_dsfg_multiplicity/hall+2026_herschel_dsfg_multiplicity",
     )
     for name in figure_examples:
         notebook = examples / f"{name}.ipynb"
@@ -94,13 +94,13 @@ def test_figure_examples_display_visuals_in_notebooks():
 def test_verified_pcat_publications_have_examples():
     examples = REPOSITORY_ROOT / "examples"
     publication_examples = {
-        "10.3847/1538-4357/aa679e": "daylan_2017_fermi_point_sources",
-        "10.3847/1538-3881/aa8565": "portillo_2017_crowded_sdss_m2",
-        "10.3847/1538-4357/aaa1f2": "daylan_2018_strong_lens_subhalos",
-        "10.3847/1538-3881/ab74cf": "feder_2020_multiband_sdss_deblending",
-        "10.3847/1538-4357/ac6c04": "butler_2022_spire_sz_component_separation",
-        "10.3847/1538-3881/ace69b": "feder_2023_point_diffuse_spire",
-        "10.3847/1538-4357/ae1e7a": "hall_2026_herschel_dsfg_multiplicity",
+        "10.3847/1538-4357/aa679e": "daylan+2017_fermi_point_sources",
+        "10.3847/1538-3881/aa8565": "portillo+2017_crowded_sdss_m2",
+        "10.3847/1538-4357/aaa1f2": "daylan+2018_strong_lens_subhalos",
+        "10.3847/1538-3881/ab74cf": "feder+2020_multiband_sdss_deblending",
+        "10.3847/1538-4357/ac6c04": "butler+2022_spire_sz_component_separation",
+        "10.3847/1538-3881/ace69b": "feder+2023_point_diffuse_spire",
+        "10.3847/1538-4357/ae1e7a": "hall+2026_herschel_dsfg_multiplicity",
     }
     index = (examples / "README.md").read_text()
 
@@ -108,8 +108,31 @@ def test_verified_pcat_publications_have_examples():
         root = examples / directory
         assert root.is_dir(), directory
         assert (root / f"{directory}.py").is_file(), directory
-        assert (root / f"{directory}.ipynb").is_file(), directory
+        notebook = root / f"{directory}.ipynb"
+        assert notebook.is_file(), directory
         assert doi in index, doi
+        document = json.loads(notebook.read_text())
+        for cell in document["cells"]:
+            assert cell["metadata"]["id"] == cell["id"]
+            expected_language = "python" if cell["cell_type"] == "code" else "markdown"
+            assert cell["metadata"]["language"] == expected_language
+
+        code = "\n".join(
+            "".join(cell["source"])
+            for cell in document["cells"]
+            if cell["cell_type"] == "code"
+        )
+        if directory == "daylan+2017_fermi_point_sources":
+            for posterior_product in (
+                "read_posterior",
+                "posterior.listpostcntpmodl",
+                "posterior.listpostdictelem",
+                "posterior.listpostnumbelem",
+                "posterior.listpostlliktotl",
+            ):
+                assert posterior_product in code
+        else:
+            assert "load_example_posterior" in code
 
 
 def test_rubin_dp1_notebook_preserves_real_data_scope():

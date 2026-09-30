@@ -15,11 +15,102 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent
 
 PIPELINE_EXAMPLES = [
-    (ROOT / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py", (), ROOT / "gaussian_mixture_catalog", "gaussian_mixture_catalog", True, True),
-    (ROOT / "chandra_point_source_catalog" / "chandra_point_source_catalog.py", (), ROOT / "chandra_point_source_catalog", "chandra_point_source_catalog", True, False),
-    (ROOT / "daylan_2017_fermi_point_sources" / "daylan_2017_fermi_point_sources.py", ("--smoke",), ROOT / "daylan_2017_fermi_point_sources", "daylan2017_mock", True, True),
-    (ROOT / "simulated_hst_strong_lens" / "simulated_hst_strong_lens.py", (), ROOT / "simulated_hst_strong_lens", "simulated_hst_strong_lens", True, True),
-    (ROOT / "voigt_spectral_line_catalog" / "voigt_spectral_line_catalog.py", ("--smoke",), ROOT / "voigt_spectral_line_catalog", "voigt_nomi", False, True),
+    (
+        ROOT / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py",
+        (),
+        ROOT / "gaussian_mixture_catalog" / "gaussian_mixture_catalog",
+        "gaussian_mixture_catalog",
+        True,
+        True,
+    ),
+    (
+        ROOT / "chandra_point_source_catalog" / "chandra_point_source_catalog.py",
+        (),
+        ROOT / "chandra_point_source_catalog" / "chandra_point_source_catalog",
+        "chandra_point_source_catalog",
+        True,
+        True,
+    ),
+    (
+        ROOT / "daylan+2017_fermi_point_sources" / "daylan+2017_fermi_point_sources.py",
+        ("--smoke",),
+        ROOT / "daylan+2017_fermi_point_sources" / "pcat_runs" / "daylan2017_mock",
+        "daylan2017_mock",
+        True,
+        True,
+    ),
+    (
+        ROOT / "daylan+2018_strong_lens_subhalos" / "daylan+2018_strong_lens_subhalos.py",
+        ("--smoke", "--fresh"),
+        ROOT / "daylan+2018_strong_lens_subhalos" / "daylan2018_catalog",
+        "daylan2018_catalog",
+        True,
+        True,
+    ),
+    (
+        ROOT / "simulated_hst_strong_lens" / "simulated_hst_strong_lens.py",
+        (),
+        ROOT / "simulated_hst_strong_lens",
+        "simulated_hst_strong_lens",
+        True,
+        True,
+    ),
+    (
+        ROOT / "portillo+2017_crowded_sdss_m2" / "portillo+2017_crowded_sdss_m2.py",
+        (),
+        ROOT / "portillo+2017_crowded_sdss_m2" / "pcat_runs" / "portillo2017_sdss_m2",
+        "portillo2017_sdss_m2",
+        True,
+        True,
+    ),
+    (
+        ROOT / "feder+2020_multiband_sdss_deblending" / "feder+2020_multiband_sdss_deblending.py",
+        (),
+        ROOT / "feder+2020_multiband_sdss_deblending" / "pcat_runs" / "feder2020_multiband_sdss",
+        "feder2020_multiband_sdss",
+        True,
+        True,
+    ),
+    (
+        ROOT / "butler+2022_spire_sz_component_separation" / "butler+2022_spire_sz_component_separation.py",
+        (),
+        ROOT / "butler+2022_spire_sz_component_separation" / "pcat_runs" / "butler2022_spire_sz",
+        "butler2022_spire_sz",
+        True,
+        True,
+    ),
+    (
+        ROOT / "feder+2023_point_diffuse_spire" / "feder+2023_point_diffuse_spire.py",
+        (),
+        ROOT / "feder+2023_point_diffuse_spire" / "pcat_runs" / "feder2023_point_diffuse_spire",
+        "feder2023_point_diffuse_spire",
+        True,
+        True,
+    ),
+    (
+        ROOT / "hall+2026_herschel_dsfg_multiplicity" / "hall+2026_herschel_dsfg_multiplicity.py",
+        (),
+        ROOT / "hall+2026_herschel_dsfg_multiplicity" / "pcat_runs" / "hall2026_dsfg_multiplicity",
+        "hall2026_dsfg_multiplicity",
+        True,
+        True,
+    ),
+    (
+        ROOT / "variable_number_stellar_flares" / "variable_number_stellar_flares.py",
+        ("--smoke",),
+        ROOT / "variable_number_stellar_flares",
+        "variable_number_stellar_flares",
+        False,
+        True,
+    ),
+    (
+        ROOT / "voigt_spectral_line_catalog" / "voigt_spectral_line_catalog.py",
+        ("--smoke",),
+        ROOT / "voigt_spectral_line_catalog" / "pcat_runs" / "voigt_nomi",
+        "voigt_nomi",
+        False,
+        True,
+    ),
 ]
 
 UTILITY_EXAMPLES = [
@@ -59,6 +150,13 @@ def verify_pipeline_outputs(
         raise RuntimeError(f"{run_name} did not produce: {', '.join(missing)}")
     if len(phases["posterior frames"]) < 2:
         raise RuntimeError(f"{run_name} produced fewer than two posterior frames")
+    proposal_animation = visual_root / "post" / "anim" / "proposal_activity.gif"
+    if not proposal_animation.is_file():
+        raise RuntimeError(f"{run_name} did not produce proposal activity animation")
+    print(f"Reading from {proposal_animation}...")
+    with Image.open(proposal_animation) as animation:
+        if animation.n_frames < 2:
+            raise RuntimeError(f"{run_name} proposal activity animation has fewer than two frames")
     if require_multiframe:
         for animation_path in phases["animations"]:
             print(f"Reading from {animation_path}...")

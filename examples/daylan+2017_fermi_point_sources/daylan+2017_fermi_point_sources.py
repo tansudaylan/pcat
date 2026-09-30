@@ -119,7 +119,8 @@ def build_configuration(smoke: bool = False, typefileplot: str = "png") -> dict[
         "numbswep": number_sweeps,
         "numbsamp": number_samples,
         "numbswepplot": 1_000 if smoke else 100_000,
-        "probspmr": 0.0,
+        "probtran": 0.7,
+        "probspmr": 0.4,
         "boolcondcatl": True,
         "boolmakeplot": True,
         "boolmakeplotinit": True,
@@ -138,6 +139,13 @@ def run_reproduction(smoke: bool = False, typefileplot: str = "png") -> object:
     from pcat.sampling import sample
 
     return sample(**build_configuration(smoke, typefileplot))
+
+
+def read_posterior(run: object) -> object:
+    """Load the finalized posterior produced by a PCAT run."""
+    from pcat.main import readfile
+
+    return readfile(run.pathoutpcnfg + "gdatfinlpost")
 
 
 def main() -> int:
