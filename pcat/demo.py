@@ -7,6 +7,8 @@ import runpy
 import sys
 from pathlib import Path
 
+import matplotlib as mpl
+
 from . import main as pcat_main
 
 
@@ -32,6 +34,7 @@ DEMO_DEFAULTS = {
 def run_pipeline_demo(output_root: Path, **configuration: object) -> None:
     """Run a lightweight simulated pipeline with shared plotting defaults."""
 
+    mpl.rcParams["text.usetex"] = False
     output_root = Path(output_root)
     output_root.mkdir(parents=True, exist_ok=True)
     os.environ["PCAT_DATA_PATH"] = str(output_root)

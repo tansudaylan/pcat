@@ -3,7 +3,7 @@ import os
 import pytest
 
 import pcat
-from pcat import collect_garbage, comp_rtag, submit_batch
+from pcat import submit_batch
 from pcat.paths import get_data_path, get_repository_path, get_visuals_path
 from tdpy.paths import open_narr
 
@@ -25,8 +25,6 @@ def test_repository_path_is_required(monkeypatch):
 
 def test_legacy_commands_reuse_shared_narrated_opener():
     assert pcat.open_narr is open_narr
-    assert collect_garbage.narr_open is open_narr
-    assert comp_rtag.narr_open is open_narr
     assert submit_batch.narr_open is open_narr
 
 

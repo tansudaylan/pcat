@@ -21,6 +21,7 @@ def load_example_module(name, path):
 
 def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch):
     captured = {}
+    monkeypatch.setitem(demo.mpl.rcParams, "text.usetex", True)
     monkeypatch.setattr(
         demo.pcat_main, "sample", lambda **configuration: captured.update(configuration)
     )
@@ -28,6 +29,7 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
 
     demo.run_pipeline_demo(output_root, typeexpr="gmix", numbswep=3)
 
+    assert demo.mpl.rcParams["text.usetex"] is False
     assert output_root.is_dir()
     assert os.environ["PCAT_DATA_PATH"] == str(output_root)
     assert captured["typeexpr"] == "gmix"
