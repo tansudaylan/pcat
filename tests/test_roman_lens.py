@@ -56,6 +56,22 @@ def test_population_records_generated_scene_diagnostics():
     assert summary["false_positive_rate"] <= summary["false_positive_rate_upper"]
 
 
+def test_population_threshold_controls_detection_rates():
+    records, _ = simulate_population(number_lenses=20, seed=814)
+    permissive = summarize_population(records, detection_threshold=0.1)
+    conservative = summarize_population(records, detection_threshold=0.9)
+
+    assert permissive["true_positive_rate"] >= conservative["true_positive_rate"]
+    assert permissive["false_positive_rate"] >= conservative["false_positive_rate"]
+
+
+def test_population_rejects_invalid_detection_threshold():
+    records, _ = simulate_population(number_lenses=4, seed=814)
+
+    with pytest.raises(ValueError, match="between zero and one"):
+        summarize_population(records, detection_threshold=1.1)
+
+
 def test_population_requires_injected_and_null_cohorts():
     with pytest.raises(ValueError, match="injected and null"):
         simulate_population(number_lenses=1)

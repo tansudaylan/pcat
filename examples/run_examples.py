@@ -20,6 +20,21 @@ PIPELINE_EXAMPLES = [
     (ROOT / "voigt-profile" / "pcat_voigt_profile_detection.py", ("--smoke",), ROOT / "voigt-profile", "voigt_nomi", False, True),
 ]
 
+UTILITY_EXAMPLES = [
+    (
+        ROOT / "catalog_association" / "catalog_association.py",
+        ROOT / "catalog_association" / "visuals" / "catalog_association.png",
+    ),
+    (
+        ROOT / "psf_subpixel" / "psf_subpixel.py",
+        ROOT / "psf_subpixel" / "visuals" / "psf_subpixel.png",
+    ),
+    (
+        ROOT / "roman_lens_catalog" / "roman_lens_catalog_diagnostic.py",
+        ROOT / "roman_lens_catalog" / "visuals" / "roman_lens_catalog_diagnostic.png",
+    ),
+]
+
 
 def verify_pipeline_outputs(
     output_root: Path, run_name: str, require_initial: bool = True, require_multiframe: bool = True
@@ -75,13 +90,12 @@ def main() -> None:
 
     run_script(ROOT / "make_posterior_animation_collage.py")
 
-    roman_root = ROOT / "roman_lens_catalog"
-    roman_output = roman_root / "roman_lens_catalog_diagnostic.png"
-    if roman_output.exists():
-        roman_output.unlink()
-    run_script(roman_root / "roman_lens_catalog_diagnostic.py")
-    if not roman_output.is_file():
-        raise RuntimeError("Roman lens diagnostic did not produce its figure")
+    for script, output_path in UTILITY_EXAMPLES:
+        if output_path.exists():
+            output_path.unlink()
+        run_script(script)
+        if not output_path.is_file():
+            raise RuntimeError(f"{script.name} did not produce {output_path}")
 
 
 if __name__ == "__main__":

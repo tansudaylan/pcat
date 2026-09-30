@@ -43,6 +43,41 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
     assert captured["pathbase"] == str(output_root)
 
 
+def test_notebook_example_launcher_restores_arguments(monkeypatch):
+    captured = {}
+    original_arguments = list(os.sys.argv)
+
+    def fake_run_path(path, run_name):
+        captured.update(path=path, run_name=run_name, arguments=list(os.sys.argv))
+
+    monkeypatch.setattr(demo.runpy, "run_path", fake_run_path)
+    demo.run_example_script("chan_demo/generate_demo.py", "--smoke")
+
+    assert Path(captured["path"]).is_file()
+    assert captured["run_name"] == "__main__"
+    assert captured["arguments"] == [captured["path"], "--smoke"]
+    assert os.sys.argv == original_arguments
+
+
+def test_notebook_visuals_display_saved_figures(tmp_path, monkeypatch):
+    import IPython.display
+
+    figure_path = tmp_path / "examples" / "mock" / "visuals" / "image.png"
+    figure_path.parent.mkdir(parents=True)
+    print(f"Writing to {figure_path}...")
+    Image.new("RGB", (8, 8), "red").save(figure_path)
+    shown = []
+    monkeypatch.setattr(demo, "__file__", str(tmp_path / "pcat" / "demo.py"))
+    monkeypatch.setattr(IPython.display, "display", shown.append)
+
+    demo.display_example_visuals("mock", "visuals/*.png")
+
+    assert len(shown) == 1
+    assert shown[0].filename == str(figure_path)
+    with pytest.raises(FileNotFoundError, match="missing"):
+        demo.display_example_visuals("mock", "visuals/missing*.png")
+
+
 @pytest.mark.parametrize(
     ("example_name", "run_name", "expected"),
     [

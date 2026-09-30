@@ -187,11 +187,16 @@ def simulate_population(
     return records, examples
 
 
-def summarize_population(records: list[dict[str, float | int | bool]]) -> dict[str, float | int]:
-    """Return thresholded detection and localization calibration metrics."""
+def summarize_population(
+    records: list[dict[str, float | int | bool]],
+    detection_threshold: float = 0.5,
+) -> dict[str, float | int]:
+    """Return detection and localization metrics at a posterior threshold."""
+    if not 0.0 <= detection_threshold <= 1.0:
+        raise ValueError("detection_threshold must be between zero and one.")
     truth = np.array([record["has_subhalo"] for record in records], dtype=bool)
     probability = np.array([record["posterior_one"] for record in records], dtype=float)
-    detected = probability >= 0.5
+    detected = probability >= detection_threshold
     injected_index = np.array([record["injected_index"] for record in records], dtype=int)
     recovered_index = np.array([record["recovered_index"] for record in records], dtype=int)
     number_injected = int(truth.sum())

@@ -1,6 +1,12 @@
 Examples
 ========
 
+Every Python example under ``examples/`` has a corresponding Jupyter notebook
+in the same directory. Open the notebook in VS Code or Jupyter to run it
+interactively. The Python scripts remain available for automated and command-line
+runs. The batch-command notebook lists its external commands without executing
+them.
+
 Pipeline demonstrations
 -----------------------
 
@@ -71,7 +77,7 @@ Publication and instrument examples
 
       python examples/roman_lens_catalog/roman_lens_catalog_diagnostic.py
 
-   .. image:: ../examples/roman_lens_catalog/roman_lens_catalog_diagnostic.png
+   .. image:: ../examples/roman_lens_catalog/visuals/roman_lens_catalog_diagnostic.png
       :alt: Simulated Roman strong-lens images, residual, and catalog posterior
       :width: 720px
       :align: center
@@ -95,6 +101,11 @@ Analysis utilities
 
       python examples/catalog_association/catalog_association.py
 
+   .. image:: ../examples/catalog_association/visuals/catalog_association.png
+      :alt: Catalog completeness and purity across association radii
+      :width: 640px
+      :align: center
+
 ``psf_subpixel``
    Reconstruction of an oversampled point-spread function with PCAT's
    piecewise-cubic detector-pixel model, including interpolation residuals.
@@ -102,6 +113,11 @@ Analysis utilities
    .. code-block:: bash
 
       python examples/psf_subpixel/psf_subpixel.py
+
+   .. image:: ../examples/psf_subpixel/visuals/psf_subpixel.png
+      :alt: Cubic subpixel point-spread-function reconstruction and residuals
+      :width: 640px
+      :align: center
 
 Scientific interpretation
 -------------------------

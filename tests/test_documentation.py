@@ -1,3 +1,4 @@
+import json
 import tomllib
 from pathlib import Path
 
@@ -30,10 +31,51 @@ def test_documented_example_commands_resolve():
         "examples/Daylan+2017/generate_reproduction.py",
         "examples/voigt-profile/pcat_voigt_profile_detection.py",
         "examples/roman_lens_catalog/roman_lens_catalog_diagnostic.py",
+        "examples/catalog_association/catalog_association.py",
+        "examples/psf_subpixel/psf_subpixel.py",
     ]
 
     for relative_path in relative_paths:
         assert (REPOSITORY_ROOT / relative_path).is_file()
+
+
+def test_every_example_script_has_a_notebook():
+    examples = REPOSITORY_ROOT / "examples"
+    for script in examples.rglob("*.py"):
+        notebook = script.with_suffix(".ipynb")
+        assert notebook.is_file(), f"Missing notebook for {script.relative_to(examples)}"
+        print(f"Reading from {notebook}...")
+        document = json.loads(notebook.read_text())
+        assert document["nbformat"] == 4
+        assert {cell["cell_type"] for cell in document["cells"]} == {"code", "markdown"}
+        for cell in document["cells"]:
+            assert cell["metadata"]["language"] == (
+                "python" if cell["cell_type"] == "code" else "markdown"
+            )
+            assert cell["metadata"]["id"] == cell["id"]
+
+
+def test_figure_examples_display_visuals_in_notebooks():
+    examples = REPOSITORY_ROOT / "examples"
+    figure_examples = (
+        "gmix_demo/generate_demo",
+        "chan_demo/generate_demo",
+        "hst_lens/generate_demo",
+        "Daylan+2017/generate_reproduction",
+        "Daylan+2018/generate_reproduction",
+        "voigt-profile/pcat_voigt_profile_detection",
+        "roman_lens_catalog/roman_lens_catalog_diagnostic",
+        "catalog_association/catalog_association",
+        "psf_subpixel/psf_subpixel",
+        "make_posterior_animation_collage",
+        "run_examples",
+    )
+    for name in figure_examples:
+        notebook = examples / f"{name}.ipynb"
+        print(f"Reading from {notebook}...")
+        cells = json.loads(notebook.read_text())["cells"]
+        code = "\n".join("".join(cell["source"]) for cell in cells if cell["cell_type"] == "code")
+        assert "display_example_visuals(" in code or "display(Image(" in code, name
 
 
 def test_documentation_excludes_obsolete_interface_terms():

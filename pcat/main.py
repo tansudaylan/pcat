@@ -1753,7 +1753,16 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
 
         if gdat.propwithsing and thisindxsampfull.size > 1:
             probpropblock = getattr(gdat, 'probpropblock', 0.)
-            if np.random.rand() >= probpropblock:
+            if np.random.rand() < probpropblock:
+                proposal_blocks = getattr(gdat, 'proposal_blocks', ())
+                valid_blocks = [
+                    np.asarray(block, dtype=int)
+                    for block in proposal_blocks
+                    if np.all(np.isin(block, thisindxsampfull))
+                ]
+                if valid_blocks:
+                    thisindxsampfull = valid_blocks[np.random.randint(len(valid_blocks))]
+            else:
                 thisindxsampfull = np.array([np.random.choice(thisindxsampfull)], dtype=int)
         
         thisindxstdp = np.full(thisindxsampfull.size, -1, dtype=int)
@@ -18175,6 +18184,10 @@ def _sample_generic(**kwargs):
     proposal_correlation = np.asarray(
         kwargs.pop('proposal_correlation', np.eye(parameter_count)), dtype=float
     )
+    proposal_blocks = tuple(
+        tuple(int(index) for index in block)
+        for block in kwargs.pop('proposal_blocks', ())
+    )
     initial_values = kwargs.pop('initial_values', None)
     for name, values in (
         ('prior_means', prior_means),
@@ -18194,6 +18207,14 @@ def _sample_generic(**kwargs):
     if not np.allclose(proposal_correlation, proposal_correlation.T):
         raise ValueError('proposal_correlation must be symmetric.')
     np.linalg.cholesky(proposal_correlation)
+    if any(
+        len(block) < 2
+        or len(set(block)) != len(block)
+        or min(block) < 0
+        or max(block) >= parameter_count
+        for block in proposal_blocks
+    ):
+        raise ValueError('proposal_blocks must contain unique valid parameter indices.')
 
     indxpara = tdpy.gdatstrt()
     indxpara.bacp = np.array([], dtype=int)
@@ -18228,6 +18249,7 @@ def _sample_generic(**kwargs):
         'dictfitt': dictfitt,
         'stdvpropbase': proposal_scales,
         'proposal_correlation': proposal_correlation,
+        'proposal_blocks': proposal_blocks,
         'probtran': 0.,
         'probspmr': 0.,
         'boolcondcatl': False,

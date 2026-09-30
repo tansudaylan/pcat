@@ -44,8 +44,12 @@ def run_reproduction(one_subhalo: bool = False, smoke: bool = False,
     from pcat.demo import run_pipeline_demo
 
     configuration = build_configuration(one_subhalo, smoke, typefileplot)
+    output_root = OUTPUT_ROOT / str(configuration["strgcnfg"])
+    covariance_dir = output_root / "visuals/post/finl/varbscal/cova"
+    print(f"Writing to {covariance_dir}...")
+    covariance_dir.mkdir(parents=True, exist_ok=True)
     run_pipeline_demo(
-        OUTPUT_ROOT / str(configuration["strgcnfg"]),
+        output_root,
         **configuration,
     )
 
