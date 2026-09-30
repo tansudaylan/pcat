@@ -2,7 +2,12 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from examples.make_posterior_animation_collage import PANELS, make_collage
+from examples.make_posterior_animation_collage import (
+    DEFAULT_OUTPUT,
+    PANELS,
+    ROOT,
+    make_collage,
+)
 
 
 def _write_frame(path: Path, color: str, marker: int) -> None:
@@ -34,3 +39,13 @@ def test_make_collage_combines_posterior_sequences(tmp_path):
         assert animation.n_frames == 4
         assert animation.size == (300, 450)
         assert animation.info["duration"] == 100
+
+
+def test_readme_embeds_multiframe_collage():
+    readme_path = ROOT.parent / "README.md"
+    readme = readme_path.read_text()
+    assert DEFAULT_OUTPUT.is_file()
+    assert "![Posterior samples from four PCAT example problems]" in readme
+    assert str(DEFAULT_OUTPUT.relative_to(ROOT.parent)) in readme
+    with Image.open(DEFAULT_OUTPUT) as animation:
+        assert animation.n_frames >= 4

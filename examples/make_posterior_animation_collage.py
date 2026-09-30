@@ -24,7 +24,7 @@ class Panel:
 
 PANELS = (
     Panel("Gaussian mixture | model intensity", "gmix_demo/visuals/post/fram/thiscntpmodl_*.png"),
-    Panel("Point sources | residual counts", "chan_demo/visuals/post/fram/thiscntpresien02evt0_*.png"),
+    Panel("Point sources | model counts", "Daylan+2017/visuals/post/fram/thiscntpmodlen00evt0_*.png"),
     Panel("Strong lens | model counts", "hst_lens/visuals/post/fram/thiscntpmodl_*.png"),
     Panel("Spectral lines | model and data", "voigt-profile/visuals/post/fram/thisscatcntpevt0_*.png"),
 )

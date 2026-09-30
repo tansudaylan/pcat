@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parent
 PIPELINE_EXAMPLES = [
     (ROOT / "gmix_demo" / "generate_demo.py", (), ROOT / "gmix_demo", "gmix_demo", True, True),
     (ROOT / "chan_demo" / "generate_demo.py", (), ROOT / "chan_demo", "chan_demo", True, False),
+    (ROOT / "Daylan+2017" / "generate_reproduction.py", ("--smoke",), ROOT / "Daylan+2017", "daylan2017_mock", True, True),
     (ROOT / "hst_lens" / "generate_demo.py", (), ROOT / "hst_lens", "hst_lens_demo", True, True),
     (ROOT / "voigt-profile" / "pcat_voigt_profile_detection.py", ("--smoke",), ROOT / "voigt-profile", "voigt_nomi", False, True),
 ]
