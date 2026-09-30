@@ -38,18 +38,27 @@ Pipeline demonstrations
    matched sample, and passes each usable cutout to PCAT. DP1 requires Rubin
    data rights, and SIMBAD does not constitute a complete census of lenses.
 
-Run the image analyses, Roman benchmark, and reduced Voigt calculation with:
+Run the maintained local smoke suite with:
 
 .. code-block:: bash
 
    python examples/run_all_examples.py
 
-Posterior samples from four maintained examples are synchronized below. The
-panels show model intensity for a Gaussian mixture, model counts for point
-sources and a strong lens, and the model with data for spectral lines.
+The suite runs the compact image and publication-inspired simulations, the
+stellar-flare and Voigt smoke configurations, the Roman and catalog-association
+utilities, the proposal profiler, and the sampler comparison. It regenerates
+their outputs. It intentionally excludes workflows requiring authenticated
+services or mission downloads, the long radial-velocity analysis, and notebooks
+whose role is interactive inspection.
+
+Posterior samples from twelve maintained examples are synchronized below. The
+panels span Gaussian mixtures, X-ray and gamma-ray point sources, strong lenses,
+Sloan Digital Sky Survey and Herschel deblending, stellar flares, and spectral
+lines. Every panel uses simulated data and a fixed intensity scale across its
+frames.
 
 .. image:: ../examples/pcat_posterior_samples.gif
-   :alt: Animated posterior samples from four maintained PCAT examples
+   :alt: Animated posterior samples from twelve maintained PCAT examples
    :width: 760px
    :align: center
 
@@ -82,6 +91,37 @@ Publication and instrument examples
 
       python examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py --configuration nomi
 
+``jwst_miri_ngc7027_line_catalog``
+   Transdimensional Voigt-line catalog for the public James Webb Space Telescope
+   (JWST) MIRI Medium Resolution Spectrometer spectrum of NGC 7027 from program
+   1523. The script downloads the level-3 spectrum from the Mikulski Archive for
+   Space Telescopes when it is absent, maps the measured flux and uncertainty to
+   effective Poisson counts, and fits a line catalog over 5.30--5.535 microns.
+
+   .. code-block:: bash
+
+      python examples/jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py --numbswep 200000
+
+``variable_number_exoplanets_radial_velocity``
+   Simulated six-year, two-instrument radial-velocity series containing three
+   injected planets. PCAT samples a variable catalog of Keplerian signals while
+   marginalizing instrument offsets and stellar jitter. The default 100,000
+   sweeps are intended for the full demonstration; ``--smoke`` provides a short
+   pipeline check.
+
+   .. code-block:: bash
+
+      python examples/variable_number_exoplanets_radial_velocity/variable_number_exoplanets_radial_velocity.py --smoke
+
+``variable_number_stellar_flares``
+   Simulated one-day, TESS-like light curve with fast-rise, exponential-decay
+   flares. PCAT fits a variable catalog of symmetric Voigt bursts, making the
+   profile mismatch and its effect on inferred component count explicit.
+
+   .. code-block:: bash
+
+      python examples/variable_number_stellar_flares/variable_number_stellar_flares.py --smoke
+
 ``roman_strong_lens_perturber_catalog``
    Seeded Roman strong-lens population benchmark and catalog-detection
    diagnostic.
@@ -103,8 +143,55 @@ Publication and instrument examples
    Fermi Large Area Telescope event-filter configuration for PG 1553+113. This
    utility requires the Fermi Science Tools and local mission data.
 
+``portillo+2017_crowded_sdss_m2``
+   Simulated Sloan Digital Sky Survey crowded-field deblending patterned after
+   Portillo et al. (2017).
+
+``feder+2020_multiband_sdss_deblending``
+   Simulated multiband Sloan Digital Sky Survey deblending patterned after
+   Feder et al. (2020).
+
+``butler+2022_spire_sz_component_separation``
+   Simulated Herschel SPIRE point-source and Sunyaev-Zeldovich component
+   separation patterned after Butler et al. (2022).
+
+``feder+2023_point_diffuse_spire``
+   Simulated joint point-source and diffuse-emission inference patterned after
+   Feder et al. (2023).
+
+``hall+2026_herschel_dsfg_multiplicity``
+   Simulated Herschel dusty star-forming galaxy multiplicity inference patterned
+   after Hall et al. (2026).
+
 Analysis utilities
 ------------------
+
+``sampler_comparison_emcee_dynesty``
+   Controlled simulated radial-velocity comparison of PCAT, emcee, and dynesty.
+   The fixed-dimensional comparison uses the same likelihood and priors for all
+   samplers. The variable-dimensional comparison contrasts one PCAT catalog run
+   with separate dynesty evidence calculations for each planet count; emcee is
+   excluded from that portion because it does not compare dimensions.
+
+   .. code-block:: bash
+
+      python examples/sampler_comparison_emcee_dynesty/sampler_comparison_emcee_dynesty.py --part fixed
+
+``proposal_profiling``
+   Simulated Voigt-line run reporting proposal attempts, acceptance fractions,
+   time per sweep, and the recorded timing breakdown for major pipeline phases.
+
+   .. code-block:: bash
+
+      python examples/proposal_profiling/proposal_profiling.py --numbswep 20000
+
+``population_grid``
+   Seeded simulated populations used to demonstrate PCAT's marginal and pairwise
+   posterior plotting. These arrays are illustrative rather than observations.
+
+``legacy_external_analysis_commands``
+   Command-reference notebook for external analyses. It records commands but
+   does not execute them.
 
 ``catalog_association_completeness_purity``
    Seeded completeness and purity calculation for coordinate-and-value catalog

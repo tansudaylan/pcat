@@ -48,12 +48,12 @@ the object from the extension-free path:
 
    from pcat.main import readfile
 
-    project_root = Path("examples")
-    run_root = project_root / "pcat_runs" / "gaussian_mixture_catalog"
+   project_root = Path("examples")
+   run_root = project_root / "pcat_runs" / "gaussian_mixture_catalog"
    state = readfile(
        str(run_root / "data" / "outp" / "gaussian_mixture_catalog" / "gdatfinlpost")
    )
-   print(state.numbsamp)
+   retained_sample_count = state.numbsamp
 
 Completion markers
 ------------------
@@ -69,7 +69,29 @@ Visual products
 ``init`` contains simulated data, reference-model, and initial diagnostics.
 ``post/fram`` contains snapshots across the chain. ``post/finl`` contains final
 posterior summaries and diagnostics. ``post/anim`` contains GIFs assembled from
-frame plots. Empty optional directories are removed at successful completion.
+frame plots. When proposal metadata is present, it also contains
+``proposal_activity.gif`` with cumulative attempts and acceptances and
+``proposal_sequence.gif`` with proposal labels on saved chain-state frames.
+Empty optional directories are removed at successful completion.
+
+Condensed catalogs and association
+----------------------------------
+
+Transdimensional runs always retain the sampled catalogs in
+``listpostdictelem``, ``listpostindxelemfull``, and related final-state arrays.
+With ``boolcondcatl=True`` and supported two-dimensional spatial elements,
+final processing groups samples by ``xpos`` and ``ypos`` into a condensed
+catalog. ``dictglob["liststkscond"]`` stores the grouped samples,
+``dictglob["poststkscond"]`` stores their median and 16th/84th percentiles, and
+``prvl`` stores the prevalence of each condensed element across retained
+catalogs. Reference-catalog association and completeness products use this
+post-sampling representation. They are not likelihood terms.
+
+The current condensation algorithm is spatial. Spectral lines, stellar flares,
+and Keplerian radial-velocity elements do not expose the required ``xpos`` and
+``ypos`` pair, so those workflows retain the sampled catalogs without a
+condensed summary. Set ``boolcondcatl=False`` to skip condensation explicitly,
+as the lightweight demo defaults do.
 
 Convergence and interpretation
 ------------------------------
@@ -80,6 +102,12 @@ predictive residuals. A completed process is not necessarily a converged or
 scientifically adequate inference. Transdimensional parameters also require
 population-level or association-aware summaries because raw element labels are
 not persistent.
+
+The final state stores per-sweep proposal IDs, accept/reject flags, and
+acceptance probabilities, together with acceptance fractions by proposal type.
+Interpret these alongside chain movement and convergence rather than optimizing
+acceptance fraction alone. See :doc:`sampling` for the move-specific acceptance
+terms, tunable settings, burn-in, and stopping rules.
 
 Reproducibility checklist
 -------------------------

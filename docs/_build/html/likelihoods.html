@@ -1,0 +1,271 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Likelihood configurations &mdash; PCAT 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+    <link rel="shortcut icon" href="_static/pcat_icon.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Sampling, proposals, and convergence" href="sampling.html" />
+    <link rel="prev" title="Capabilities" href="capabilities.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #000000" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            PCAT
+              <img src="_static/pcat_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Likelihood configurations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#poisson-image-likelihood">Poisson image likelihood</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#data-and-pixelization">Data and pixelization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#source-and-lens-components">Source and lens components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#background-emission-and-exposure">Background emission and exposure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#point-spread-functions">Point-spread functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gaussian-mixture-image-model">Gaussian-mixture image model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#spectral-and-time-series-likelihood">Spectral and time-series likelihood</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#user-supplied-likelihood">User-supplied likelihood</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sampling.html">Sampling, proposals, and convergence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #000000" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PCAT</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Likelihood configurations</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/likelihoods.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="likelihood-configurations">
+<h1>Likelihood configurations<a class="headerlink" href="#likelihood-configurations" title="Link to this heading"></a></h1>
+<p>PCAT separates the likelihood for the data from the transdimensional catalog
+summary. Choose the likelihood family to match the data representation, then
+configure its geometry, response, background, and source model. In particular,
+catalog association is a post-sampling summary of transdimensional catalogs;
+it is not a separate likelihood.</p>
+<section id="poisson-image-likelihood">
+<h2>Poisson image likelihood<a class="headerlink" href="#poisson-image-likelihood" title="Link to this heading"></a></h2>
+<p>The image workflow predicts counts in pixels from a source model, exposure,
+background emission, and instrument response. Point sources, extended emission,
+foreground light, and gravitational lenses are components of this one image
+likelihood, not separate likelihood families.</p>
+<section id="data-and-pixelization">
+<h3>Data and pixelization<a class="headerlink" href="#data-and-pixelization" title="Link to this heading"></a></h3>
+<p>Set <code class="docutils literal notranslate"><span class="pre">typedata=&quot;simu&quot;</span></code> for generated counts or <code class="docutils literal notranslate"><span class="pre">typedata=&quot;inpt&quot;</span></code> for
+supplied data. For input data, <code class="docutils literal notranslate"><span class="pre">strgexprsbrt</span></code> identifies the surface-brightness
+or count-rate FITS input. Exposure can be constant with <code class="docutils literal notranslate"><span class="pre">typeexpo=&quot;cons&quot;</span></code>
+and <code class="docutils literal notranslate"><span class="pre">strgexpo</span></code> or read from a FITS map with <code class="docutils literal notranslate"><span class="pre">typeexpo=&quot;file&quot;</span></code> and
+<code class="docutils literal notranslate"><span class="pre">strgexpo</span></code>. PCAT converts the input to expected counts using the exposure and
+its configured units before evaluating the likelihood.</p>
+<p><code class="docutils literal notranslate"><span class="pre">typepixl=&quot;cart&quot;</span></code> selects a Cartesian image. Set <code class="docutils literal notranslate"><span class="pre">numbsidecart</span></code> to choose
+its side length; <code class="docutils literal notranslate"><span class="pre">boolforccart=True</span></code> forces a square grid when pixel
+coordinates are supplied directly. <code class="docutils literal notranslate"><span class="pre">typepixl=&quot;heal&quot;</span></code> selects HEALPix data
+and uses <code class="docutils literal notranslate"><span class="pre">numbsideheal</span></code> for its resolution. Fermi-LAT defaults to HEALPix;
+other image experiments default to Cartesian pixels.</p>
+<p><code class="docutils literal notranslate"><span class="pre">liketype=&quot;pois&quot;</span></code> is the default for count data. Omitting the data-only
+factorial, its log likelihood is</p>
+<div class="math notranslate nohighlight">
+\[\log L_{\mathrm{Pois}} = \sum_i D_i \log M_i - M_i,\]</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">D</span></code> is the observed count map and <code class="docutils literal notranslate"><span class="pre">M</span></code> is the predicted count map.
+Set <code class="docutils literal notranslate"><span class="pre">liketype=&quot;gaus&quot;</span></code> for the built-in Gaussian residual likelihood, which
+uses <code class="docutils literal notranslate"><span class="pre">varidata</span></code> (by default, the observed counts with a floor of one) as its
+per-pixel variance:</p>
+<div class="math notranslate nohighlight">
+\[\log L_{\mathrm{Gaus}} = -\frac{1}{2}\sum_i \frac{(D_i-M_i)^2}{V_i}.\]</div>
+</section>
+<section id="source-and-lens-components">
+<h3>Source and lens components<a class="headerlink" href="#source-and-lens-components" title="Link to this heading"></a></h3>
+<p>Configure populations with <code class="docutils literal notranslate"><span class="pre">typeelem</span></code> and their true and fitted settings in
+<code class="docutils literal notranslate"><span class="pre">dicttrue</span></code> and <code class="docutils literal notranslate"><span class="pre">dictfitt</span></code>. Common image components include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">lghtpnts</span></code> for point sources with sampled positions and fluxes.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lghtgausbgrd</span></code> for extended Gaussian emission components.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lens</span></code> for lens deflectors and their associated mass parameters.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clusvari</span></code> for variable-width Gaussian components represented in an image count map.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">typeemishost=&quot;sers&quot;</span></code> for a Sérsic foreground lens-galaxy light model;
+<code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code> disables this host-emission component.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">boollenssubh=True</span></code> to include lens-substructure deflectors where the
+selected lens configuration supports them.</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">typespatdist</span></code> or <code class="docutils literal notranslate"><span class="pre">spatdisttype</span></code> setting selects the spatial prior for
+each population. Source flux priors are selected with <code class="docutils literal notranslate"><span class="pre">typeprioflux</span></code> and
+bounded or customized with the corresponding per-element limits and
+<code class="docutils literal notranslate"><span class="pre">limtparaelem</span></code> where available. HST strong-lens examples combine a fixed
+macro lens and source/host light with a variable <code class="docutils literal notranslate"><span class="pre">lens</span></code> population for
+additional deflectors.</p>
+</section>
+<section id="background-emission-and-exposure">
+<h3>Background emission and exposure<a class="headerlink" href="#background-emission-and-exposure" title="Link to this heading"></a></h3>
+<p>Experiment defaults define the available background components. Override their
+templates with <code class="docutils literal notranslate"><span class="pre">sbrtbacknorm</span></code> in <code class="docutils literal notranslate"><span class="pre">dicttrue</span></code> or <code class="docutils literal notranslate"><span class="pre">dictfitt</span></code>. The
+<code class="docutils literal notranslate"><span class="pre">listnamediff</span></code> entry selects the diffuse components added to the model; names
+such as <code class="docutils literal notranslate"><span class="pre">back0000</span></code> refer to entries in the template list. <code class="docutils literal notranslate"><span class="pre">boolspecback</span></code>
+controls whether a background amplitude is shared spectrally or varies by
+energy bin. Fermi-LAT configurations can use a uniform component, a diffuse
+template, or the <code class="docutils literal notranslate"><span class="pre">anlytype=&quot;bfun&quot;</span></code> background-function basis. Exposure
+controls how model brightness becomes expected counts and can be masked with
+<code class="docutils literal notranslate"><span class="pre">listmask</span></code> and <code class="docutils literal notranslate"><span class="pre">typemaskexpo</span></code>.</p>
+</section>
+<section id="point-spread-functions">
+<h3>Point-spread functions<a class="headerlink" href="#point-spread-functions" title="Link to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">typeevalpsfn</span></code> controls where the PSF is applied:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code> leaves the source model unconvolved.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;kern&quot;</span></code> applies a local PSF kernel to supported point-source elements.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;conv&quot;</span></code> convolves eligible image components.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;full&quot;</span></code> enables both kernel evaluation and image convolution where
+supported.</p></li>
+</ul>
+<p>The experiment selects a PSF profile family through <code class="docutils literal notranslate"><span class="pre">typemodlpsfn</span></code>. Current
+experiment defaults include single Gaussian, single King, and double King
+profiles. Supply profile parameters through <code class="docutils literal notranslate"><span class="pre">psfpexpr</span></code> in <code class="docutils literal notranslate"><span class="pre">dicttrue</span></code> and
+<code class="docutils literal notranslate"><span class="pre">dictfitt</span></code>; set <code class="docutils literal notranslate"><span class="pre">boolmodipsfn=True</span></code> when PSF parameters should vary in the
+fit. Fermi-LAT can also use its energy- and event-class-dependent PSF scale
+<code class="docutils literal notranslate"><span class="pre">fermscalfact</span></code>. PSF and source-kernel options depend on pixelization and
+element type; unsupported combinations should use <code class="docutils literal notranslate"><span class="pre">typeevalpsfn=&quot;none&quot;</span></code>.</p>
+</section>
+</section>
+<section id="gaussian-mixture-image-model">
+<h2>Gaussian-mixture image model<a class="headerlink" href="#gaussian-mixture-image-model" title="Link to this heading"></a></h2>
+<p>The current <code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gmix&quot;</span></code> example uses variable-width Gaussian elements
+(<code class="docutils literal notranslate"><span class="pre">typeelem=[&quot;clusvari&quot;]</span></code>) on a spatial pixel grid. Although it sets
+<code class="docutils literal notranslate"><span class="pre">boolbinsener=False</span></code> because it has no energy axis, its spatial data remain
+binned; the maintained 8-by-8 example uses the Poisson image likelihood. It is
+therefore a Gaussian-mixture image model, not an unbinned spatial likelihood.</p>
+<p>A genuinely unbinned mixture likelihood would evaluate a point-process density
+at each observed coordinate rather than first accumulating coordinates into
+pixels. That likelihood is not currently exposed by this PCAT configuration.
+The current simulated example is in
+<code class="docutils literal notranslate"><span class="pre">examples/gaussian_mixture_catalog/gaussian_mixture_catalog.py</span></code>.</p>
+</section>
+<section id="spectral-and-time-series-likelihood">
+<h2>Spectral and time-series likelihood<a class="headerlink" href="#spectral-and-time-series-likelihood" title="Link to this heading"></a></h2>
+<p>The one-dimensional <code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;fire&quot;</span></code> workflow uses <code class="docutils literal notranslate"><span class="pre">anlytype=&quot;spec&quot;</span></code> for
+spectral bins. Set <code class="docutils literal notranslate"><span class="pre">binsenerfull</span></code> to the axis edges and use
+<code class="docutils literal notranslate"><span class="pre">typedata=&quot;inpt&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">strgexprsbrt</span></code>, <code class="docutils literal notranslate"><span class="pre">typeexpo</span></code>, and <code class="docutils literal notranslate"><span class="pre">strgexpo</span></code> for
+supplied spectra and exposure. A continuum or background template can be
+provided through <code class="docutils literal notranslate"><span class="pre">dictfitt[&quot;sbrtbacknorm&quot;]</span></code> and activated with
+<code class="docutils literal notranslate"><span class="pre">dictfitt[&quot;listnamediff&quot;]</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">spectype</span></code> setting selects an analytic spectral shape:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;powr&quot;</span></code> for a power law.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;gaus&quot;</span></code> for a Gaussian profile.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;voig&quot;</span></code> for a Voigt profile.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;edis&quot;</span></code> for an energy-dispersion profile using the configured
+<code class="docutils literal notranslate"><span class="pre">edisintp</span></code> response.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;colr&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;curv&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;expc&quot;</span></code> for color-index, curved, or
+exponential-cutoff continua.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">lghtlinevoig</span></code> elements use integrated line flux <code class="docutils literal notranslate"><span class="pre">flux</span></code>, line center
+<code class="docutils literal notranslate"><span class="pre">elin</span></code>, Gaussian width <code class="docutils literal notranslate"><span class="pre">sigm</span></code>, and Lorentz width <code class="docutils literal notranslate"><span class="pre">gamm</span></code>. Set parameter
+bounds with <code class="docutils literal notranslate"><span class="pre">limtparaelem</span></code> and proposal scales with <code class="docutils literal notranslate"><span class="pre">stdvpropelemfire</span></code>.
+The current public configuration does not expose a general instrument-specific
+line-spread-function convolution; the profile parameters or configured energy
+dispersion must represent the spectral response used in a run.</p>
+<p>The same one-dimensional machinery can model time-binned data by treating time
+as the axis. The maintained stellar-flare example uses <code class="docutils literal notranslate"><span class="pre">lghtlinevoig</span></code> as a
+convenient flare profile and labels its asymmetric injected flare shapes as
+simulated. Radial-velocity models use Keplerian <code class="docutils literal notranslate"><span class="pre">lghtlinekepl</span></code> elements and
+their dedicated likelihood in <code class="xref py py-mod docutils literal notranslate"><span class="pre">pcat.radial_velocity</span></code>.</p>
+</section>
+<section id="user-supplied-likelihood">
+<h2>User-supplied likelihood<a class="headerlink" href="#user-supplied-likelihood" title="Link to this heading"></a></h2>
+<p>Use <code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gener&quot;</span></code> for a fixed-dimensional custom likelihood. The
+<code class="docutils literal notranslate"><span class="pre">retr_llik(gdat,</span> <span class="pre">strgmodl,</span> <span class="pre">values)</span></code> callback returns one log-likelihood value
+for the supplied parameter vector; PCAT handles configured priors, proposals,
+accept/reject steps, persistence, and diagnostics. This is the appropriate path
+when none of the built-in binned likelihoods matches the data model. See
+<a class="reference internal" href="capabilities.html"><span class="doc">Capabilities</span></a> for a complete callback example and <a class="reference internal" href="sampling.html"><span class="doc">Sampling, proposals, and convergence</span></a> for
+proposal and convergence controls.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="capabilities.html" class="btn btn-neutral float-left" title="Capabilities" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sampling.html" class="btn btn-neutral float-right" title="Sampling, proposals, and convergence" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Tansu Daylan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

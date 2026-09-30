@@ -1,7 +1,12 @@
 import json
+import inspect
 import re
 import tomllib
 from pathlib import Path
+
+from pcat import plotting, sampling
+from pcat.plotting import POSTERIOR_ANIMATION_PANELS
+from pcat.main import retr_pathrun
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +32,9 @@ def test_documentation_pages_are_in_the_toctree():
         "capabilities",
         "examples",
         "getting_started",
+        "likelihoods",
         "outputs",
+        "sampling",
         "troubleshooting",
     }
     for page in pages:
@@ -187,12 +194,17 @@ def test_documentation_excludes_obsolete_interface_terms():
 def test_documentation_dependencies_are_declared():
     metadata = tomllib.loads((REPOSITORY_ROOT / "pyproject.toml").read_text())
     requirements = (DOCS_ROOT / "requirements.txt").read_text().splitlines()
+    getting_started = (DOCS_ROOT / "getting_started.rst").read_text().lower()
 
     assert metadata["project"]["optional-dependencies"]["docs"] == [
         "sphinx>=8",
         "sphinx-rtd-theme>=3",
     ]
     assert requirements == metadata["project"]["optional-dependencies"]["docs"]
+    for dependency in metadata["project"]["dependencies"]:
+        assert dependency.lower() in getting_started
+    for dependency in metadata["project"]["optional-dependencies"]["examples"]:
+        assert dependency.lower() in getting_started
 
 
 def test_documentation_covers_primary_capabilities():
@@ -210,3 +222,84 @@ def test_documentation_covers_primary_capabilities():
         term for term in required_terms if term in capabilities
     }
     assert not missing_terms
+
+
+def test_documentation_separates_likelihoods_from_catalog_products():
+    capabilities = (DOCS_ROOT / "capabilities.rst").read_text()
+    likelihoods = (DOCS_ROOT / "likelihoods.rst").read_text()
+
+    assert "Point sources, extended emission, foreground light, and gravitational lenses" in capabilities
+    assert "Unbinned Gaussian-mixture likelihood" in capabilities
+    assert "without first accumulating them into image pixels" in capabilities
+    assert inspect.signature(sampling.init).parameters["boolcondcatl"].default is True
+    assert "default ``boolcondcatl=True``" in capabilities
+    assert re.search(r"Set\s+``boolcondcatl=False``", likelihoods)
+    assert "does\nnot condense one-dimensional line, flare, or Keplerian catalogs" in likelihoods
+    assert "Neither\ncondensation nor catalog association is a likelihood" in likelihoods
+    assert "The public ``typeexpr=\"gmix\"`` example currently" in likelihoods
+
+
+def test_documented_api_signatures_match_public_entry_points():
+    api = (DOCS_ROOT / "api.rst").read_text()
+
+    assert list(inspect.signature(sampling.init).parameters)[:1] == ["dictglob"]
+    assert list(inspect.signature(sampling.sample_parallel).parameters)[:2] == [
+        "dictpcatinptvari",
+        "listlablcnfg",
+    ]
+    assert list(inspect.signature(plotting.plot_grid).parameters)[:4] == [
+        "path",
+        "name",
+        "listpara",
+        "listlablparatotl",
+    ]
+    assert "pcat.sampling.init(dictglob, **options)" in api
+    assert "pcat.sampling.sample_parallel(dictpcatinptvari, listlablcnfg" in api
+    assert "scalpara=None, truepara=None, join=False" in api
+
+
+def test_documented_output_layout_matches_runtime(tmp_path):
+    outputs = (DOCS_ROOT / "outputs.rst").read_text()
+    expected = tmp_path / "pcat_runs" / "example"
+
+    assert Path(retr_pathrun(tmp_path, "example")) == expected
+    assert "project_root / \"pcat_runs\" / \"gaussian_mixture_catalog\"" in outputs
+    assert "retained_sample_count = state.numbsamp" in outputs
+
+
+def test_documentation_lists_every_maintained_example():
+    examples_root = REPOSITORY_ROOT / "examples"
+    examples_page = (DOCS_ROOT / "examples.rst").read_text()
+    script_directories = {
+        path.parent.name
+        for path in examples_root.glob("*/*.py")
+        if "archive" not in path.parts
+    }
+    notebook_only_directories = {
+        "legacy_external_analysis_commands",
+        "rubin_dp1_confirmed_strong_lenses",
+        "simulated_rubin_cluster_lens",
+    }
+
+    for directory in script_directories | notebook_only_directories:
+        assert directory in examples_page, directory
+
+
+def test_documentation_lists_stable_public_helpers():
+    api = (DOCS_ROOT / "api.rst").read_text()
+
+    for name in (
+        "sample_allesfitter_pcat",
+        "plot_population_grid",
+        "binomial_wilson_interval",
+    ):
+        assert name in api
+
+
+def test_documented_posterior_collage_matches_generator():
+    examples = (DOCS_ROOT / "examples.rst").read_text()
+
+    assert len(POSTERIOR_ANIMATION_PANELS) == 12
+    assert "Posterior samples from twelve maintained examples" in examples
+    for domain in ("strong lenses", "stellar flares", "spectral\nlines"):
+        assert domain in examples

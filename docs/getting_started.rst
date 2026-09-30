@@ -6,7 +6,9 @@ Requirements
 
 PCAT requires Python 3.10 or newer. Its runtime dependencies are declared in
 ``pyproject.toml`` and include NumPy, SciPy, Astropy, Matplotlib, h5py, Numba,
-Seaborn, and TDpy.
+Pillow, Seaborn, cloudpickle, Chalcedon, and TDpy. The optional ``examples``
+dependency group adds dynesty, emcee, and Nicomedia for the sampler-comparison
+and stellar-flare workflows.
 
 For development with sibling repositories, install TDpy and PCAT in editable
 mode:
@@ -23,6 +25,12 @@ Install the documentation dependencies with:
 .. code-block:: bash
 
    python -m pip install -e ".[docs]"
+
+Install dependencies used by every maintained local example with:
+
+.. code-block:: bash
+
+   python -m pip install -e ".[examples]"
 
 First run
 ---------

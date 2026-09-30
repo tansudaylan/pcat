@@ -1,0 +1,311 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sampling, proposals, and convergence &mdash; PCAT 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+    <link rel="shortcut icon" href="_static/pcat_icon.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="Likelihood configurations" href="likelihoods.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #000000" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            PCAT
+              <img src="_static/pcat_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="likelihoods.html">Likelihood configurations</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Sampling, proposals, and convergence</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#proposal-types">Proposal types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#acceptance-probability">Acceptance probability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tuning-proposals">Tuning proposals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#burn-in-and-scale-adaptation">Burn-in and scale adaptation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#automatic-convergence-monitoring">Automatic convergence monitoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#animations-and-saved-diagnostics">Animations and saved diagnostics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #000000" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PCAT</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Sampling, proposals, and convergence</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/sampling.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="sampling-proposals-and-convergence">
+<h1>Sampling, proposals, and convergence<a class="headerlink" href="#sampling-proposals-and-convergence" title="Link to this heading"></a></h1>
+<p>PCAT uses one Metropolis-Hastings sampler for fixed-dimensional models and
+transdimensional catalogs. A sweep selects a proposal, evaluates its candidate
+state, and accepts or rejects that candidate. The realized proposal type,
+acceptance probability, and accept/reject result are recorded for every sweep.</p>
+<section id="proposal-types">
+<h2>Proposal types<a class="headerlink" href="#proposal-types" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">PCAT proposal families</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 18.0%" />
+<col style="width: 38.0%" />
+<col style="width: 44.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Type</p></th>
+<th class="head"><p>State change</p></th>
+<th class="head"><p>Main settings</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Within-model</p></td>
+<td><p>Updates existing parameters without changing the number of elements.
+It is the only proposal used by default for fixed-dimensional models.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">stdvpropbase</span></code> and <code class="docutils literal notranslate"><span class="pre">stdvpropelemfire</span></code> set unit-coordinate step
+scales. <code class="docutils literal notranslate"><span class="pre">booladaptstdp=True</span></code> adapts these scales during burn-in.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Birth</p></td>
+<td><p>Adds an element drawn from its prior or a configured data-informed
+proposal.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">probtran</span></code> enables transdimensional proposals. <code class="docutils literal notranslate"><span class="pre">factpriodoff</span></code>
+changes the prior penalty for added dimensions.</p></td>
+</tr>
+<tr class="row-even"><td><p>Death</p></td>
+<td><p>Removes one existing element.</p></td>
+<td><p>Selected with birth moves under <code class="docutils literal notranslate"><span class="pre">probtran</span></code> and the model-count
+bounds.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Split</p></td>
+<td><p>Replaces an element with two elements when the element model supports
+reversible-jump splitting.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">probspmr</span></code> controls the split/merge share. <code class="docutils literal notranslate"><span class="pre">radispmr</span></code> sets the
+scale of the split displacement.</p></td>
+</tr>
+<tr class="row-even"><td><p>Merge</p></td>
+<td><p>Replaces a pair of elements with one element when the model supports
+reversible-jump merging.</p></td>
+<td><p>Uses the reverse-proposal probability and Jacobian correction of the
+split move.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Jump</p></td>
+<td><p>Redraws one existing element from its prior without changing catalog
+size.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">probjump</span></code> controls the probability of attempting this move when a
+catalog is nonempty.</p></td>
+</tr>
+<tr class="row-even"><td><p>Differential evolution</p></td>
+<td><p>Proposes a symmetric within-model step from the difference between two
+states in a bounded history.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">probdemc</span></code> enables the move, <code class="docutils literal notranslate"><span class="pre">numbdemchist</span></code> sets the history length,
+and <code class="docutils literal notranslate"><span class="pre">factdemcgamma</span></code> optionally sets its jump scale.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Correlated block</p></td>
+<td><p>Updates a configured set of fixed-dimensional parameters together.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">probpropblock</span></code> sets its mixture probability;
+<code class="docutils literal notranslate"><span class="pre">proposal_correlation</span></code> and <code class="docutils literal notranslate"><span class="pre">proposal_blocks</span></code> define its shape, and
+<code class="docutils literal notranslate"><span class="pre">factpropblock</span></code> scales its step.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Birth, death, split, and merge moves are available only for supported element
+models. Their direction can be restricted by the model’s minimum and maximum
+element counts. If split or merge is unsupported, set <code class="docutils literal notranslate"><span class="pre">probspmr=0</span></code>. At a
+catalog boundary, PCAT selects only moves that can leave the current state.</p>
+</section>
+<section id="acceptance-probability">
+<h2>Acceptance probability<a class="headerlink" href="#acceptance-probability" title="Link to this heading"></a></h2>
+<p>For a current state <code class="docutils literal notranslate"><span class="pre">x</span></code> and candidate <code class="docutils literal notranslate"><span class="pre">x'</span></code>, the log Metropolis-Hastings
+ratio is</p>
+<div class="math notranslate nohighlight">
+\[\log r = \log \pi(x'\mid d) - \log \pi(x\mid d)
+         + \log q(x\mid x') - \log q(x'\mid x)
+         + \log |J|,\]</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">pi</span></code> is the posterior density, <code class="docutils literal notranslate"><span class="pre">q</span></code> is the proposal density, and
+<code class="docutils literal notranslate"><span class="pre">J</span></code> is the reversible-jump Jacobian. PCAT accepts with probability</p>
+<div class="math notranslate nohighlight">
+\[\alpha = \min(1, \exp(\log r)).\]</div>
+<p>The within-model random walk and differential-evolution proposals are
+symmetric, so their proposal-density ratio is one and their Jacobian is one.
+Birth and death moves include model-count and auxiliary-parameter corrections.
+Split and merge moves include reverse-move probabilities and the split
+Jacobian. For a prior-redraw jump, the element prior cancels its proposal
+density, leaving the likelihood change plus any Hastings correction for a
+data-informed draw.</p>
+<p>The final state stores per-sweep proposal IDs in <code class="docutils literal notranslate"><span class="pre">listpostindxproptype</span></code>,
+accept/reject flags in <code class="docutils literal notranslate"><span class="pre">listpostboolpropaccp</span></code>, and acceptance probabilities in
+<code class="docutils literal notranslate"><span class="pre">listpostaccpprob</span></code>. Final processing also computes <code class="docutils literal notranslate"><span class="pre">accpwith</span></code>, <code class="docutils literal notranslate"><span class="pre">accpbrth</span></code>,
+<code class="docutils literal notranslate"><span class="pre">accpdeth</span></code>, <code class="docutils literal notranslate"><span class="pre">accpsplt</span></code>, <code class="docutils literal notranslate"><span class="pre">accpmerg</span></code>, and <code class="docutils literal notranslate"><span class="pre">accpjump</span></code> from attempted moves.
+An acceptance fraction is accepted attempts divided by attempts of that type.
+It is a tuning diagnostic, not a target to maximize. Very small steps can have
+high acceptance but explore the posterior slowly; large steps can have low
+acceptance and waste evaluations.</p>
+<figure class="align-center" id="id2">
+<a class="reference internal image-reference" href="_images/proposal_acceptance_and_cost.png"><img alt="Acceptance fraction and computational cost by PCAT proposal type" src="_images/proposal_acceptance_and_cost.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Proposal acceptance and evaluation cost in the simulated Voigt-line
+profiling example. The values depend on the model, prior, data, and tuning.</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="tuning-proposals">
+<h2>Tuning proposals<a class="headerlink" href="#tuning-proposals" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">probtran</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">0.4</span></code> when a variable population is present and
+<code class="docutils literal notranslate"><span class="pre">0</span></code> otherwise. It is the probability of selecting a transdimensional move.
+<code class="docutils literal notranslate"><span class="pre">probspmr</span></code> defaults to half of <code class="docutils literal notranslate"><span class="pre">probtran</span></code> and sets the fraction of eligible
+transdimensional selections allocated to split and merge; the remaining share
+is allocated to birth and death. Split and merge directions are balanced when
+both are available, with boundary restrictions taking precedence.
+<code class="docutils literal notranslate"><span class="pre">probjump</span></code> and <code class="docutils literal notranslate"><span class="pre">probdemc</span></code> both default to zero, so those optional moves must
+be enabled explicitly.</p>
+<p>For an existing model configuration, proposal controls can be added before
+calling the sampler:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">configuration</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+    <span class="n">probtran</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+    <span class="n">probspmr</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
+    <span class="n">probjump</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">probdemc</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">numbdemchist</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">booladaptstdp</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pcat</span><span class="o">.</span><span class="n">sampling</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="o">**</span><span class="n">configuration</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Start with the model’s native proposal scales and inspect acceptance by move
+type, trace behavior, model-count transitions, residuals, and effective sample
+sizes. Adjust <code class="docutils literal notranslate"><span class="pre">stdvpropbase</span></code> or <code class="docutils literal notranslate"><span class="pre">stdvpropelemfire</span></code> when within-model moves
+are too large or too small. Set <code class="docutils literal notranslate"><span class="pre">probpropblock</span></code> only when correlated blocks
+and a matching <code class="docutils literal notranslate"><span class="pre">proposal_correlation</span></code> are configured. <code class="docutils literal notranslate"><span class="pre">probdemc</span></code> uses at
+least ten history states before it can propose; its default history length is
+1,000 and its default scale is <code class="docutils literal notranslate"><span class="pre">2.38</span> <span class="pre">/</span> <span class="pre">sqrt(2</span> <span class="pre">d)</span></code> for a <code class="docutils literal notranslate"><span class="pre">d</span></code>-parameter
+update.</p>
+</section>
+<section id="burn-in-and-scale-adaptation">
+<h2>Burn-in and scale adaptation<a class="headerlink" href="#burn-in-and-scale-adaptation" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">numbburn</span></code> is the number of initial sweeps excluded from retained samples. If
+it is omitted, PCAT uses ten percent of <code class="docutils literal notranslate"><span class="pre">numbswep</span></code>. Set <code class="docutils literal notranslate"><span class="pre">numbsamp</span></code> or
+<code class="docutils literal notranslate"><span class="pre">factthin</span></code> to control the number of retained samples after burn-in.</p>
+<p><code class="docutils literal notranslate"><span class="pre">booladaptstdp=True</span></code> adapts within-model proposal scales during burn-in only.
+The sampler uses a target acceptance of 0.44 for one-dimensional updates and
+0.234 for multivariate updates. Adaptation stops once burn-in ends. Report the
+burn-in length and proposal settings with scientific results, and check that
+posterior summaries are stable to a longer run or a different seed.</p>
+</section>
+<section id="automatic-convergence-monitoring">
+<h2>Automatic convergence monitoring<a class="headerlink" href="#automatic-convergence-monitoring" title="Link to this heading"></a></h2>
+<p>By default PCAT stops after the configured sweep count. Set
+<code class="docutils literal notranslate"><span class="pre">boolcheckconv=True</span></code> to stop after repeated convergence checks. The defaults
+are <code class="docutils literal notranslate"><span class="pre">numbsampconvmin=1000</span></code> retained samples before the first check,
+<code class="docutils literal notranslate"><span class="pre">numbsampconvcheck=250</span></code> samples between checks, <code class="docutils literal notranslate"><span class="pre">maxmconvrhat=1.01</span></code>,
+<code class="docutils literal notranslate"><span class="pre">numbsampconveffc=200</span></code>, and <code class="docutils literal notranslate"><span class="pre">numbconvpass=2</span></code> consecutive passing checks.
+For one worker PCAT estimates R-hat by splitting the chain in half. With several
+workers, it calculates convergence across independent worker chains and stops
+them together after they all observe the shared stop signal.</p>
+<p>Convergence is assessed using log posterior, element count, persistent element
+parameters, or modeled data pixels when no persistent element parameter is
+available. Inspect the values saved in <code class="docutils literal notranslate"><span class="pre">gdatfinlpost</span></code> and the convergence
+plots. Automatic stopping does not establish that the likelihood, model, or
+priors are scientifically adequate.</p>
+</section>
+<section id="animations-and-saved-diagnostics">
+<h2>Animations and saved diagnostics<a class="headerlink" href="#animations-and-saved-diagnostics" title="Link to this heading"></a></h2>
+<p>Set <code class="docutils literal notranslate"><span class="pre">makeanim=True</span></code> and <code class="docutils literal notranslate"><span class="pre">numbswepplot</span></code> so at least two chain frames are
+saved. With frame plotting enabled, PCAT writes the usual posterior animations
+from these retained chain states. It also writes <code class="docutils literal notranslate"><span class="pre">proposal_activity.gif</span></code>,
+which shows cumulative proposal attempts and acceptances, and
+<code class="docutils literal notranslate"><span class="pre">proposal_sequence.gif</span></code>, which labels each saved state frame with its sweep,
+proposal type, and acceptance result. The sequence animation uses saved frame
+intervals rather than every sweep. A rejected proposal remains represented by
+the retained chain state; the rejected candidate image is not separately saved.</p>
+<p>The proposal-profiling example includes a visual comparison of acceptance and
+cost above and writes proposal activity with its run. See <a class="reference internal" href="outputs.html"><span class="doc">Outputs and diagnostics</span></a> for
+the output directory and persisted diagnostics, and <a class="reference internal" href="capabilities.html"><span class="doc">Capabilities</span></a> for
+the maintained model families.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="likelihoods.html" class="btn btn-neutral float-left" title="Likelihood configurations" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Tansu Daylan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

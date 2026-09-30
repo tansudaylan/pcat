@@ -12338,7 +12338,10 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
         if not booltile:
             # memory usage
             listmemoresi = getattr(gdatfinl, 'list' + strgpdfn + 'memoresi')
-            gdatfinl.meanmemoresi = np.mean(listmemoresi, 1)
+            listmemoresi = np.mean(listmemoresi, axis=1).reshape(
+                gdatfinl.numbproc, gdatfinl.numbswep
+            )
+            gdatfinl.meanmemoresi = np.mean(listmemoresi, axis=0)
             gdatfinl.derimemoresi = (gdatfinl.meanmemoresi[-1] - gdatfinl.meanmemoresi[0]) / gdatfinl.numbswep
 
             if not hasattr(gdatfinl, 'timerealtotl'):
@@ -14492,7 +14495,11 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
     
     # plot resident memory
     figr, axis = plt.subplots(figsize=(2 * gdat.plotsize, gdat.plotsize))
-    axis.plot(gdat.indxswep, np.mean(listmemoresi, 1) / float(2**30))
+    memory_by_chain = np.mean(listmemoresi, axis=1).reshape(
+        gdat.numbproc, gdat.numbswep
+    )
+    memory_by_sweep = np.mean(memory_by_chain, axis=0)
+    axis.plot(gdat.indxswep, memory_by_sweep / float(2**30))
     axis.set_ylabel(r'$M$ [GB]')
     axis.set_xlabel(r'$i_{samp}$')
     plt.tight_layout()

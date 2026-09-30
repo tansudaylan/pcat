@@ -47,22 +47,26 @@ decomposed into smaller modules.
    See :doc:`capabilities` for a complete example and the image and spectral
    model families.
 
-.. py:function:: pcat.sampling.init(configuration)
+.. py:function:: pcat.sampling.init(dictglob, **options)
 
-   Lower-level initialization and execution engine. Most analyses should call
-   :func:`pcat.sampling.sample`, which performs experiment
-   dispatch before invoking this function.
+   Lower-level initialization and execution engine. ``dictglob`` contains
+   model and data configuration overrides, while keyword options control
+   sampling, diagnostics, persistence, and plotting. Most analyses should call
+   :func:`pcat.sampling.sample`, which dispatches the experiment before
+   invoking this function.
 
 .. py:function:: pcat.sampling.init_image(**configuration)
 
-   Initialize image-analysis configuration and construct the populated state
-   passed to :func:`pcat.sampling.init`.
+   Initialize built-in image, spectral, or time-series configuration and
+   construct the populated state passed to :func:`pcat.sampling.init`. The
+   historical function name predates the one-dimensional workflows.
 
-.. py:function:: pcat.sampling.sample_parallel(dictargsvari, listnamecnfgextn, dictpcatinpt=None, **options)
+.. py:function:: pcat.sampling.sample_parallel(dictpcatinptvari, listlablcnfg, dictpcatinpt=None, **options)
 
    Execute a family of related configurations, optionally in separate
-   processes. ``dictpcatinpt`` contains shared settings and ``dictargsvari``
-   contains per-configuration overrides keyed by configuration name.
+   processes. ``dictpcatinpt`` contains shared settings,
+   ``dictpcatinptvari`` contains per-configuration overrides, and
+   ``listlablcnfg`` supplies the configuration labels.
 
 .. py:function:: pcat.sampling.sample_fixed(**configuration)
 
@@ -83,21 +87,59 @@ decomposed into smaller modules.
    Gaussian priors, derived variables, trace and corner plots, and a saved
    posterior summary that later runs reuse.
 
+.. py:function:: pcat.sampling.sample_allesfitter_pcat(datadir)
+
+   Run the PCAT-backed fixed-dimensional adapter for an allesfitter data
+   directory. This compatibility entry point is specialized for that external
+   package; new likelihood integrations should use
+   :func:`pcat.sampling.sample_fixed` or
+   :func:`pcat.sampling.sample_fixed_chains`.
+
 .. py:function:: pcat.main.retr_listgdat(liststrgcnfg, typegdat="finlpost")
 
    Load the requested persisted state for each run tag in a configuration
    family.
 
+Image formation
+---------------
+
+.. py:function:: pcat.image.forward_model_image(source_image, psf_sigma_pixels, background=0.0)
+
+   Convolve a finite two-dimensional source scene with a normalized circular
+   Gaussian point-spread function and add a finite uniform background. The
+   returned dictionary contains ``source_image``, ``psf_kernel``, and
+   ``observed_image`` arrays. This deterministic utility does not run the
+   sampler or draw Poisson noise.
+
+   ``psf_sigma_pixels`` is the Gaussian standard deviation in pixels. The
+   source scene and background use the same image units.
+
+.. code-block:: python
+
+   from pcat.image import forward_model_image
+
+   products = forward_model_image(source_image, psf_sigma_pixels=1.5, background=5.0)
+
 Plotting
 --------
 
-.. py:function:: pcat.plotting.plot_grid(path, name, listpara, listlablparatotl, truepara=None, listvarbdraw=None, typefileplot="pdf")
+.. py:function:: pcat.plotting.plot_grid(path, name, listpara, listlablparatotl, scalpara=None, truepara=None, join=False, listvarbdraw=None, typefileplot="pdf", **kwargs)
 
    Render the diagonal marginal distributions and every lower-triangle pairwise
    posterior projection. ``listpara`` contains one row per sample and one
    column per parameter. ``truepara`` marks injected values and
    ``listvarbdraw`` can mark maximum-likelihood or other reference vectors.
-   The output path is ``path_name.pdf`` or ``path_name.png``.
+   The output path is ``path_name.pdf`` or ``path_name.png``. ``scalpara``,
+   ``join``, and extra keyword arguments are accepted for compatibility with
+   earlier callers but do not alter the current native grid rendering.
+
+.. py:function:: pcat.plot_population_grid(listlablpara, listpara=None, dictpara=None, pathbase=None, strgextn=None, typefileplot="png", **options)
+
+   Plot marginal distributions and pairwise projections for one or more
+   populations supplied either as arrays or a parameter dictionary. Optional
+   settings control triangular grids, histograms, pair plots, population
+   labels, markers, limits, and annotations. The
+   ``examples/population_grid`` workflow demonstrates the maintained interface.
 
 Instrument response
 -------------------
@@ -123,6 +165,11 @@ Example analyses
 
 Catalog analysis
 ----------------
+
+.. py:function:: pcat.binomial_wilson_interval(successes, trials, z_score=1.0)
+
+   Return the lower and upper Wilson interval for a binomial fraction. Counts
+   must satisfy ``0 <= successes <= trials`` and ``z_score`` must be positive.
 
 .. py:function:: pcat.associate_catalogs(coordinates_source, values_source, coordinates_target, values_target, distance_maximum, value_difference_maximum, confidence_target=None, significance_target=None)
 

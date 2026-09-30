@@ -9,38 +9,28 @@ elements, or both.
 Functionality overview
 ----------------------
 
-.. list-table:: Maintained PCAT workflows
-   :header-rows: 1
-   :widths: 18 24 21 37
+Maintained workflows include:
 
-   * - Workflow
-     - Model
-     - Inference
-     - Maintained example
-   * - Arbitrary likelihood
-     - User callback and configured priors
-     - Fixed-dimensional scalar or correlated proposals
-     - ``typeexpr="gener"`` example below
-   * - Point-source imaging
-     - Catalog, background, exposure, and point-spread function
-     - Variable source count and source parameters
-    - ``chandra_point_source_catalog`` and ``daylan+2017_fermi_point_sources``
-   * - Gaussian mixtures
-     - Variable-width components in two-dimensional data
-     - Birth and death catalog transitions
-     - ``gaussian_mixture_catalog``
-   * - Strong-lens imaging
-     - Lens mass, foreground light, source light, and lensed emission
-     - Fixed or variable perturber catalog
-    - ``simulated_hst_strong_lens``, ``daylan+2018_strong_lens_subhalos``, and ``roman_strong_lens_perturber_catalog``
-   * - Spectral lines
-     - Voigt profiles in spectral data
-     - Variable line count and profile parameters
-     - ``voigt_spectral_line_catalog``
-   * - Catalog association
-     - Positions, values, confidence, and significance
-     - Completeness and purity versus matching criteria
-     - ``catalog_association_completeness_purity``
+* **Arbitrary likelihoods.** User callbacks with fixed-dimensional scalar or
+  correlated proposals. The ``typeexpr="gener"`` example is described below.
+* **Poisson image likelihood.** Point sources, extended emission, and lensed
+  sources are element populations in one image model with backgrounds,
+  exposure, and point-spread functions. The Chandra, Fermi-LAT, Hubble Space
+  Telescope (HST), and Roman examples exercise different combinations of
+  these components.
+* **Unbinned Gaussian-mixture likelihood.** A distinct likelihood class models
+  observed coordinates directly as draws from a variable-component mixture,
+  without first accumulating them into image pixels. The current public
+  ``gaussian_mixture_catalog`` example remains a binned Poisson image workflow
+  until the unbinned dispatcher is completed.
+* **Spectral and time-series likelihoods.** Variable-count Voigt profiles and
+  Keplerian radial-velocity models in the maintained spectral and RV examples.
+* **Transdimensional catalog products.** Every transdimensional likelihood
+  produces samples of catalogs. By default, final processing condenses those
+  samples into a catalog before optional association with a reference catalog
+  when the elements have supported two-dimensional spatial coordinates. Set
+  ``boolcondcatl=False`` to skip this potentially expensive summary. Catalog
+  association is a posterior product rather than a likelihood family.
 
 Inference and proposal engine
 -----------------------------
@@ -51,6 +41,9 @@ and death proposals change the catalog size, while supported element models can
 also use split and merge proposals. Multiple independent workers can sample a
 configuration, and :func:`pcat.sampling.sample_parallel` can execute related
 configurations for controlled comparisons.
+
+See :doc:`sampling` for the proposal acceptance ratio, move-selection settings,
+proposal-scale adaptation, burn-in, and automatic convergence monitoring.
 
 Parameters are sampled in unit-prior coordinates and transformed to their
 physical priors. Fixed-dimensional runs can mix single-parameter updates with
@@ -94,8 +87,18 @@ acceptance, persistence, convergence, and final-processing machinery. Generic
 runs currently use within-model proposals. They do not activate birth, death,
 split, or merge proposals.
 
-Point sources in imaging data
------------------------------
+Poisson image likelihood
+------------------------
+
+Point sources, extended emission, foreground light, and gravitational lenses
+are alternative model components within the same image-data likelihood. The
+catalog may contain one or several supported element populations; it does not
+change the likelihood family. With the default ``boolcondcatl=True``, final
+processing creates a condensed catalog from the sampled catalogs before any
+optional association with a reference catalog.
+
+Point-source and extended emission
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``lghtpnts`` element represents a point source with inferred position and
 flux. PCAT forward-models an image from a catalog of these elements, including
@@ -103,6 +106,12 @@ the configured point-spread function and background, and infers the catalog
 size and source parameters jointly. This supports crowded-field and
 photon-count analyses in which detections, memberships, and blends are
 uncertain.
+
+For deterministic Gaussian-PSF image formation outside the sampler,
+:func:`pcat.image.forward_model_image` convolves a two-dimensional scene,
+normalizes the kernel, and adds a uniform background. It returns the intrinsic
+scene, PSF kernel, and predicted image for inspection or a user-defined
+likelihood.
 
 The compact Chandra-style example is directly runnable:
 
@@ -112,9 +121,11 @@ The compact Chandra-style example is directly runnable:
 
 The :doc:`getting_started` page gives its configuration, while the
 ``daylan+2017_fermi_point_sources`` example demonstrates a larger synthetic point-source catalog.
+See :doc:`likelihoods` for image geometry, backgrounds, extended-source
+components, lensing options, exposure, and PSF modes.
 
-Lenses and lensed emission in imaging data
-------------------------------------------
+Lenses and lensed emission
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``lens`` element supports strong-lensing image models. PCAT jointly models
 the lens mass parameters, foreground lens-galaxy emission, source-plane
@@ -134,13 +145,16 @@ catalog-level perturber detection. These examples use simulations and validate
 the pipeline. They are not measurements or performance forecasts for observed
 systems.
 
-Spectral lines in spectral data
--------------------------------
+Spectral and time-series catalogs
+---------------------------------
 
 Spectral-line elements use the same transdimensional catalog machinery along a
 spectral axis. PCAT infers the number of lines together with line locations,
 amplitudes, and profile parameters. The maintained ``lghtlinevoig``
-configuration models Voigt-profile emission lines in simulated spectral data.
+configuration models Voigt-profile emission lines in simulated spectral data
+and in the public JWST MIRI spectrum of NGC 7027. The observed-spectrum example
+uses measured flux uncertainties and a stated error floor to construct the
+effective Poisson counts consumed by PCAT.
 
 Run the nominal line-detection analysis with:
 
@@ -152,11 +166,23 @@ This example compares catalogs containing different numbers of lines. Its
 short modes are pipeline checks, while scientific analyses require adequate
 sampling, convergence assessment, and problem-specific prior validation.
 
+The same one-dimensional machinery supports binned time-series catalogs. The
+``variable_number_stellar_flares`` example fits symmetric Voigt components to a
+clearly labeled simulation of asymmetric fast-rise, exponential-decay flares.
+The model mismatch is deliberate and documented in its outputs. The
+``variable_number_exoplanets_radial_velocity`` example instead uses dedicated
+Keplerian elements, a radial-velocity likelihood, analytically marginalized
+instrument offsets, and numerically marginalized stellar jitter for a simulated
+two-instrument data set.
+
+See :doc:`likelihoods` for the available spectral profiles, response settings,
+line parameters, and input options.
+
 Shared inference products
 -------------------------
 
-All four model classes use PCAT's persisted run state and final-processing
-pipeline. Depending on the configuration, products include posterior samples,
+All supported likelihood and model families use PCAT's persisted run state and
+final-processing pipeline. Depending on the configuration, products include posterior samples,
 model-count probabilities, catalog summaries, associations, convergence and
 proposal diagnostics, posterior-predictive models, residuals, static figures,
 and animations. See :doc:`outputs` for the file layout and interpretation
@@ -165,8 +191,13 @@ requirements.
 Catalog summaries and diagnostics
 ---------------------------------
 
-PCAT can condense posterior catalogs, associate inferred elements with a
-reference catalog, and evaluate completeness and false-discovery summaries.
+Every transdimensional run samples catalogs whose element labels can vary
+between states. With ``boolcondcatl=True``, PCAT condenses those samples into a
+persistent posterior catalog before associating inferred elements with a
+reference catalog or evaluating completeness and false-discovery summaries.
+The current condensation algorithm clusters elements by ``xpos`` and ``ypos``.
+One-dimensional spectral, flare, and radial-velocity catalogs retain their raw
+catalog samples but do not yet receive this condensed spatial summary.
 The public :func:`pcat.associate_catalogs` utility performs coordinate-and-value
 matching for external catalogs. :func:`pcat.posterior_convergence` reports
 Gelman-Rubin statistics and effective sample sizes from a completed state.
