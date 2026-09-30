@@ -10,27 +10,27 @@
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
-
+  
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
-      <script src="_static/doctools.js?v=fd6eb6e6"></script>
-      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Maintained examples" href="examples.html" />
-    <link rel="prev" title="PCAT documentation" href="index.html" />
+    <link rel="next" title="Capabilities" href="capabilities.html" />
+    <link rel="prev" title="PCAT documentation" href="index.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
 
-
-
+          
+          
           <a href="index.html" class="icon icon-home">
             PCAT
           </a>
@@ -51,7 +51,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#configuration-principles">Configuration principles</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Maintained examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
@@ -80,7 +81,7 @@
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-
+             
   <section id="getting-started">
 <h1>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading"></a></h1>
 <section id="requirements">
@@ -97,7 +98,7 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 </pre></div>
 </div>
 <p>Install the documentation dependencies with:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[docs]"</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[docs]&quot;</span>
 </pre></div>
 </div>
 </section>
@@ -116,19 +117,19 @@ runnable configuration template.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pcat.demo</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_pipeline_demo</span>
 
 <span class="n">run_pipeline_demo</span><span class="p">(</span>
-    <span class="n">Path</span><span class="p">(</span><span class="s2">"analysis/point_sources"</span><span class="p">),</span>
-    <span class="n">typeexpr</span><span class="o">=</span><span class="s2">"chan"</span><span class="p">,</span>
-    <span class="n">typeelem</span><span class="o">=</span><span class="p">[</span><span class="s2">"lghtpnts"</span><span class="p">],</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;analysis/point_sources&quot;</span><span class="p">),</span>
+    <span class="n">typeexpr</span><span class="o">=</span><span class="s2">&quot;chan&quot;</span><span class="p">,</span>
+    <span class="n">typeelem</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;lghtpnts&quot;</span><span class="p">],</span>
     <span class="n">truenumbelempop0</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
     <span class="n">fittminmnumbelempop0</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">fittmaxmnumbelempop0</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-    <span class="n">dicttrue</span><span class="o">=</span><span class="p">{</span><span class="s2">"typeelemspateval"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"full"</span><span class="p">]},</span>
-    <span class="n">dictfitt</span><span class="o">=</span><span class="p">{</span><span class="s2">"typeelemspateval"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"full"</span><span class="p">]},</span>
+    <span class="n">dicttrue</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;typeelemspateval&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;full&quot;</span><span class="p">]},</span>
+    <span class="n">dictfitt</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;typeelemspateval&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;full&quot;</span><span class="p">]},</span>
     <span class="n">numbsidecart</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
     <span class="n">numbswep</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
     <span class="n">numbsamp</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
     <span class="n">numbswepplot</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-    <span class="n">strgcnfg</span><span class="o">=</span><span class="s2">"point_sources"</span><span class="p">,</span>
+    <span class="n">strgcnfg</span><span class="o">=</span><span class="s2">&quot;point_sources&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -138,10 +139,13 @@ problem-specific prior validation.</p>
 </section>
 <section id="runtime-paths">
 <h2>Runtime paths<a class="headerlink" href="#runtime-paths" title="Link to this heading"></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">pathbase</span></code> is the root for one analysis and contains <code class="docutils literal notranslate"><span class="pre">data/</span></code> and
-<code class="docutils literal notranslate"><span class="pre">visuals/</span></code>. If <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> is omitted, PCAT uses <code class="docutils literal notranslate"><span class="pre">PCAT_DATA_PATH</span></code> and then
-<code class="docutils literal notranslate"><span class="pre">TDGU_DATA_PATH</span></code>. <code class="docutils literal notranslate"><span class="pre">PCAT_PATH</span></code> separately identifies the repository root for
-repository-local utilities and does not replace the analysis output path.</p>
+<p><code class="docutils literal notranslate"><span class="pre">pathbase</span></code> is the parent project root. Each <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> run becomes a
+self-contained child of <code class="docutils literal notranslate"><span class="pre">pathbase/pcat_runs</span></code> containing <code class="docutils literal notranslate"><span class="pre">data/</span></code> and
+<code class="docutils literal notranslate"><span class="pre">visuals/</span></code>. A <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> that already identifies <code class="docutils literal notranslate"><span class="pre">pcat_runs</span></code> or ends in
+<code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> is used directly. If <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> is omitted, PCAT uses
+<code class="docutils literal notranslate"><span class="pre">PCAT_DATA_PATH</span></code> and then <code class="docutils literal notranslate"><span class="pre">TDGU_DATA_PATH</span></code>. <code class="docutils literal notranslate"><span class="pre">PCAT_PATH</span></code> separately
+identifies the repository root for repository-local utilities and does not
+replace the analysis output path.</p>
 </section>
 <section id="configuration-principles">
 <h2>Configuration principles<a class="headerlink" href="#configuration-principles" title="Link to this heading"></a></h2>
@@ -165,7 +169,7 @@ for scientific claims.</p></li>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="index.html" class="btn btn-neutral float-left" title="PCAT documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="examples.html" class="btn btn-neutral float-right" title="Maintained examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="capabilities.html" class="btn btn-neutral float-right" title="Capabilities" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
@@ -177,7 +181,7 @@ for scientific claims.</p></li>
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     provided by <a href="https://readthedocs.org">Read the Docs</a>.
-
+   
 
 </footer>
         </div>
@@ -188,7 +192,7 @@ for scientific claims.</p></li>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
+  </script> 
 
 </body>
 </html>

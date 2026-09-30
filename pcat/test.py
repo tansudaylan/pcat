@@ -107,12 +107,9 @@ def _clear_forced_run_state(dictargs):
         return
 
     pathbase = dictargs.get("pathbase") or oper.environ.get("PCAT_DATA_PATH") or oper.path.join(oper.getcwd(), "pcat-data")
-    pathoutpcnfg = oper.path.join(pathbase, "data", "outp", strgcnfg)
-    pathvisucnfg = oper.path.join(pathbase, "visuals")
-
-    for path in [pathoutpcnfg, pathvisucnfg]:
-        if oper.path.exists(path):
-            shut.rmtree(path)
+    pathrun = pcat.main.retr_pathrun(pathbase, strgcnfg)
+    if oper.path.exists(pathrun):
+        shut.rmtree(pathrun)
 
 
 def _init_compat(*args, **kwargs):

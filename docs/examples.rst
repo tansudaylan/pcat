@@ -25,6 +25,12 @@ Pipeline demonstrations
 
       python examples/hst_lens/generate_demo.py
 
+``rubin_cluster_lens``
+   Simulated Rubin-like cluster-scale lens with a Gaussian point-spread function.
+   The notebook samples the Einstein radius and source position with PCAT's
+   Poisson image likelihood, then shows the fitted image, residuals, and
+   posterior parameter distributions. It does not analyze Rubin observations.
+
 Run the image analyses, Roman benchmark, and reduced Voigt calculation with:
 
 .. code-block:: bash

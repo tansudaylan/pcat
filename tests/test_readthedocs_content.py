@@ -31,7 +31,9 @@ def test_readthedocs_covers_public_workflows():
 def test_readthedocs_embeds_maintained_visuals():
     visual_paths = {
         "../examples/pcat_posterior_samples.gif",
-        "../examples/roman_lens_catalog/roman_lens_catalog_diagnostic.png",
+        "../examples/catalog_association/visuals/catalog_association.png",
+        "../examples/psf_subpixel/visuals/psf_subpixel.png",
+        "../examples/roman_lens_catalog/visuals/roman_lens_catalog_diagnostic.png",
     }
     source = "\n".join(path.read_text() for path in DOCS_ROOT.glob("*.rst"))
 

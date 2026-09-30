@@ -5,6 +5,46 @@ from scipy.special import logsumexp
 from scipy.stats import multivariate_normal, norm
 
 
+def gelman_rubin(chains):
+    """Return the potential scale reduction factor across parallel chains."""
+    values = np.asarray(chains, dtype=float)
+    if values.ndim != 2 or min(values.shape) < 2:
+        return np.nan
+    sample_count = values.shape[0]
+    within = np.mean(np.var(values, axis=0, ddof=1))
+    between = sample_count * np.var(np.mean(values, axis=0), ddof=1)
+    if within == 0.:
+        return np.inf if between > 0. else np.nan
+    variance = (sample_count - 1.) / sample_count * within + between / sample_count
+    return float(np.sqrt(variance / within))
+
+
+def autocorrelation_time(samples, typeverb=0, atcrtype='maxm', verbtype=None):
+    """Return correlation sequences and integrated times for a sampled series."""
+    values = np.asarray(samples, dtype=float)
+    if values.ndim < 1 or values.shape[0] < 2:
+        return np.full(values.shape[1:] + (1,), np.nan), np.full(values.shape[1:], np.nan)
+    parameter_shape = values.shape[1:]
+    flat = values.reshape(values.shape[0], -1)
+    lag_count = max(1, values.shape[0] // 2)
+    correlations = np.empty((flat.shape[1], lag_count))
+    times = np.empty(flat.shape[1])
+    for parameter_index, series in enumerate(flat.T):
+        centered = series - np.mean(series)
+        variance = np.dot(centered, centered)
+        if variance == 0.:
+            correlations[parameter_index] = np.nan
+            times[parameter_index] = np.nan
+            continue
+        correlation = np.correlate(centered, centered, mode='full')[series.size - 1:series.size - 1 + lag_count]
+        correlation /= variance
+        correlations[parameter_index] = correlation
+        stop_indices = np.where(correlation[1:] <= 0.)[0]
+        stop = stop_indices[0] + 1 if stop_indices.size > 0 else correlation.size
+        times[parameter_index] = 1. + 2. * np.sum(correlation[1:stop])
+    return correlations.reshape(parameter_shape + (lag_count,)), times.reshape(parameter_shape)
+
+
 def posterior_convergence(state, max_rhat=1.05, min_effective_sample_size=200.0):
     """Return convergence metrics and whether every parameter passes."""
     rhat = np.asarray(state.gmrbparagenrscalbase, dtype=float)

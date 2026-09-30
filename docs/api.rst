@@ -15,8 +15,8 @@ Sampling
      ``"fire"``, and HST Wide Field Camera 3 identifiers.
    * ``typedata`` set to ``"simu"`` for generated data or ``"inpt"`` for
      supplied data.
-   * ``pathbase`` and ``strgcnfg`` for the output root and filesystem-safe run
-     tag.
+   * ``pathbase`` for the parent project root and ``strgcnfg`` for the
+     filesystem-safe run under its common ``pcat_runs`` directory.
    * ``typeelem`` for the element types in each population.
    * ``numbswep`` and ``numbsamp`` for sampler sweeps and retained posterior
      samples.

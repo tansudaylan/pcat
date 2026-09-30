@@ -1,10 +1,21 @@
 import json
+import re
 import tomllib
 from pathlib import Path
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = REPOSITORY_ROOT / "docs"
+
+
+def test_readme_local_images_exist():
+    readme_path = REPOSITORY_ROOT / "README.md"
+    print(f"Reading from {readme_path}...")
+    image_paths = re.findall(r"!\[[^]]*\]\((?!https?://)([^)]+)\)", readme_path.read_text())
+
+    assert image_paths
+    for image_path in image_paths:
+        assert (REPOSITORY_ROOT / image_path).is_file(), image_path
 
 
 def test_documentation_pages_are_in_the_toctree():
@@ -67,6 +78,7 @@ def test_figure_examples_display_visuals_in_notebooks():
         "roman_lens_catalog/roman_lens_catalog_diagnostic",
         "catalog_association/catalog_association",
         "psf_subpixel/psf_subpixel",
+        "rubin_cluster_lens/rubin_cluster_lens",
         "make_posterior_animation_collage",
         "run_examples",
     )

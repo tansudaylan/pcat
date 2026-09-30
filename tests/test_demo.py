@@ -200,6 +200,34 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
     assert np.std(diffuse_template[1, :, 0]) > 0.15
 
 
+def test_daylan2018_smoke_configuration_skips_animation(tmp_path, monkeypatch):
+    script_path = (
+        REPOSITORY_ROOT / "examples" / "Daylan+2018" / "generate_reproduction.py"
+    )
+    module = load_example_module("pcat_daylan2018_reproduction", script_path)
+
+    assert module.build_configuration()["makeanim"] is True
+    assert module.build_configuration(smoke=True)["makeanim"] is False
+    cached_output = tmp_path / "daylan2018_catalog"
+    cached_output.mkdir()
+    (cached_output / "stale.txt").touch()
+    captured = {}
+    monkeypatch.setattr(module, "OUTPUT_ROOT", tmp_path)
+    monkeypatch.setattr(
+        demo,
+        "run_pipeline_demo",
+        lambda output_root, **configuration: captured.update(
+            output_root=output_root, **configuration
+        ),
+    )
+
+    module.run_reproduction(smoke=True, fresh=True)
+
+    assert not (cached_output / "stale.txt").exists()
+    assert captured["output_root"] == cached_output
+    assert captured["makeanim"] is False
+
+
 def test_example_output_verification_requires_multiframe_animation(tmp_path):
     script_path = REPOSITORY_ROOT / "examples" / "run_examples.py"
     module = load_example_module("pcat_example_runner", script_path)

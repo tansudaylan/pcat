@@ -131,11 +131,20 @@ def retr_pathcnfg(pathroot, strgcnfg):
     return os.path.join(pathroot, strgcnfg)
 
 
-def retr_pathplotcnfg(pathvisu, strgcnfg):
-    """Return the flat visual root while validating the associated run tag."""
-    pathvisu = os.path.normpath(os.fspath(pathvisu))
-    retr_pathcnfg(pathvisu, strgcnfg)
-    return pathvisu + os.sep
+def retr_pathrun(pathbase, strgcnfg):
+    """Return one self-contained run root beneath ``pcat_runs``."""
+    pathbase = os.path.normpath(os.fspath(pathbase))
+    retr_pathcnfg(pathbase, strgcnfg)
+    if os.path.basename(pathbase) == strgcnfg:
+        return pathbase
+    if os.path.basename(pathbase) != 'pcat_runs':
+        pathbase = os.path.join(pathbase, 'pcat_runs')
+    return retr_pathcnfg(pathbase, strgcnfg)
+
+
+def retr_pathplotcnfg(pathbase, strgcnfg):
+    """Return the visual root for one self-contained run."""
+    return os.path.join(retr_pathrun(pathbase, strgcnfg), 'visuals') + os.sep
 
 
 def _remove_empty_directories(pathroot):
@@ -222,41 +231,15 @@ class _PCATMCMCCompat(object):
 
     @staticmethod
     def gmrb_test(griddata):
-        arr = np.asarray(griddata, dtype=float)
-        if arr.ndim != 2 or min(arr.shape) < 2:
-            return np.nan
-        numbsamp = arr.shape[0]
-        withvari = np.mean(np.var(arr, axis=0, ddof=1))
-        btwnvari = numbsamp * np.var(np.mean(arr, axis=0), ddof=1)
-        if withvari == 0.:
-            return np.inf if btwnvari > 0. else np.nan
-        vari = (numbsamp - 1.) / numbsamp * withvari + btwnvari / numbsamp
-        return float(np.sqrt(vari / withvari))
+        from .diagnostics import gelman_rubin
+
+        return gelman_rubin(griddata)
 
     @staticmethod
     def retr_timeatcr(listpara, typeverb=0, atcrtype='maxm'):
-        arr = np.asarray(listpara, dtype=float)
-        if arr.ndim < 1 or arr.shape[0] < 2:
-            return np.full(arr.shape[1:] + (1,), np.nan), np.full(arr.shape[1:], np.nan)
-        shapvarb = arr.shape[1:]
-        listflat = arr.reshape(arr.shape[0], -1)
-        numblag = max(1, arr.shape[0] // 2)
-        atcr = np.empty((listflat.shape[1], numblag))
-        timeatcr = np.empty(listflat.shape[1])
-        for indxvarb, valu in enumerate(listflat.T):
-            valucent = valu - np.mean(valu)
-            vari = np.dot(valucent, valucent)
-            if vari == 0.:
-                atcr[indxvarb] = np.nan
-                timeatcr[indxvarb] = np.nan
-                continue
-            corr = np.correlate(valucent, valucent, mode='full')[valu.size - 1:valu.size - 1 + numblag]
-            corr /= vari
-            atcr[indxvarb] = corr
-            indxstop = np.where(corr[1:] <= 0.)[0]
-            numbsum = indxstop[0] + 1 if indxstop.size > 0 else corr.size
-            timeatcr[indxvarb] = 1. + 2. * np.sum(corr[1:numbsum])
-        return atcr.reshape(shapvarb + (numblag,)), timeatcr.reshape(shapvarb)
+        from .diagnostics import autocorrelation_time
+
+        return autocorrelation_time(listpara, typeverb=typeverb, atcrtype=atcrtype)
 
     @staticmethod
     def plot_plot(path, xdat, ydat, lablxdat='', lablydat='', scalpara='self', titl=None, colr=None, linestyl=None, legd=None, typefileplot='pdf', **kwargs):
@@ -3134,8 +3117,9 @@ def setup_pcat(gdat):
             )
     gdat.pathbase = os.path.normpath(gdat.pathbase)
 
-    gdat.pathdata = os.path.join(gdat.pathbase, 'data') + '/'
-    gdat.pathvisu = os.path.join(gdat.pathbase, 'visuals') + '/'
+    gdat.pathrun = retr_pathrun(gdat.pathbase, gdat.strgcnfg) + '/'
+    gdat.pathdata = os.path.join(gdat.pathrun, 'data') + '/'
+    gdat.pathvisu = os.path.join(gdat.pathrun, 'visuals') + '/'
 
     gdat.pathoutp = os.path.join(gdat.pathdata, 'outp') + '/'
     gdat.pathinpt = os.path.join(gdat.pathdata, 'inpt') + '/'
@@ -3460,6 +3444,9 @@ def init_image( \
         for strgstat in ['this', 'next']:
             setattr(gdat, strgstat, tdpy.gdatstrt())
         
+    if gdat.strgcnfg is None:
+        gdat.strgcnfg = inspect.stack()[1][3]
+
     setup_pcat(gdat)
 
     for strgmodl in gdat.liststrgmodl + ['refr']:
@@ -3482,10 +3469,6 @@ def init_image( \
         for name in gdat.dictfitt:
             setattr(gdat.fitt, name, gdat.dictfitt[name])
     
-    ## name of the configuration function
-    if gdat.strgcnfg is None:
-        gdat.strgcnfg = inspect.stack()[1][3]
-   
     if gdat.typedata == 'inpt' and gdat.strgcnfgsimu is not None:
         print('Will use %s to account for selection effects.' % gdat.strgcnfgsimu)
         gdat.pathoutpcnfgsimu = retr_pathoutpcnfg(gdat.pathbase, gdat.strgcnfgsimu)
@@ -5148,7 +5131,7 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
     gdat.pathpixlcnvt = gdat.pathdata + 'pixlcnvt/'
     gdat.pathprox = gdat.pathdata + 'prox/'
     ## plot
-    gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, gdat.strgcnfg)
+    gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathbase, gdat.strgcnfg)
     gdat.pathinit = gdat.pathplotcnfg + 'init/'
     gdat.pathinitintr = gdat.pathinit + 'intr/'
     
@@ -7480,17 +7463,19 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
 
 def retr_liststrgcnfgprev(strgcnfg, pathbase):
     
-    # list of PCAT run plot outputs
-    pathvisu = os.path.join(pathbase, 'visuals')
-    if not os.path.isdir(pathvisu):
+    # list of self-contained PCAT runs
+    pathruns = os.path.normpath(os.fspath(pathbase))
+    if os.path.basename(pathruns) != 'pcat_runs':
+        pathruns = os.path.join(pathruns, 'pcat_runs')
+    if not os.path.isdir(pathruns):
         return []
-    liststrgcnfg = fnmatch.filter(os.listdir(pathvisu), '2*')
+    liststrgcnfg = fnmatch.filter(os.listdir(pathruns), '2*')
     
     liststrgcnfgprev = []
     for strgcnfg in liststrgcnfg:
-        strgstat = pathbase + '/data/outp/' + strgcnfg
-        
-        if chec_statfile(pathbase, strgcnfg, 'gdatmodipost', typeverb=0) and strgcnfg + '_' + strgcnfg[16:].split('_')[-1] == strgcnfg[16:]:
+        if os.path.isdir(retr_pathrun(pathbase, strgcnfg)) and \
+                chec_statfile(pathbase, strgcnfg, 'gdatmodipost', typeverb=0) and \
+                strgcnfg + '_' + strgcnfg[16:].split('_')[-1] == strgcnfg[16:]:
             liststrgcnfgprev.append(strgcnfg) 
     
     liststrgcnfgprev.sort()
@@ -11558,8 +11543,8 @@ def checstrgfeat(strgfrst, strgseco):
 
 
 def retr_pathoutpcnfg(pathbase, strgcnfg):
-    pathbase = os.path.normpath(pathbase)
-    pathoutpcnfg = os.path.join(pathbase, 'data', 'outp', strgcnfg) + '/'
+    pathrun = retr_pathrun(pathbase, strgcnfg)
+    pathoutpcnfg = os.path.join(pathrun, 'data', 'outp', strgcnfg) + '/'
 
     return pathoutpcnfg
 
@@ -11747,7 +11732,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                 maxmnumbparafinl = getattr(gdatfinl.fitt, 'maxmnumbpara', None)
                 if maxmnumbparafinl is None:
                     maxmnumbparafinl = getattr(gdatfinl.fitt, 'numbparagenr', getattr(gdatfinl.fitt, 'numbparagenrbase', 0))
-                boolhastdpymcmc = hasattr(tdpy, 'mcmc')
+                boolhastdpymcmc = True
                 ## np.maximum likelihood sample 
                 gdatfinl.maxmllikproc = np.empty(gdatfinl.numbproc)
                 gdatfinl.indxswepmaxmllikproc = np.empty(gdatfinl.numbproc, dtype=int)
@@ -11772,12 +11757,12 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                     gdatfinl.gmrbparagenrscalbase = np.zeros(gdatfinl.fitt.numbparagenrbase)
                     gdatfinl.gmrbstat = np.zeros((gdatfinl.numbener, gdatfinl.numbpixl, gdatfinl.numbdqlt))
                     for k in gdatfinl.fitt.indxpara.genr.base:
-                        gdatfinl.gmrbparagenrscalbase[k] = tdpy.mcmc.gmrb_test(listparagenrscalfull[:, :, k])
+                        gdatfinl.gmrbparagenrscalbase[k] = _PCATMCMCCompat.gmrb_test(listparagenrscalfull[:, :, k])
                     listcntpmodl = getattr(gdatfinl, 'list' + strgpdfn + 'cntpmodl')
                     for i in gdatfinl.indxener:
                         for j in gdatfinl.indxpixl:
                             for m in gdatfinl.indxdqlt:
-                                gdatfinl.gmrbstat[i, j, m] = tdpy.mcmc.gmrb_test(listcntpmodl[:, :, i, j, m])
+                                gdatfinl.gmrbstat[i, j, m] = _PCATMCMCCompat.gmrb_test(listcntpmodl[:, :, i, j, m])
                     if gdatfinl.typeverb > 0:
                         timefinl = gdatfinl.functime()
                         print('Done in %.3g seconds.' % (timefinl - timeinit))
@@ -11793,7 +11778,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                     gdatfinl.atcrpara = np.full((gdatfinl.numbproc, maxmnumbparafinl, numbatcr), np.nan)
                     gdatfinl.timeatcrpara = np.full((gdatfinl.numbproc, maxmnumbparafinl), np.nan)
                     for k in gdatfinl.indxproc:
-                        atcrparatemp, timeparatemp = tdpy.mcmc.retr_timeatcr(listparagenrscalfull[:, k, :], typeverb=gdatfinl.typeverb)
+                        atcrparatemp, timeparatemp = _PCATMCMCCompat.retr_timeatcr(listparagenrscalfull[:, k, :], typeverb=gdatfinl.typeverb)
                         atcrparatemp = np.asarray(atcrparatemp)
                         timeparatemp = np.asarray(timeparatemp)
                         if atcrparatemp.ndim == 1:
@@ -11807,7 +11792,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                         gdatfinl.atcrpara[k, :numbparause, :numbatcruse] = atcrparatemp[:numbparause, :numbatcruse]
                         gdatfinl.timeatcrpara[k, :numbparause] = timeparatemp[:numbparause]
                         listcntpmodl = getattr(gdatfinl, 'list' + strgpdfn + 'cntpmodl')
-                        atcrcntptemp, timeatcrcntptemp = tdpy.mcmc.retr_timeatcr(listcntpmodl[:, k, :, :, :], typeverb=gdatfinl.typeverb)
+                        atcrcntptemp, timeatcrcntptemp = _PCATMCMCCompat.retr_timeatcr(listcntpmodl[:, k, :, :, :], typeverb=gdatfinl.typeverb)
                         atcrcntptemp = np.asarray(atcrcntptemp)
                         timeatcrcntptemp = np.asarray(timeatcrcntptemp)
                         if atcrcntptemp.ndim == 3:
@@ -11893,7 +11878,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                 print('Done with the tile number %d, run number %d...' % (indxtiletemp, n))
         
         if booltile:
-            gdatfinl.pathplotcnfg = retr_pathplotcnfg(gdatfinl.pathvisu, strgcnfgfinl)
+            gdatfinl.pathplotcnfg = retr_pathplotcnfg(gdatfinl.pathbase, strgcnfgfinl)
             make_fold(gdatfinl)
             indxstrgcnfggood = np.array(indxstrgcnfggood).astype(int)
             numbstrgcnfggood = indxstrgcnfggood.size
@@ -12390,7 +12375,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
     
     print('Preparing plotting context (paths, folder lists, and compatibility defaults for reconstructed final states)...')
     gdatfinl.strgpdfn = 'post'
-    gdatfinl.pathplotcnfg = retr_pathplotcnfg(gdatfinl.pathvisu, gdatfinl.strgcnfg)
+    gdatfinl.pathplotcnfg = retr_pathplotcnfg(gdatfinl.pathbase, gdatfinl.strgcnfg)
     if not hasattr(gdatfinl, 'liststrgpdfn') or gdatfinl.liststrgpdfn is None:
         gdatfinl.liststrgpdfn = [strgpdfn]
     if not hasattr(gdatfinl, 'liststrgfoldfram') or gdatfinl.liststrgfoldfram is None:
@@ -12609,7 +12594,7 @@ def _plot_finl_lpdf_fallback(gdat, strgpdfn):
         else:
             labl = r'$\ln P(D|M)$'
         path = pathfinl + strgpdfntemp
-        tdpy.mcmc.plot_hist(path, varb, labl)
+        _PCATMCMCCompat.plot_hist(path, varb, labl)
         listvarbdraw = []
         listlabldraw = []
         listcolrdraw = []
@@ -12617,7 +12602,7 @@ def _plot_finl_lpdf_fallback(gdat, strgpdfn):
             listvarbdraw += [getattr(gdat.true, strgpdfntemp)]
             listlabldraw += ['True model']
             listcolrdraw += [gdat.refr.colr]
-        tdpy.mcmc.plot_trac(path, varb, labl, listvarbdraw=listvarbdraw, listlabldraw=listlabldraw, listcolrdraw=listcolrdraw)
+        _PCATMCMCCompat.plot_trac(path, varb, labl, listvarbdraw=listvarbdraw, listlabldraw=listlabldraw, listcolrdraw=listcolrdraw)
 
 
 def _has_init_plot_outputs(gdat):
@@ -13068,7 +13053,7 @@ def proc_anim(strgcnfg, pathbase=None):
     for strgpdfn in gdat.liststrgpdfn:
         from PIL import Image
 
-        pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, strgcnfg)
+        pathplotcnfg = retr_pathplotcnfg(pathbase, strgcnfg)
         pathfram = os.path.join(pathplotcnfg, strgpdfn, 'fram')
         pathanim = os.path.join(pathplotcnfg, strgpdfn, 'anim')
         dictpathfram = {}
@@ -13100,8 +13085,7 @@ def proc_anim(strgcnfg, pathbase=None):
     filestat = open_narr(pathoutpcnfg + 'stat.txt', 'a')
     filestat.write('animfinl written.\n')
     filestat.close()
-    pathvisu = getattr(gdat, 'pathvisu', os.path.join(os.fspath(pathbase), 'visuals'))
-    _remove_empty_directories(retr_pathplotcnfg(pathvisu, strgcnfg))
+    _remove_empty_directories(retr_pathplotcnfg(pathbase, strgcnfg))
     
 
 def _should_plot_spatial_count_histograms(gdat):
@@ -13883,15 +13867,14 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                         plot_genemaps(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, 'magnresiperc', booltdim=True)
     
 
-def delete_strgcnfg(strgcnfg):
-    
-    pathdata = pathbase + 'data/outp/'
-    pathvisu = pathbase + 'visuals/'
-    
-    for pathroot in [pathdata, pathvisu]:
-        path = retr_pathcnfg(pathroot, strgcnfg)
-        print('Writing to %s...' % path)
-        shutil.rmtree(path, ignore_errors=True)
+def delete_strgcnfg(strgcnfg, pathbase=None):
+    if pathbase is None:
+        pathbase = os.environ.get('PCAT_DATA_PATH')
+    if pathbase is None:
+        raise RuntimeError('PCAT_DATA_PATH is not set; cannot locate the run to delete.')
+    pathrun = retr_pathrun(pathbase, strgcnfg)
+    print('Writing to %s...' % pathrun)
+    shutil.rmtree(pathrun, ignore_errors=True)
 
 
 def plot_infopvks(gdat, gdatprio, name, namefull, nameseco=None):
@@ -13949,11 +13932,11 @@ def plot_infopvks(gdat, gdatprio, name, namefull, nameseco=None):
         lablxdat = getattr(gmod.lablpara, name + 'totl')
         xdat = getattr(gdat, 'bctr' + name)
         ydat = getattr(gdat, 'info' + namefull)
-        tdpy.mcmc.plot_plot(path, xdat, ydat, lablxdat, lablydat, scal)
+        _PCATMCMCCompat.plot_plot(path, xdat, ydat, lablxdat, lablydat, scal)
         
         ydat = getattr(gdat, 'pvks' + namefull)
         pathpvks = gdat.pathinfo + 'pvks' + namefull
-        tdpy.mcmc.plot_plot(pathpvks, xdat, ydat, lablxdat, '$p_{KS}$', scal)
+        _PCATMCMCCompat.plot_plot(pathpvks, xdat, ydat, lablxdat, '$p_{KS}$', scal)
         
     else:
         # horizontal axis
@@ -13970,14 +13953,14 @@ def plot_infopvks(gdat, gdatprio, name, namefull, nameseco=None):
         pathdinf = gdat.pathinfo + 'dinf' + namefull
         ydat = getattr(gdat, 'infodens' + namefull)
         lablydat = r'$\rho_{D_{KL}}$'
-        tdpy.mcmc.plot_plot(pathdinf, xdat, ydat, lablxdat, lablydat, scal, titl=titl)
+        _PCATMCMCCompat.plot_plot(pathdinf, xdat, ydat, lablxdat, lablydat, scal, titl=titl)
         
         # prior and posterior PDFs
         pathpdfn = gdat.pathinfo + 'pdfn' + namefull
         lablydat = r'$P$'
         ydat = [getattr(gdat, 'pdfnpost' + namefull), getattr(gdatprio, 'pdfnprio' + namefull)]
         legd = ['$P$(%s|$D$)' % lablxdat, '$P$(%s)' % lablxdat]
-        tdpy.mcmc.plot_plot(pathpdfn, xdat, ydat, lablxdat, lablydat, scal, colr=['k', 'k'], linestyl=['-', '--'], legd=legd, titl=titl)
+        _PCATMCMCCompat.plot_plot(pathpdfn, xdat, ydat, lablxdat, lablydat, scal, colr=['k', 'k'], linestyl=['-', '--'], legd=legd, titl=titl)
 
 
 def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu=None, booltile=None):
@@ -13990,7 +13973,7 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
     
     gdat.strgbest = 'ML'
     gmod = gdat.fitt
-    boolhastdpymcmc = hasattr(tdpy, 'mcmc')
+    boolhastdpymcmc = True
     if not hasattr(gmod, 'namepara'):
         gmod.namepara = tdpy.gdatstrt()
     if not hasattr(gmod.namepara, 'scal'):
@@ -14038,17 +14021,17 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
                 if listindxsamptotlproptotl[n].size > 0 and (varb[listindxsamptotlproptotl[n]] != 0.).any():
                     make_directory(pathfinlprop)
                     path = pathfinlprop + gdat.listnametermlacp[k] + 'totl'
-                    tdpy.mcmc.plot_trac(path, varb[listindxsamptotlproptotl[n]], labl, titl=gdat.nameproptype[n] + ', Total')
+                    _PCATMCMCCompat.plot_trac(path, varb[listindxsamptotlproptotl[n]], labl, titl=gdat.nameproptype[n] + ', Total')
                 
                 if listindxsamptotlpropaccp[n].size > 0 and (varb[listindxsamptotlpropaccp[n]] != 0.).any():
                     make_directory(pathfinlprop)
                     path = pathfinlprop + gdat.listnametermlacp[k] + 'accp'
-                    tdpy.mcmc.plot_trac(path, varb[listindxsamptotlpropaccp[n]], labl, titl=gdat.nameproptype[n] + ', Accepted')
+                    _PCATMCMCCompat.plot_trac(path, varb[listindxsamptotlpropaccp[n]], labl, titl=gdat.nameproptype[n] + ', Accepted')
                 
                 if listindxsamptotlpropreje[n].size > 0 and (varb[listindxsamptotlpropreje[n]] != 0.).any():
                     make_directory(pathfinlprop)
                     path = pathfinlprop + gdat.listnametermlacp[k] + 'reje'
-                    tdpy.mcmc.plot_trac(path, varb[listindxsamptotlpropreje[n]], labl, titl=gdat.nameproptype[n] + ', Rejected')
+                    _PCATMCMCCompat.plot_trac(path, varb[listindxsamptotlpropreje[n]], labl, titl=gdat.nameproptype[n] + ', Rejected')
             
         if gdat.checprio and strgpdfn == 'post' and not booltile:
             # this works only for scalar variables -- needs to be generalized to all variables
@@ -14129,23 +14112,23 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
         if hasattr(gdat, 'atcrcntp') and hasattr(gdat, 'timeatcrcntp') and np.size(gdat.atcrcntp) > 0 and np.size(gdat.timeatcrcntp) > 0:
             atcrplot, timeatcrplot = _retr_representative_atcr(gdat.atcrcntp, gdat.timeatcrcntp)
             if atcrplot is not None:
-                tdpy.mcmc.plot_atcr(pathdiag, atcrplot, timeatcrplot, strgextn='cntp')
+                _PCATMCMCCompat.plot_atcr(pathdiag, atcrplot, timeatcrplot, strgextn='cntp')
             else:
                 print('Skipping count-map autocorrelation plot because all sampled count maps are constant.')
         else:
             print('Skipping count-map autocorrelation plot because autocorrelation arrays are empty.')
         if gmod.numbpopl > 0 and hasattr(gdat, 'list' + strgpdfn + 'lpostotl'):
             listlpostotl = np.asarray(getattr(gdat, 'list' + strgpdfn + 'lpostotl'))
-            atcrplot, timeatcrplot = tdpy.mcmc.retr_timeatcr(listlpostotl, typeverb=gdat.typeverb)
+            atcrplot, timeatcrplot = _PCATMCMCCompat.retr_timeatcr(listlpostotl, typeverb=gdat.typeverb)
             atcrplot, timeatcrplot = _retr_representative_atcr(atcrplot, timeatcrplot)
             if atcrplot is not None:
-                tdpy.mcmc.plot_atcr(pathdiag, atcrplot, timeatcrplot, strgextn='lpostotl')
+                _PCATMCMCCompat.plot_atcr(pathdiag, atcrplot, timeatcrplot, strgextn='lpostotl')
             else:
                 print('Skipping log-posterior autocorrelation plot because the sampled values are constant.')
         elif hasattr(gdat, 'atcrpara') and hasattr(gdat, 'timeatcrpara') and np.size(gdat.atcrpara) > 0 and np.size(gdat.timeatcrpara) > 0 and gdat.atcrpara.shape[1] > 0 and gdat.timeatcrpara.shape[1] > 0:
             atcrplot, timeatcrplot = _retr_representative_atcr(gdat.atcrpara, gdat.timeatcrpara)
             if atcrplot is not None:
-                tdpy.mcmc.plot_atcr(pathdiag, atcrplot, timeatcrplot, strgextn='para')
+                _PCATMCMCCompat.plot_atcr(pathdiag, atcrplot, timeatcrplot, strgextn='para')
             else:
                 print('Skipping parameter autocorrelation plot because all sampled parameters are constant.')
             print('Autocorrelation times:')
@@ -15997,7 +15980,7 @@ def plot_init(gdat):
     if not hasattr(gdat, 'typefileplot'):
         gdat.typefileplot = 'png'
     if not hasattr(gdat, 'pathplotcnfg') or gdat.pathplotcnfg is None:
-        gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, gdat.strgcnfg)
+        gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathbase, gdat.strgcnfg)
     if not hasattr(gdat, 'pathinit') or gdat.pathinit is None:
         gdat.pathinit = gdat.pathplotcnfg + 'init/'
     if not hasattr(gdat, 'pathinitintr') or gdat.pathinitintr is None:
@@ -16742,6 +16725,9 @@ def init( \
     if not hasattr(gdat, 'strgenerunit') or gdat.strgenerunit is None:
         gdat.strgenerunit = ''
 
+    if gdat.strgcnfg is None:
+        gdat.strgcnfg = '%d' % gdat.numbswep
+
     setup_pcat(gdat)
 
     typeelemglob = list(getattr(gdat, 'typeelem', [])) if hasattr(gdat, 'typeelem') else []
@@ -16784,8 +16770,6 @@ def init( \
     gdat.strgnumbswep = '%d' % gdat.numbswep
     
     # output paths
-    if gdat.strgcnfg is None:
-        gdat.strgcnfg = '%s' % gdat.strgnumbswep
     gdat.pathoutpcnfg = retr_pathoutpcnfg(gdat.pathbase, gdat.strgcnfg)
 
     # physical constants
@@ -16994,7 +16978,7 @@ def init( \
                 if not _has_init_plot_outputs(gdatinit):
                     print('Initialization plot files are missing; regenerating init/ diagnostics from cached gdatinit state.')
                     if not hasattr(gdatinit, 'pathplotcnfg') or gdatinit.pathplotcnfg is None:
-                        gdatinit.pathplotcnfg = retr_pathplotcnfg(gdatinit.pathvisu, gdatinit.strgcnfg)
+                        gdatinit.pathplotcnfg = retr_pathplotcnfg(gdatinit.pathbase, gdatinit.strgcnfg)
                     if not hasattr(gdatinit, 'pathinit') or gdatinit.pathinit is None:
                         gdatinit.pathinit = gdatinit.pathplotcnfg + 'init/'
                     if not hasattr(gdatinit, 'pathinitintr') or gdatinit.pathinitintr is None:
@@ -17585,7 +17569,7 @@ def init( \
         # Ensure init-plot paths exist even for minimal/mock configurations
         # where folder scaffolding may be incomplete.
         if not hasattr(gdat, 'pathplotcnfg') or gdat.pathplotcnfg is None:
-            gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, gdat.strgcnfg)
+            gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathbase, gdat.strgcnfg)
         if not hasattr(gdat, 'pathinit') or gdat.pathinit is None:
             gdat.pathinit = gdat.pathplotcnfg + 'init/'
         if not hasattr(gdat, 'pathinitintr') or gdat.pathinitintr is None:
@@ -18253,12 +18237,7 @@ def _sample_generic(**kwargs):
         'probtran': 0.,
         'probspmr': 0.,
         'boolcondcatl': False,
-        'boolmakeplot': False,
-        'boolmakeplotinit': False,
-        'boolmakeplotfram': False,
-        'boolmakeplotfinlprio': False,
-        'boolmakeplotfinlpost': False,
-        'makeanim': False,
+        'boolbinsener': False,
         'numbener': 1,
         'numbpixl': 1,
         'numbdqlt': 1,
@@ -18267,6 +18246,15 @@ def _sample_generic(**kwargs):
         'cntpdata': np.ones((1, 1, 1)),
         'expo': np.ones((1, 1, 1)),
     })
+    for name in (
+        'boolmakeplot',
+        'boolmakeplotinit',
+        'boolmakeplotfram',
+        'boolmakeplotfinlprio',
+        'boolmakeplotfinlpost',
+        'makeanim',
+    ):
+        kwargs.setdefault(name, False)
     gdat = init(kwargs)
     return readfile(gdat.pathoutpcnfg + 'gdatfinlpost')
 
@@ -18776,7 +18764,7 @@ def worksamp(gdat, lock, strgpdfn='post'):
     narr_task('Preparing sampler workers.', gdat=gdat, phase='before', major=True)
 
     if not hasattr(gdat, 'pathplotcnfg') or gdat.pathplotcnfg is None:
-        gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathvisu, gdat.strgcnfg)
+        gdat.pathplotcnfg = retr_pathplotcnfg(gdat.pathbase, gdat.strgcnfg)
     make_directory(gdat.pathplotcnfg)
     
     pathorig = gdat.pathoutpcnfg + 'stat.txt'

@@ -10,27 +10,27 @@
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
-
+  
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
-      <script src="_static/doctools.js?v=fd6eb6e6"></script>
-      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
-    <link rel="prev" title="Maintained examples" href="examples.html" />
+    <link rel="prev" title="Examples" href="examples.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
 
-
-
+          
+          
           <a href="index.html" class="icon icon-home">
             PCAT
           </a>
@@ -45,7 +45,8 @@
               <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Maintained examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Outputs and diagnostics</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#directory-layout">Directory layout</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#state-files">State files</a></li>
@@ -82,36 +83,37 @@
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-
+             
   <section id="outputs-and-diagnostics">
 <h1>Outputs and diagnostics<a class="headerlink" href="#outputs-and-diagnostics" title="Link to this heading"></a></h1>
 <section id="directory-layout">
 <h2>Directory layout<a class="headerlink" href="#directory-layout" title="Link to this heading"></a></h2>
-<p>A run with output root <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> and tag <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> writes:</p>
+<p>A run with project root <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> and tag <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> writes:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>pathbase/
-|-- data/
-|   `-- outp/
-|       `-- strgcnfg/
-|           |-- cmndargs.txt
-|           |-- stat.txt
-|           |-- gdatinit.p
-|           |-- gdatinit.h5
-|           |-- gdatmodi0000post.p
-|           |-- gdatmodi0000post.h5
-|           |-- gdatfinlpost.p
-|           `-- gdatfinlpost.h5
-`-- visuals/
+`-- pcat_runs/
     `-- strgcnfg/
-        |-- init/
-        `-- post/
-            |-- fram/
-            |-- finl/
-            `-- anim/
+        |-- data/
+        |   `-- outp/
+        |       `-- strgcnfg/
+        |           |-- cmndargs.txt
+        |           |-- stat.txt
+        |           |-- gdatinit.p
+        |           |-- gdatinit.h5
+        |           |-- gdatmodi0000post.p
+        |           |-- gdatmodi0000post.h5
+        |           |-- gdatfinlpost.p
+        |           `-- gdatfinlpost.h5
+        `-- visuals/
+            |-- init/
+            `-- post/
+                |-- fram/
+                |-- finl/
+                `-- anim/
 </pre></div>
 </div>
-<p>When <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> already ends in the run tag, PCAT avoids repeating that name
-under <code class="docutils literal notranslate"><span class="pre">visuals/</span></code>. For example, <code class="docutils literal notranslate"><span class="pre">examples/gmix_demo</span></code> writes directly to
-<code class="docutils literal notranslate"><span class="pre">examples/gmix_demo/visuals/init</span></code> and <code class="docutils literal notranslate"><span class="pre">visuals/post</span></code>.</p>
+<p>Each run is a self-contained child of <code class="docutils literal notranslate"><span class="pre">pathbase/pcat_runs</span></code>. PCAT also accepts
+<code class="docutils literal notranslate"><span class="pre">pathbase</span></code> values that already identify either <code class="docutils literal notranslate"><span class="pre">pcat_runs</span></code> or the run root
+without repeating either directory.</p>
 </section>
 <section id="state-files">
 <h2>State files<a class="headerlink" href="#state-files" title="Link to this heading"></a></h2>
@@ -124,9 +126,10 @@ the object from the extension-free path:</p>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pcat.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">readfile</span>
 
-<span class="n">run_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"examples/gmix_demo"</span><span class="p">)</span>
+ <span class="n">project_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;examples&quot;</span><span class="p">)</span>
+ <span class="n">run_root</span> <span class="o">=</span> <span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;pcat_runs&quot;</span> <span class="o">/</span> <span class="s2">&quot;gmix_demo&quot;</span>
 <span class="n">state</span> <span class="o">=</span> <span class="n">readfile</span><span class="p">(</span>
-    <span class="nb">str</span><span class="p">(</span><span class="n">run_root</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="s2">"outp"</span> <span class="o">/</span> <span class="s2">"gmix_demo"</span> <span class="o">/</span> <span class="s2">"gdatfinlpost"</span><span class="p">)</span>
+    <span class="nb">str</span><span class="p">(</span><span class="n">run_root</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span> <span class="o">/</span> <span class="s2">&quot;outp&quot;</span> <span class="o">/</span> <span class="s2">&quot;gmix_demo&quot;</span> <span class="o">/</span> <span class="s2">&quot;gdatfinlpost&quot;</span><span class="p">)</span>
 <span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">numbsamp</span><span class="p">)</span>
 </pre></div>
@@ -182,7 +185,7 @@ tag; use a new <code class="docutils literal notranslate"><span class="pre">strg
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="examples.html" class="btn btn-neutral float-left" title="Maintained examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples.html" class="btn btn-neutral float-left" title="Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="troubleshooting.html" class="btn btn-neutral float-right" title="Troubleshooting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
@@ -195,7 +198,7 @@ tag; use a new <code class="docutils literal notranslate"><span class="pre">strg
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     provided by <a href="https://readthedocs.org">Read the Docs</a>.
-
+   
 
 </footer>
         </div>
@@ -206,7 +209,7 @@ tag; use a new <code class="docutils literal notranslate"><span class="pre">strg
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
+  </script> 
 
 </body>
 </html>

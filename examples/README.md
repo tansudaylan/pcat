@@ -10,6 +10,7 @@ These notebooks apply probabilistic cataloging to point-source images, Gaussian 
 - `Daylan+2018/`: a simulated HST strong-lens catalog and one-subhalo comparison inspired by Daylan et al. (2018)
 - `hst_lens/`: catalog inference in a simulated Hubble Space Telescope lens image
 - `roman_lens_catalog/`: a seeded Roman strong-lens benchmark and its generated diagnostic
+- `rubin_cluster_lens/`: a synthetic Rubin-like cluster-scale lens fitted with PCAT's Poisson image sampler
 - `catalog_association/`: completeness and purity across catalog-matching radii
 - `psf_subpixel/`: cubic reconstruction of an oversampled point-spread function
 - `voigt-profile/`: nominal and high-signal Voigt-profile line detection in simulated spectra

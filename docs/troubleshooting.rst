@@ -12,13 +12,13 @@ and does not select a sampler output directory.
 If final processing or animation reports that ``PCAT_DATA_PATH`` is not set,
 pass the same ``pathbase`` used for sampling. A run cannot be reconstructed from
 ``visuals/`` alone because final processing reads serialized states under
-``data/outp/<run tag>/``.
+``pcat_runs/<run tag>/data/outp/<run tag>/``.
 
 Incomplete runs
 ---------------
 
-Inspect ``data/outp/<run tag>/stat.txt`` from bottom to top. A complete posterior
-run normally records these stages in order:
+Inspect ``pcat_runs/<run tag>/data/outp/<run tag>/stat.txt`` from bottom to top.
+A complete posterior run normally records these stages in order:
 
 .. code-block:: text
 
@@ -40,9 +40,9 @@ Stale caches
 
 PCAT can reuse existing state for a matching run tag. After changing model
 structure, output paths, or plotting configuration, make a fresh run. Commands
-that support fresh initialization accept ``--fresh``. Otherwise remove both
-``data/outp/<run tag>`` and the corresponding ``visuals/`` directory, preserving
-any products needed for provenance first.
+that support fresh initialization accept ``--fresh``. Otherwise preserve any
+products needed for provenance, then remove the self-contained
+``pcat_runs/<run tag>/`` directory.
 
 Missing figures or animations
 -----------------------------

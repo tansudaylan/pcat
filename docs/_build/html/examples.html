@@ -6,31 +6,31 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maintained examples &mdash; PCAT 0.1.0 documentation</title>
+  <title>Examples &mdash; PCAT 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
-
+  
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
-      <script src="_static/doctools.js?v=fd6eb6e6"></script>
-      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Outputs and diagnostics" href="outputs.html" />
-    <link rel="prev" title="Getting started" href="getting_started.html" />
+    <link rel="prev" title="Capabilities" href="capabilities.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
 
-
-
+          
+          
           <a href="index.html" class="icon icon-home">
             PCAT
           </a>
@@ -45,9 +45,11 @@
               <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Maintained examples</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#pipeline-demonstrations">Pipeline demonstrations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#publication-and-instrument-examples">Publication and instrument examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#analysis-utilities">Analysis utilities</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#scientific-interpretation">Scientific interpretation</a></li>
 </ul>
 </li>
@@ -70,7 +72,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Maintained examples</li>
+      <li class="breadcrumb-item active">Examples</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/examples.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -79,27 +81,38 @@
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-
-  <section id="maintained-examples">
-<h1>Maintained examples<a class="headerlink" href="#maintained-examples" title="Link to this heading"></a></h1>
-<p>Each example owns one subdirectory under <code class="docutils literal notranslate"><span class="pre">examples/</span></code>. Source, generated data,
-and visuals stay together so outputs can be traced to the configuration that
-created them.</p>
+             
+  <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h1>
+<p>Every Python example under <code class="docutils literal notranslate"><span class="pre">examples/</span></code> has a corresponding Jupyter notebook
+in the same directory. Open the notebook in VS Code or Jupyter to run it
+interactively. The Python scripts remain available for automated and command-line
+runs. The batch-command notebook lists its external commands without executing
+them.</p>
 <section id="pipeline-demonstrations">
 <h2>Pipeline demonstrations<a class="headerlink" href="#pipeline-demonstrations" title="Link to this heading"></a></h2>
-<dl class="simple">
+<dl>
 <dt><code class="docutils literal notranslate"><span class="pre">chan_demo</span></code></dt><dd><p>Compact Chandra-style point-source detection with simulated data.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">gmix_demo</span></code></dt><dd><p>Two-dimensional variable-width Gaussian-mixture inference with genuine
 birth and death transitions.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">hst_lens</span></code></dt><dd><p>Hubble Space Telescope Wide Field Camera 3 lensing-style image inference.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">hst_lens</span></code></dt><dd><p>Hubble Space Telescope Wide Field Camera 3 image inference with lens mass,
+foreground lens-galaxy emission, source emission, and lensed emission.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/hst_lens/generate_demo.py
+</pre></div>
+</div>
 </dd>
 </dl>
-<p>Run all maintained pipeline checks and verify their figures with:</p>
+<p>Run the image analyses, Roman benchmark, and reduced Voigt calculation with:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/run_examples.py
 </pre></div>
 </div>
+<p>Posterior samples from four maintained examples are synchronized below. The
+panels show model intensity for a Gaussian mixture, model counts for point
+sources and a strong lens, and the model with data for spectral lines.</p>
+<a class="reference internal image-reference" href="_images/pcat_posterior_samples.gif"><img alt="Animated posterior samples from four maintained PCAT examples" class="align-center" src="_images/pcat_posterior_samples.gif" style="width: 760px;" />
+</a>
 </section>
 <section id="publication-and-instrument-examples">
 <h2>Publication and instrument examples<a class="headerlink" href="#publication-and-instrument-examples" title="Link to this heading"></a></h2>
@@ -107,11 +120,19 @@ birth and death transitions.</p>
 <dt><code class="docutils literal notranslate"><span class="pre">Daylan+2017</span></code></dt><dd><p>Scaled mock-catalog reproduction of Daylan, Portillo, and Finkbeiner (2017).
 The smoke mode preserves the inference pattern while reducing the source
 count and chain length.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="s1">'examples/Daylan+2017/generate_reproduction.py'</span><span class="w"> </span>--smoke<span class="w"> </span>--fresh
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="s1">&#39;examples/Daylan+2017/generate_reproduction.py&#39;</span><span class="w"> </span>--smoke<span class="w"> </span>--fresh
 </pre></div>
 </div>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">voigt-profile</span></code></dt><dd><p>Simulated nominal and high-signal Voigt-profile line detection.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">Daylan+2018</span></code></dt><dd><p>Simulated Hubble Space Telescope Wide Field Camera 3 strong-lens analysis
+comparing a variable subhalo catalog with a fixed one-subhalo fit.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="s1">&#39;examples/Daylan+2018/generate_reproduction.py&#39;</span><span class="w"> </span>--smoke
+python<span class="w"> </span><span class="s1">&#39;examples/Daylan+2018/generate_reproduction.py&#39;</span><span class="w"> </span>--smoke<span class="w"> </span>--one-subhalo
+</pre></div>
+</div>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">voigt-profile</span></code></dt><dd><p>Transdimensional detection of an unknown number of Voigt-profile emission
+lines in simulated spectral data.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/voigt-profile/pcat_voigt_profile_detection.py<span class="w"> </span>--configuration<span class="w"> </span>nomi
 </pre></div>
 </div>
@@ -121,9 +142,35 @@ diagnostic.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/roman_lens_catalog/roman_lens_catalog_diagnostic.py
 </pre></div>
 </div>
+<a class="reference internal image-reference" href="_images/roman_lens_catalog_diagnostic.png"><img alt="Simulated Roman strong-lens images, residual, and catalog posterior" class="align-center" src="_images/roman_lens_catalog_diagnostic.png" style="width: 720px;" />
+</a>
+<p>The four panels trace one simulated detector image through the macro-lens
+model and residual, then summarize catalog posterior probabilities across
+the seeded lens population.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">fermi_lat_pg1553</span></code></dt><dd><p>Fermi Large Area Telescope event-filter configuration for PG 1553+113. This
 utility requires the Fermi Science Tools and local mission data.</p>
+</dd>
+</dl>
+</section>
+<section id="analysis-utilities">
+<h2>Analysis utilities<a class="headerlink" href="#analysis-utilities" title="Link to this heading"></a></h2>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">catalog_association</span></code></dt><dd><p>Seeded completeness and purity calculation for coordinate-and-value catalog
+matching across a range of association radii.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/catalog_association/catalog_association.py
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/catalog_association.png"><img alt="Catalog completeness and purity across association radii" class="align-center" src="_images/catalog_association.png" style="width: 640px;" />
+</a>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">psf_subpixel</span></code></dt><dd><p>Reconstruction of an oversampled point-spread function with PCAT’s
+piecewise-cubic detector-pixel model, including interpolation residuals.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/psf_subpixel/psf_subpixel.py
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/psf_subpixel.png"><img alt="Cubic subpixel point-spread-function reconstruction and residuals" class="align-center" src="_images/psf_subpixel.png" style="width: 640px;" />
+</a>
 </dd>
 </dl>
 </section>
@@ -132,7 +179,7 @@ utility requires the Fermi Science Tools and local mission data.</p>
 <p>Generated examples are deterministic pipeline demonstrations unless their
 README explicitly states otherwise. Synthetic outputs validate computation and
 visualization but do not constitute measurements of real astrophysical systems.
-The Daylan+2017 README distinguishes its maintained scaled simulation from the
+The Daylan+2017 README distinguishes its scaled simulation from the
 archival Fermi-LAT analysis in the publication.</p>
 </section>
 </section>
@@ -141,7 +188,7 @@ archival Fermi-LAT analysis in the publication.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="capabilities.html" class="btn btn-neutral float-left" title="Capabilities" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="outputs.html" class="btn btn-neutral float-right" title="Outputs and diagnostics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
@@ -154,7 +201,7 @@ archival Fermi-LAT analysis in the publication.</p>
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     provided by <a href="https://readthedocs.org">Read the Docs</a>.
-
+   
 
 </footer>
         </div>
@@ -165,7 +212,7 @@ archival Fermi-LAT analysis in the publication.</p>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
+  </script> 
 
 </body>
 </html>

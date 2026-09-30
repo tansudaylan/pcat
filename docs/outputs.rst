@@ -4,32 +4,34 @@ Outputs and diagnostics
 Directory layout
 ----------------
 
-A run with output root ``pathbase`` and tag ``strgcnfg`` writes:
+A run with project root ``pathbase`` and tag ``strgcnfg`` writes:
 
 .. code-block:: text
 
    pathbase/
-   |-- data/
-   |   `-- outp/
-   |       `-- strgcnfg/
-   |           |-- cmndargs.txt
-   |           |-- stat.txt
-   |           |-- gdatinit.p
-   |           |-- gdatinit.h5
-   |           |-- gdatmodi0000post.p
-   |           |-- gdatmodi0000post.h5
-   |           |-- gdatfinlpost.p
-   |           `-- gdatfinlpost.h5
-   `-- visuals/
-       |-- init/
-       `-- post/
-           |-- fram/
-           |-- finl/
-           `-- anim/
+   `-- pcat_runs/
+       `-- strgcnfg/
+           |-- data/
+           |   `-- outp/
+           |       `-- strgcnfg/
+           |           |-- cmndargs.txt
+           |           |-- stat.txt
+           |           |-- gdatinit.p
+           |           |-- gdatinit.h5
+           |           |-- gdatmodi0000post.p
+           |           |-- gdatmodi0000post.h5
+           |           |-- gdatfinlpost.p
+           |           `-- gdatfinlpost.h5
+           `-- visuals/
+               |-- init/
+               `-- post/
+                   |-- fram/
+                   |-- finl/
+                   `-- anim/
 
-The run tag separates serialized states under ``data/outp``. Visual products
-always remain directly under ``pathbase/visuals`` because ``pathbase`` already
-identifies their owning example or analysis.
+Each run is a self-contained child of ``pathbase/pcat_runs``. PCAT also accepts
+``pathbase`` values that already identify either ``pcat_runs`` or the run root
+without repeating either directory.
 
 State files
 -----------
@@ -46,7 +48,8 @@ the object from the extension-free path:
 
    from pcat.main import readfile
 
-   run_root = Path("examples/gmix_demo")
+    project_root = Path("examples")
+    run_root = project_root / "pcat_runs" / "gmix_demo"
    state = readfile(
        str(run_root / "data" / "outp" / "gmix_demo" / "gdatfinlpost")
    )

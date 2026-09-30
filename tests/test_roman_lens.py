@@ -1,5 +1,7 @@
 import numpy as np
 import pytest
+import pickle
+from types import SimpleNamespace
 
 from pcat.roman_lens import (
     RomanLensConfig,
@@ -9,6 +11,26 @@ from pcat.roman_lens import (
     simulate_population,
     summarize_population,
 )
+from pcat.rubin_cluster import log_likelihood, predicted_counts
+
+
+def test_cluster_poisson_likelihood_prefers_the_injected_lens():
+    config = RomanLensConfig(number_side=32, pixel_scale=0.2, psf_fwhm=0.7)
+    true_parameters = np.array((1.2, 0.1, -0.2))  # [arcsec]
+    source_size = 0.3  # [arcsec]
+    observed = predicted_counts(config, true_parameters, source_size, 0.7, 0.4)
+    state = SimpleNamespace(
+        rubin_config=config,
+        rubin_observed_counts=observed,
+        rubin_source_size=source_size,
+        rubin_source_axis_ratio=0.7,
+        rubin_source_angle=0.4,
+    )
+
+    assert log_likelihood(state, "fitt", true_parameters) > log_likelihood(
+        state, "fitt", np.array((1.6, 0.1, -0.2))
+    )
+    assert pickle.loads(pickle.dumps(log_likelihood)) is log_likelihood
 
 
 def test_injected_perturber_raises_catalog_probability():

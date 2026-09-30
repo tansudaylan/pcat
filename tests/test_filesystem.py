@@ -8,7 +8,9 @@ from pcat.main import (
     make_symlink,
     readfile,
     retr_pathcnfg,
+    retr_pathoutpcnfg,
     retr_pathplotcnfg,
+    retr_pathrun,
     writfile,
 )
 
@@ -30,14 +32,34 @@ def test_retr_pathcnfg_rejects_path_traversal(tmp_path):
         retr_pathcnfg(tmp_path, '../outside')
 
 
-def test_retr_pathplotcnfg_keeps_visual_root_flat(tmp_path):
-    output_root = tmp_path / 'gmix_demo'
+def test_run_paths_are_self_contained_under_parent(tmp_path):
+    run_root = tmp_path / 'pcat_runs' / 'gmix_demo'
 
-    assert retr_pathplotcnfg(output_root / 'visuals', 'gmix_demo') == (
-        str(output_root / 'visuals') + '/'
+    assert retr_pathrun(tmp_path, 'gmix_demo') == str(run_root)
+    assert retr_pathoutpcnfg(tmp_path, 'gmix_demo') == (
+        str(run_root / 'data' / 'outp' / 'gmix_demo') + '/'
     )
-    assert retr_pathplotcnfg(output_root / 'visuals', 'alternate') == (
-        str(output_root / 'visuals') + '/'
+    assert retr_pathplotcnfg(tmp_path, 'gmix_demo') == (
+        str(run_root / 'visuals') + '/'
+    )
+
+
+def test_run_paths_do_not_repeat_existing_runs_root(tmp_path):
+    runs_root = tmp_path / 'pcat_runs'
+    run_root = runs_root / 'gmix_demo'
+
+    assert retr_pathrun(runs_root, 'gmix_demo') == str(run_root)
+
+
+def test_run_paths_do_not_repeat_existing_run_root(tmp_path):
+    run_root = tmp_path / 'pcat_runs' / 'gmix_demo'
+
+    assert retr_pathrun(run_root, 'gmix_demo') == str(run_root)
+    assert retr_pathoutpcnfg(run_root, 'gmix_demo') == (
+        str(run_root / 'data' / 'outp' / 'gmix_demo') + '/'
+    )
+    assert retr_pathplotcnfg(run_root, 'gmix_demo') == (
+        str(run_root / 'visuals') + '/'
     )
 
 

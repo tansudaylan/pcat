@@ -240,8 +240,9 @@ def test_proc_anim_uses_explicit_output_root(tmp_path, monkeypatch):
 def test_proc_anim_preserves_numeric_sweep_order(tmp_path, monkeypatch):
     from PIL import Image
 
-    output_path = tmp_path / "data" / "outp" / "demo"
-    frame_path = tmp_path / "visuals" / "post" / "fram" / "maps"
+    run_root = tmp_path / "pcat_runs" / "demo"
+    output_path = run_root / "data" / "outp" / "demo"
+    frame_path = run_root / "visuals" / "post" / "fram" / "maps"
     output_path.mkdir(parents=True)
     frame_path.mkdir(parents=True)
     Image.new("RGB", (2, 2), "blue").save(frame_path / "sample_swep000000010.png")
@@ -257,14 +258,15 @@ def test_proc_anim_preserves_numeric_sweep_order(tmp_path, monkeypatch):
         "readfile",
         lambda path: SimpleNamespace(
             liststrgpdfn=["post"],
-            pathvisu=str(tmp_path / "visuals") + "/",
+            pathbase=str(tmp_path),
+            pathvisu=str(run_root / "visuals") + "/",
             typefileplot="png",
         ),
     )
 
     pcat_main.proc_anim("demo", pathbase=tmp_path)
 
-    animation_path = tmp_path / "visuals" / "post" / "anim" / "maps" / "sample.gif"
+    animation_path = run_root / "visuals" / "post" / "anim" / "maps" / "sample.gif"
     with Image.open(animation_path) as animation:
         assert animation.n_frames == 2
         animation.seek(0)

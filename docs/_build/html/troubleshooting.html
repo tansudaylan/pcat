@@ -10,27 +10,27 @@
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
-
+  
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
-      <script src="_static/doctools.js?v=fd6eb6e6"></script>
-      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Public API" href="api.html" />
-    <link rel="prev" title="Outputs and diagnostics" href="outputs.html" />
+    <link rel="prev" title="Outputs and diagnostics" href="outputs.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
 
-
-
+          
+          
           <a href="index.html" class="icon icon-home">
             PCAT
           </a>
@@ -45,7 +45,8 @@
               <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Maintained examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshooting</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#output-path-errors">Output path errors</a></li>
@@ -83,7 +84,7 @@
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-
+             
   <section id="troubleshooting">
 <h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h1>
 <section id="output-path-errors">
@@ -95,12 +96,12 @@ and does not select a sampler output directory.</p>
 <p>If final processing or animation reports that <code class="docutils literal notranslate"><span class="pre">PCAT_DATA_PATH</span></code> is not set,
 pass the same <code class="docutils literal notranslate"><span class="pre">pathbase</span></code> used for sampling. A run cannot be reconstructed from
 <code class="docutils literal notranslate"><span class="pre">visuals/</span></code> alone because final processing reads serialized states under
-<code class="docutils literal notranslate"><span class="pre">data/outp/&lt;run</span> <span class="pre">tag&gt;/</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">pcat_runs/&lt;run</span> <span class="pre">tag&gt;/data/outp/&lt;run</span> <span class="pre">tag&gt;/</span></code>.</p>
 </section>
 <section id="incomplete-runs">
 <h2>Incomplete runs<a class="headerlink" href="#incomplete-runs" title="Link to this heading"></a></h2>
-<p>Inspect <code class="docutils literal notranslate"><span class="pre">data/outp/&lt;run</span> <span class="pre">tag&gt;/stat.txt</span></code> from bottom to top. A complete posterior
-run normally records these stages in order:</p>
+<p>Inspect <code class="docutils literal notranslate"><span class="pre">pcat_runs/&lt;run</span> <span class="pre">tag&gt;/data/outp/&lt;run</span> <span class="pre">tag&gt;/stat.txt</span></code> from bottom to top.
+A complete posterior run normally records these stages in order:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>gdatinit written.
 gdatmodipost written.
 gdatfinlpost written.
@@ -118,10 +119,10 @@ partial state.</p>
 <section id="stale-caches">
 <h2>Stale caches<a class="headerlink" href="#stale-caches" title="Link to this heading"></a></h2>
 <p>PCAT can reuse existing state for a matching run tag. After changing model
-structure, output paths, or plotting configuration, make a fresh run. Maintained
-entry points that support it accept <code class="docutils literal notranslate"><span class="pre">--fresh</span></code>. Otherwise remove both
-<code class="docutils literal notranslate"><span class="pre">data/outp/&lt;run</span> <span class="pre">tag&gt;</span></code> and its corresponding visual run directory, preserving
-any products needed for provenance first.</p>
+structure, output paths, or plotting configuration, make a fresh run. Commands
+that support fresh initialization accept <code class="docutils literal notranslate"><span class="pre">--fresh</span></code>. Otherwise preserve any
+products needed for provenance, then remove the self-contained
+<code class="docutils literal notranslate"><span class="pre">pcat_runs/&lt;run</span> <span class="pre">tag&gt;/</span></code> directory.</p>
 </section>
 <section id="missing-figures-or-animations">
 <h2>Missing figures or animations<a class="headerlink" href="#missing-figures-or-animations" title="Link to this heading"></a></h2>
@@ -139,7 +140,7 @@ should not be reported as an animation.</p>
 <h2>Sampling configuration failures<a class="headerlink" href="#sampling-configuration-failures" title="Link to this heading"></a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">Sampling</span> <span class="pre">failed</span> <span class="pre">due</span> <span class="pre">to</span> <span class="pre">incomplete</span> <span class="pre">or</span> <span class="pre">inconsistent</span> <span class="pre">model</span> <span class="pre">configuration</span></code> wraps
 a lower-level attribute, key, index, or type error. Preserve the chained
-traceback and compare the configuration with the nearest maintained example.
+traceback and compare the configuration with the closest example.
 Explicitly set model-specific values in <code class="docutils literal notranslate"><span class="pre">dicttrue</span></code> and <code class="docutils literal notranslate"><span class="pre">dictfitt</span></code> when an
 experiment default would otherwise replace them.</p>
 <p>Split and merge proposals are not implemented for every element model. For
@@ -160,7 +161,7 @@ run.</p>
 <h2>Minimal diagnostic sequence<a class="headerlink" href="#minimal-diagnostic-sequence" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
 <li><p>Reproduce the issue with a deterministic seed and a small configuration.</p></li>
-<li><p>Run the nearest maintained example in the same Python environment.</p></li>
+<li><p>Run the closest example in the same Python environment.</p></li>
 <li><p>Compare <code class="docutils literal notranslate"><span class="pre">cmndargs.txt</span></code>, <code class="docutils literal notranslate"><span class="pre">stat.txt</span></code>, and the final completed stage.</p></li>
 <li><p>Confirm every pickle state has its matching HDF5 companion.</p></li>
 <li><p>Rerun under a new tag after correcting the root cause.</p></li>
@@ -185,7 +186,7 @@ run.</p>
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     provided by <a href="https://readthedocs.org">Read the Docs</a>.
-
+   
 
 </footer>
         </div>
@@ -196,7 +197,7 @@ run.</p>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
+  </script> 
 
 </body>
 </html>

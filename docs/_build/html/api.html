@@ -10,26 +10,26 @@
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
-
+  
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
-      <script src="_static/doctools.js?v=fd6eb6e6"></script>
-      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Troubleshooting" href="troubleshooting.html" />
+    <link rel="prev" title="Troubleshooting" href="troubleshooting.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
 
-
-
+          
+          
           <a href="index.html" class="icon icon-home">
             PCAT
           </a>
@@ -44,17 +44,41 @@
               <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Maintained examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Public API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#sampling">Sampling</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#pcat.main.sample"><code class="docutils literal notranslate"><span class="pre">pcat.main.sample()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pcat.main.init"><code class="docutils literal notranslate"><span class="pre">pcat.main.init()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.main.sample_parallel"><code class="docutils literal notranslate"><span class="pre">pcat.main.sample_parallel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.main.retr_listgdat"><code class="docutils literal notranslate"><span class="pre">pcat.main.retr_listgdat()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#example-orchestration">Example orchestration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#plotting">Plotting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.plotting.plot_grid"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_grid()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#instrument-response">Instrument response</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.psf_poly_fit"><code class="docutils literal notranslate"><span class="pre">pcat.psf_poly_fit()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#example-analyses">Example analyses</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#pcat.demo.run_pipeline_demo"><code class="docutils literal notranslate"><span class="pre">pcat.demo.run_pipeline_demo()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.demo.run_example_script"><code class="docutils literal notranslate"><span class="pre">pcat.demo.run_example_script()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#catalog-analysis">Catalog analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.associate_catalogs"><code class="docutils literal notranslate"><span class="pre">pcat.associate_catalogs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.posterior_convergence"><code class="docutils literal notranslate"><span class="pre">pcat.posterior_convergence()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.diagnostics.estimate_evidence"><code class="docutils literal notranslate"><span class="pre">pcat.diagnostics.estimate_evidence()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#roman-lens-benchmark">Roman lens benchmark</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.roman_lens.simulate_population"><code class="docutils literal notranslate"><span class="pre">pcat.roman_lens.simulate_population()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.roman_lens.summarize_population"><code class="docutils literal notranslate"><span class="pre">pcat.roman_lens.summarize_population()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.roman_lens.plot_detection_diagnostic"><code class="docutils literal notranslate"><span class="pre">pcat.roman_lens.plot_detection_diagnostic()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#persistence">Persistence</a><ul>
@@ -92,7 +116,7 @@
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-
+             
   <section id="public-api">
 <h1>Public API<a class="headerlink" href="#public-api" title="Link to this heading"></a></h1>
 <section id="sampling">
@@ -100,25 +124,43 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="pcat.main.sample">
 <span class="sig-prename descclassname"><span class="pre">pcat.main.</span></span><span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">configuration</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.main.sample" title="Link to this definition"></a></dt>
-<dd><p>Dispatch an image or general PCAT configuration, execute sampling and final
-processing, and return the final global state object.</p>
+<dd><p>Dispatch an image, catalog, or fixed-dimensional PCAT configuration, execute
+sampling and final processing, and return the final global state object.</p>
 <p>Frequently used configuration keys include:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">typeexpr</span></code> for the experiment family, including <code class="docutils literal notranslate"><span class="pre">&quot;chan&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;gmix&quot;</span></code>,
 <code class="docutils literal notranslate"><span class="pre">&quot;fire&quot;</span></code>, and HST Wide Field Camera 3 identifiers.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">typedata</span></code> set to <code class="docutils literal notranslate"><span class="pre">&quot;simu&quot;</span></code> for generated data or <code class="docutils literal notranslate"><span class="pre">&quot;inpt&quot;</span></code> for
 supplied data.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pathbase</span></code> and <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> for the output root and filesystem-safe run
-tag.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pathbase</span></code> for the parent project root and <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> for the
+filesystem-safe run under its common <code class="docutils literal notranslate"><span class="pre">pcat_runs</span></code> directory.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">typeelem</span></code> for the element types in each population.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">numbswep</span></code> and <code class="docutils literal notranslate"><span class="pre">numbsamp</span></code> for sampler sweeps and retained posterior
 samples.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">probtran</span></code> and <code class="docutils literal notranslate"><span class="pre">probspmr</span></code> for transdimensional and split/merge proposal
-probabilities. Maintained examples disable split/merge where that proposal
-is unsupported.</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">probtran</span></code> and <code class="docutils literal notranslate"><span class="pre">probspmr</span></code> for transdimensional and split/merge proposal</dt><dd><p>probabilities. The listed image configurations disable split/merge where
+that proposal is unsupported.</p>
+</dd>
+</dl>
+</li>
 <li><p><code class="docutils literal notranslate"><span class="pre">boolmakeplotinit</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotfram</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotfinlpost</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">makeanim</span></code> for visual-output controls.</p></li>
 </ul>
+<p><code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gener&quot;</span></code> registers <code class="docutils literal notranslate"><span class="pre">parameter_names</span></code> as ordinary base
+parameters. <code class="docutils literal notranslate"><span class="pre">prior_types</span></code> accepts <code class="docutils literal notranslate"><span class="pre">&quot;self&quot;</span></code> for bounded uniform priors
+and <code class="docutils literal notranslate"><span class="pre">&quot;gaus&quot;</span></code> for Gaussian priors. <code class="docutils literal notranslate"><span class="pre">prior_minima</span></code>, <code class="docutils literal notranslate"><span class="pre">prior_maxima</span></code>,
+<code class="docutils literal notranslate"><span class="pre">prior_means</span></code>, <code class="docutils literal notranslate"><span class="pre">prior_stdvs</span></code>, and <code class="docutils literal notranslate"><span class="pre">proposal_scales</span></code> each contain one
+value per parameter. <code class="docutils literal notranslate"><span class="pre">initial_values</span></code> optionally supplies a finite
+physical initial state through PCAT’s native initializer. The callback
+<code class="docutils literal notranslate"><span class="pre">retr_llik(gdat,</span> <span class="pre">strgmodl,</span> <span class="pre">values)</span></code>
+returns the log likelihood only. PCAT’s unit-coordinate transforms encode
+the priors. Generic runs use the standard type-0 proposal and set
+transdimensional proposal probabilities to zero.</p>
+<p><code class="docutils literal notranslate"><span class="pre">proposal_correlation</span></code> optionally defines correlated type-0 block moves.
+Set <code class="docutils literal notranslate"><span class="pre">probpropblock</span></code> to their mixture probability and <code class="docutils literal notranslate"><span class="pre">factpropblock</span></code> to
+their scale relative to the adapted per-parameter proposal scales.
+See <a class="reference internal" href="capabilities.html"><span class="doc">Capabilities</span></a> for a complete example and the image and spectral
+model families.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -129,15 +171,109 @@ should normally call <a class="reference internal" href="#pcat.main.sample" titl
 dispatch before invoking this function.</p>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.main.sample_parallel">
+<span class="sig-prename descclassname"><span class="pre">pcat.main.</span></span><span class="sig-name descname"><span class="pre">sample_parallel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dictargsvari</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">listnamecnfgextn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dictpcatinpt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.main.sample_parallel" title="Link to this definition"></a></dt>
+<dd><p>Execute a family of related configurations, optionally in separate
+processes. <code class="docutils literal notranslate"><span class="pre">dictpcatinpt</span></code> contains shared settings and <code class="docutils literal notranslate"><span class="pre">dictargsvari</span></code>
+contains per-configuration overrides keyed by configuration name.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.main.retr_listgdat">
+<span class="sig-prename descclassname"><span class="pre">pcat.main.</span></span><span class="sig-name descname"><span class="pre">retr_listgdat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">liststrgcnfg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typegdat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'finlpost'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.main.retr_listgdat" title="Link to this definition"></a></dt>
+<dd><p>Load the requested persisted state for each run tag in a configuration
+family.</p>
+</dd></dl>
+
 </section>
-<section id="example-orchestration">
-<h2>Example orchestration<a class="headerlink" href="#example-orchestration" title="Link to this heading"></a></h2>
+<section id="plotting">
+<h2>Plotting<a class="headerlink" href="#plotting" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.plotting.plot_grid">
+<span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">listpara</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">listlablparatotl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">truepara</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">listvarbdraw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typefileplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pdf'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.plot_grid" title="Link to this definition"></a></dt>
+<dd><p>Render the diagonal marginal distributions and every lower-triangle pairwise
+posterior projection. <code class="docutils literal notranslate"><span class="pre">listpara</span></code> contains one row per sample and one
+column per parameter. <code class="docutils literal notranslate"><span class="pre">truepara</span></code> marks injected values and
+<code class="docutils literal notranslate"><span class="pre">listvarbdraw</span></code> can mark maximum-likelihood or other reference vectors.
+The output path is <code class="docutils literal notranslate"><span class="pre">path_name.pdf</span></code> or <code class="docutils literal notranslate"><span class="pre">path_name.png</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="instrument-response">
+<h2>Instrument response<a class="headerlink" href="#instrument-response" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.psf_poly_fit">
+<span class="sig-prename descclassname"><span class="pre">pcat.</span></span><span class="sig-name descname"><span class="pre">psf_poly_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gdat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psfnusam</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">factusam</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.psf_poly_fit" title="Link to this definition"></a></dt>
+<dd><p>Fit a piecewise-cubic subpixel model to an oversampled one-dimensional
+point-spread function. The returned coefficient columns reconstruct each
+detector pixel as a polynomial in subpixel offset.</p>
+</dd></dl>
+
+</section>
+<section id="example-analyses">
+<h2>Example analyses<a class="headerlink" href="#example-analyses" title="Link to this heading"></a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="pcat.demo.run_pipeline_demo">
 <span class="sig-prename descclassname"><span class="pre">pcat.demo.</span></span><span class="sig-name descname"><span class="pre">run_pipeline_demo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_root</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">configuration</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.demo.run_pipeline_demo" title="Link to this definition"></a></dt>
-<dd><p>Apply lightweight plotting and simulation defaults, set <code class="docutils literal notranslate"><span class="pre">pathbase</span></code>, and
-call <a class="reference internal" href="#pcat.main.sample" title="pcat.main.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.main.sample()</span></code></a>. This helper is intended for maintained
-demonstrations and integration checks.</p>
+<dd><p>Apply the reduced sampling and plotting settings used by the simulated image
+analyses, set <code class="docutils literal notranslate"><span class="pre">pathbase</span></code>, and call <a class="reference internal" href="#pcat.main.sample" title="pcat.main.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.main.sample()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.demo.run_example_script">
+<span class="sig-prename descclassname"><span class="pre">pcat.demo.</span></span><span class="sig-name descname"><span class="pre">run_example_script</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">relative_path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">arguments</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.demo.run_example_script" title="Link to this definition"></a></dt>
+<dd><p>Run a repository example from a notebook while isolating its command-line
+arguments.</p>
+</dd></dl>
+
+</section>
+<section id="catalog-analysis">
+<h2>Catalog analysis<a class="headerlink" href="#catalog-analysis" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.associate_catalogs">
+<span class="sig-prename descclassname"><span class="pre">pcat.</span></span><span class="sig-name descname"><span class="pre">associate_catalogs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coordinates_source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values_source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinates_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance_maximum</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_difference_maximum</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confidence_target</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">significance_target</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.associate_catalogs" title="Link to this definition"></a></dt>
+<dd><p>Match each source to compatible nearby targets. The result reports source
+matches and can include the best target confidence and significance.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.posterior_convergence">
+<span class="sig-prename descclassname"><span class="pre">pcat.</span></span><span class="sig-name descname"><span class="pre">posterior_convergence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_rhat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_effective_sample_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.posterior_convergence" title="Link to this definition"></a></dt>
+<dd><p>Summarize Gelman-Rubin statistics and autocorrelation-based effective sample
+sizes for a completed posterior state, including a combined pass flag.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.diagnostics.estimate_evidence">
+<span class="sig-prename descclassname"><span class="pre">pcat.diagnostics.</span></span><span class="sig-name descname"><span class="pre">estimate_evidence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">posterior</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_likelihood</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prior_types</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prior_minima</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prior_maxima</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prior_means</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prior_stdvs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.diagnostics.estimate_evidence" title="Link to this definition"></a></dt>
+<dd><p>Estimate normalized evidence for fixed-dimensional posterior samples using
+independent defensive importance draws. The result includes the log
+evidence, relative error estimate, and importance effective sample size.</p>
+</dd></dl>
+
+</section>
+<section id="roman-lens-benchmark">
+<h2>Roman lens benchmark<a class="headerlink" href="#roman-lens-benchmark" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.roman_lens.simulate_population">
+<span class="sig-prename descclassname"><span class="pre">pcat.roman_lens.</span></span><span class="sig-name descname"><span class="pre">simulate_population</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">number_lenses</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">814</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.roman_lens.simulate_population" title="Link to this definition"></a></dt>
+<dd><p>Simulate a seeded population of strong lenses with and without a perturber,
+then evaluate the zero-versus-one-perturber catalog probability.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.roman_lens.summarize_population">
+<span class="sig-prename descclassname"><span class="pre">pcat.roman_lens.</span></span><span class="sig-name descname"><span class="pre">summarize_population</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detection_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.roman_lens.summarize_population" title="Link to this definition"></a></dt>
+<dd><p>Report detection, false-positive, and localization rates with Wilson
+intervals for the simulated population.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.roman_lens.plot_detection_diagnostic">
+<span class="sig-prename descclassname"><span class="pre">pcat.roman_lens.</span></span><span class="sig-name descname"><span class="pre">plot_detection_diagnostic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">examples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.roman_lens.plot_detection_diagnostic" title="Link to this definition"></a></dt>
+<dd><p>Plot representative detector, macro-model, and residual images together
+with the population catalog probabilities.</p>
 </dd></dl>
 
 </section>
@@ -195,7 +331,7 @@ sampler.</p>
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     provided by <a href="https://readthedocs.org">Read the Docs</a>.
-
+   
 
 </footer>
         </div>
@@ -206,7 +342,7 @@ sampler.</p>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
+  </script> 
 
 </body>
 </html>

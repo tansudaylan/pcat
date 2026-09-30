@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from types import SimpleNamespace
 
+from pcat.diagnostics import autocorrelation_time, gelman_rubin
 from pcat.main import (
     _PCATMCMCCompat,
     _configure_proposal_types,
@@ -21,6 +22,7 @@ def test_gmrb_rejects_separated_constant_chains():
     chains = np.column_stack((np.zeros(100), np.full(100, 100.0)))
 
     assert np.isinf(_PCATMCMCCompat.gmrb_test(chains))
+    assert np.isinf(gelman_rubin(chains))
 
 
 def test_autocorrelation_distinguishes_independent_draws_and_random_walk():
@@ -30,9 +32,11 @@ def test_autocorrelation_distinguishes_independent_draws_and_random_walk():
 
     _, time_independent = _PCATMCMCCompat.retr_timeatcr(independent)
     _, time_random_walk = _PCATMCMCCompat.retr_timeatcr(random_walk)
+    _, direct_time = autocorrelation_time(independent)
 
     assert time_independent[0] < 2.0
     assert time_random_walk[0] > 20.0
+    assert direct_time[0] == pytest.approx(time_independent[0])
 
 
 def test_autocorrelation_plot_selects_finite_nonconstant_series():

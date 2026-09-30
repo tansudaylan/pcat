@@ -1,0 +1,307 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Capabilities &mdash; PCAT 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="Getting started" href="getting_started.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            PCAT
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Capabilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#functionality-overview">Functionality overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inference-and-proposal-engine">Inference and proposal engine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#user-supplied-likelihoods">User-supplied likelihoods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#point-sources-in-imaging-data">Point sources in imaging data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lenses-and-lensed-emission-in-imaging-data">Lenses and lensed emission in imaging data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#spectral-lines-in-spectral-data">Spectral lines in spectral data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#shared-inference-products">Shared inference products</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#catalog-summaries-and-diagnostics">Catalog summaries and diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#persistence-plotting-and-reproducibility">Persistence, plotting, and reproducibility</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PCAT</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Capabilities</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/capabilities.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="capabilities">
+<h1>Capabilities<a class="headerlink" href="#capabilities" title="Link to this heading"></a></h1>
+<p>PCAT applies one posterior-sampling and output pipeline to fixed-dimensional
+models and transdimensional catalogs. A run can use simulated data or supplied
+data, and its model can contain a fixed set of parameters, a variable number of
+elements, or both.</p>
+<section id="functionality-overview">
+<h2>Functionality overview<a class="headerlink" href="#functionality-overview" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Maintained PCAT workflows</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 18.0%" />
+<col style="width: 24.0%" />
+<col style="width: 21.0%" />
+<col style="width: 37.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Workflow</p></th>
+<th class="head"><p>Model</p></th>
+<th class="head"><p>Inference</p></th>
+<th class="head"><p>Maintained example</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Arbitrary likelihood</p></td>
+<td><p>User callback and configured priors</p></td>
+<td><p>Fixed-dimensional scalar or correlated proposals</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gener&quot;</span></code> example below</p></td>
+</tr>
+<tr class="row-odd"><td><p>Point-source imaging</p></td>
+<td><p>Catalog, background, exposure, and point-spread function</p></td>
+<td><p>Variable source count and source parameters</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chan_demo</span></code> and <code class="docutils literal notranslate"><span class="pre">Daylan+2017</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Gaussian mixtures</p></td>
+<td><p>Variable-width components in two-dimensional data</p></td>
+<td><p>Birth and death catalog transitions</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">gmix_demo</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Strong-lens imaging</p></td>
+<td><p>Lens mass, foreground light, source light, and lensed emission</p></td>
+<td><p>Fixed or variable perturber catalog</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">hst_lens</span></code>, <code class="docutils literal notranslate"><span class="pre">Daylan+2018</span></code>, and <code class="docutils literal notranslate"><span class="pre">roman_lens_catalog</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Spectral lines</p></td>
+<td><p>Voigt profiles in spectral data</p></td>
+<td><p>Variable line count and profile parameters</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">voigt-profile</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Catalog association</p></td>
+<td><p>Positions, values, confidence, and significance</p></td>
+<td><p>Completeness and purity versus matching criteria</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">catalog_association</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Instrument response</p></td>
+<td><p>Oversampled point-spread function</p></td>
+<td><p>Piecewise-cubic subpixel reconstruction</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">psf_subpixel</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="inference-and-proposal-engine">
+<h2>Inference and proposal engine<a class="headerlink" href="#inference-and-proposal-engine" title="Link to this heading"></a></h2>
+<p>PCAT supports fixed-dimensional parameters and populations of exchangeable
+elements. Within-model proposals update parameters already in the state. Birth
+and death proposals change the catalog size, while supported element models can
+also use split and merge proposals. Multiple independent workers can sample a
+configuration, and <a class="reference internal" href="api.html#pcat.main.sample_parallel" title="pcat.main.sample_parallel"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.main.sample_parallel()</span></code></a> can execute related
+configurations for controlled comparisons.</p>
+<p>Parameters are sampled in unit-prior coordinates and transformed to their
+physical priors. Fixed-dimensional runs can mix single-parameter updates with
+correlated block proposals. Catalog runs can include population
+hyperparameters, spatial priors, spectral models, backgrounds, exposure,
+point-spread functions, and instrument-specific response settings.</p>
+</section>
+<section id="user-supplied-likelihoods">
+<h2>User-supplied likelihoods<a class="headerlink" href="#user-supplied-likelihoods" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gener&quot;</span></code> runs a fixed-dimensional model with an arbitrary
+user-supplied log-likelihood function. The callback receives the run state, the
+model name, and the current parameter values, and returns one scalar log
+likelihood:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pcat.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">log_likelihood</span><span class="p">(</span><span class="n">gdat</span><span class="p">,</span> <span class="n">strgmodl</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="n">residual</span> <span class="o">=</span> <span class="n">values</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">residual</span> <span class="o">@</span> <span class="n">residual</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span>
+    <span class="n">typeexpr</span><span class="o">=</span><span class="s2">&quot;gener&quot;</span><span class="p">,</span>
+    <span class="n">retr_llik</span><span class="o">=</span><span class="n">log_likelihood</span><span class="p">,</span>
+    <span class="n">parameter_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">),</span>
+    <span class="n">prior_types</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;self&quot;</span><span class="p">,</span> <span class="s2">&quot;self&quot;</span><span class="p">),</span>
+    <span class="n">prior_minima</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">5.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">5.0</span><span class="p">),</span>
+    <span class="n">prior_maxima</span><span class="o">=</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">),</span>
+    <span class="n">proposal_scales</span><span class="o">=</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">),</span>
+    <span class="n">pathbase</span><span class="o">=</span><span class="s2">&quot;analysis/custom_likelihood&quot;</span><span class="p">,</span>
+    <span class="n">strgcnfg</span><span class="o">=</span><span class="s2">&quot;custom_likelihood&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The callback supplies only the log likelihood. PCAT applies the configured
+priors through its unit-coordinate transforms and provides proposal,
+acceptance, persistence, convergence, and final-processing machinery. Generic
+runs currently use within-model proposals. They do not activate birth, death,
+split, or merge proposals.</p>
+</section>
+<section id="point-sources-in-imaging-data">
+<h2>Point sources in imaging data<a class="headerlink" href="#point-sources-in-imaging-data" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">lghtpnts</span></code> element represents a point source with inferred position and
+flux. PCAT forward-models an image from a catalog of these elements, including
+the configured point-spread function and background, and infers the catalog
+size and source parameters jointly. This supports crowded-field and
+photon-count analyses in which detections, memberships, and blends are
+uncertain.</p>
+<p>The compact Chandra-style example is directly runnable:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/chan_demo/generate_demo.py
+</pre></div>
+</div>
+<p>The <a class="reference internal" href="getting_started.html"><span class="doc">Getting started</span></a> page gives its configuration, while the
+<code class="docutils literal notranslate"><span class="pre">Daylan+2017</span></code> example demonstrates a larger synthetic point-source catalog.</p>
+</section>
+<section id="lenses-and-lensed-emission-in-imaging-data">
+<h2>Lenses and lensed emission in imaging data<a class="headerlink" href="#lenses-and-lensed-emission-in-imaging-data" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">lens</span></code> element supports strong-lensing image models. PCAT jointly models
+the lens mass parameters, foreground lens-galaxy emission, source-plane
+emission, its lensed image, point-spread-function convolution, and image
+residuals. A transdimensional lens population can represent uncertain
+additional deflectors or substructure while fixed parameters describe the
+macro lens and emission components.</p>
+<p>Run the Hubble Space Telescope Wide Field Camera 3 demonstration with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/hst_lens/generate_demo.py
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">roman_lens_catalog</span></code> example provides a seeded population benchmark for
+catalog-level perturber detection. These examples use simulations and validate
+the pipeline. They are not measurements or performance forecasts for observed
+systems.</p>
+</section>
+<section id="spectral-lines-in-spectral-data">
+<h2>Spectral lines in spectral data<a class="headerlink" href="#spectral-lines-in-spectral-data" title="Link to this heading"></a></h2>
+<p>Spectral-line elements use the same transdimensional catalog machinery along a
+spectral axis. PCAT infers the number of lines together with line locations,
+amplitudes, and profile parameters. The maintained <code class="docutils literal notranslate"><span class="pre">lghtlinevoig</span></code>
+configuration models Voigt-profile emission lines in simulated spectral data.</p>
+<p>Run the nominal line-detection analysis with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/voigt-profile/pcat_voigt_profile_detection.py<span class="w"> </span>--configuration<span class="w"> </span>nomi
+</pre></div>
+</div>
+<p>This example compares catalogs containing different numbers of lines. Its
+short modes are pipeline checks, while scientific analyses require adequate
+sampling, convergence assessment, and problem-specific prior validation.</p>
+</section>
+<section id="shared-inference-products">
+<h2>Shared inference products<a class="headerlink" href="#shared-inference-products" title="Link to this heading"></a></h2>
+<p>All four model classes use PCAT’s persisted run state and final-processing
+pipeline. Depending on the configuration, products include posterior samples,
+model-count probabilities, catalog summaries, associations, convergence and
+proposal diagnostics, posterior-predictive models, residuals, static figures,
+and animations. See <a class="reference internal" href="outputs.html"><span class="doc">Outputs and diagnostics</span></a> for the file layout and interpretation
+requirements.</p>
+</section>
+<section id="catalog-summaries-and-diagnostics">
+<h2>Catalog summaries and diagnostics<a class="headerlink" href="#catalog-summaries-and-diagnostics" title="Link to this heading"></a></h2>
+<p>PCAT can condense posterior catalogs, associate inferred elements with a
+reference catalog, and evaluate completeness and false-discovery summaries.
+The public <a class="reference internal" href="api.html#pcat.associate_catalogs" title="pcat.associate_catalogs"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.associate_catalogs()</span></code></a> utility performs coordinate-and-value
+matching for external catalogs. <a class="reference internal" href="api.html#pcat.posterior_convergence" title="pcat.posterior_convergence"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.posterior_convergence()</span></code></a> reports
+Gelman-Rubin statistics and effective sample sizes from a completed state.
+For fixed-dimensional posterior samples with normalized bounded or Gaussian
+priors, <a class="reference internal" href="api.html#pcat.diagnostics.estimate_evidence" title="pcat.diagnostics.estimate_evidence"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.diagnostics.estimate_evidence()</span></code></a> provides a defensive
+importance-sampling evidence estimate and its effective sample size.</p>
+</section>
+<section id="persistence-plotting-and-reproducibility">
+<h2>Persistence, plotting, and reproducibility<a class="headerlink" href="#persistence-plotting-and-reproducibility" title="Link to this heading"></a></h2>
+<p>Every full run can persist its initialized, worker, and final state as paired
+pickle and HDF5 files. Final processing aggregates workers and creates model,
+residual, parameter, catalog, association, and convergence products. The
+plotting API creates one- and two-parameter posterior projections, while the
+animation API assembles chain frames into GIF files. See <a class="reference internal" href="outputs.html"><span class="doc">Outputs and diagnostics</span></a> for the
+directory layout and <a class="reference internal" href="api.html"><span class="doc">Public API</span></a> for the callable interfaces.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Tansu Daylan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
