@@ -52,11 +52,13 @@ def test_documentation_excludes_obsolete_interface_terms():
 
 def test_documentation_dependencies_are_declared():
     metadata = tomllib.loads((REPOSITORY_ROOT / "pyproject.toml").read_text())
+    requirements = (DOCS_ROOT / "requirements.txt").read_text().splitlines()
 
     assert metadata["project"]["optional-dependencies"]["docs"] == [
         "sphinx>=8",
         "sphinx-rtd-theme>=3",
     ]
+    assert requirements == metadata["project"]["optional-dependencies"]["docs"]
 
 
 def test_documentation_covers_primary_capabilities():
