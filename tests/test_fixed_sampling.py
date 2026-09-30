@@ -17,6 +17,7 @@ def test_generic_model_uses_main_sampling_pipeline(tmp_path):
         prior_types=('self', 'self'),
         prior_minima=(-5.0, -7.0),
         prior_maxima=(5.0, 7.0),
+        initial_values=(0.0, 0.0),
         proposal_scales=(0.08, 0.08),
         pathbase=str(tmp_path),
         strgcnfg='fixed_gaussian',

@@ -748,27 +748,27 @@ def cdfn_paragenrscalbase(gdat, strgmodl, paragenrscalbase, thisindxparagenrbase
     if scalparagenrbase == 'self' or scalparagenrbase == 'logt' or scalparagenrbase == 'atan':
         
         listminmparagenrscalbase = gmod.minmpara.genrbase[thisindxparagenrbase]
-        maxmparagenrscalbase = gmod.maxmparagenrscalbase[thisindxparagenrbase]
+        maxmparagenrscalbase = gmod.maxmpara.genrbase[thisindxparagenrbase]
 
         if scalparagenrbase == 'self':
-            paragenrscalbaseunit = cdfn_self(paragenrscalbase, listminmparagenrscalbase, maxmparagenrscalbase)
+            paragenrscalbaseunit = tdpy.cdfn_self(paragenrscalbase, listminmparagenrscalbase, maxmparagenrscalbase)
         elif scalparagenrbase == 'logt':
-            paragenrscalbaseunit = cdfn_logt(paragenrscalbase, listminmparagenrscalbase, maxmparagenrscalbase)
+            paragenrscalbaseunit = tdpy.cdfn_logt(paragenrscalbase, listminmparagenrscalbase, maxmparagenrscalbase)
 
         elif scalparagenrbase == 'atan':
             gmod.listmaxmparagenrscalbase = gmod.listmaxmparagenrscalbase[thisindxparagenrbase]
             paragenrscalbaseunit = cdfn_atan(paragenrscalbase, listminmparagenrscalbase, gmod.listmaxmparagenrscalbase)
     
     elif scalparagenrbase == 'gaus' or scalparagenrbase == 'eerr':
-        gmod.meanpara.genrbasescal = gmod.meanpara.genrbasescal[thisindxparagenrbase]
-        gmod.stdvpara.genrbasescal = gmod.stdvpara.genrbasescal[thisindxparagenrbase]
+        meanparagenrscalbase = gmod.meanpara.genrbase[thisindxparagenrbase]
+        stdvparagenrscalbase = gmod.stdvpara.genrbase[thisindxparagenrbase]
         if scalparagenrbase == 'eerr':
             gmod.cdfnlistminmparagenrscalbaseunit = gmod.cdfnlistminmparagenrscalbaseunit[thisindxparagenrbase]
             gmod.listparagenrscalbaseunitdiff = gmod.listparagenrscalbaseunitdiff[thisindxparagenrbase]
-            paragenrscalbaseunit = cdfn_eerr(paragenrscalbase, gmod.meanpara.genrbasescal, gmod.stdvpara.genrbasescal, \
+            paragenrscalbaseunit = cdfn_eerr(paragenrscalbase, meanparagenrscalbase, stdvparagenrscalbase, \
                                                                             gmod.cdfnlistminmparagenrscalbaseunit, gmod.listparagenrscalbaseunitdiff)
         else:
-            paragenrscalbaseunit = cdfn_gaus(paragenrscalbase, gmod.meanpara.genrbasescal, gmod.stdvpara.genrbasescal)
+            paragenrscalbaseunit = tdpy.cdfn_gaus(paragenrscalbase, meanparagenrscalbase, stdvparagenrscalbase)
 
     elif scalparagenrbase == 'pois':
         paragenrscalbaseunit = paragenrscalbase
@@ -8630,7 +8630,7 @@ def init_stat(gdat):
                                 initnumbelem = thisfile[attr][()]
                             gmod.this.paragenrunitfull[k] = initnumbelem
                         else:
-                            gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat.fitt, '', thisfile[attr][()], k)
+                            gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat, 'fitt', thisfile[attr][()], k)
                         if gmod.this.paragenrunitfull[k] == 0.:
                             print('Warning CDF is zero.')
                         if not np.isfinite(thisfile[attr][()]):
@@ -8725,7 +8725,7 @@ def init_stat(gdat):
             print('Conflicting initial state arguments detected, init keyword takes precedence.')
             
         initvalu = getattr(gdat, nameinit)
-        gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat.fitt, '', initvalu, k)
+        gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat, 'fitt', initvalu, k)
         if gdat.typeverb > 0:
             print('Received initial condition for %s: %.3g' % (namepara, initvalu))
     
@@ -8736,12 +8736,12 @@ def init_stat(gdat):
             raise Exception('')
         for k, namepara in enumerate(gmod.namepara.genrbase):
             if k in gmod.indxpara.psfp:
-                gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat.fitt, '', gdat.initpsfp[k-gmod.indxpara.psfp[0]], k)
+                gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat, 'fitt', gdat.initpsfp[k-gmod.indxpara.psfp[0]], k)
     if gdat.initpsfprefr:
         print('Initializing the metamodel PSF from the reference state...')
         for k, namepara in enumerate(gmod.namepara.genrbase):
             if k in gmod.indxpara.psfp:
-                gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat.fitt, '', gmod.psfpexpr[k-gmod.indxpara.psfp[0]], k)
+                gmod.this.paragenrunitfull[k] = cdfn_paragenrscalbase(gdat, 'fitt', gmod.psfpexpr[k-gmod.indxpara.psfp[0]], k)
 
     if gdat.inittype == 'rand' or gdat.inittype == 'reco' and not boolinitreco:
         if gdat.typeverb > 0:
@@ -8768,7 +8768,7 @@ def init_stat(gdat):
     indxsampbadd = np.concatenate((indxsampbaddlowr, indxsampbadduppr))
     if indxsampbadd.size > 0:
         print('Initial value caused unit sample vector to go outside the unit interval...')
-        show_paragenrscalfull(gdat, gdatmodi, indxsampshow=indxsampbadd)
+        show_paragenrscalfull(gdat, None, indxsampshow=indxsampbadd)
         gmod.this.paragenrunitfull[indxsampbadd] = np.random.rand(indxsampbadd.size)
         raise Exception('')
     
@@ -18178,6 +18178,7 @@ def _sample_generic(**kwargs):
     prior_means = np.asarray(kwargs.pop('prior_means', np.zeros(parameter_count)), dtype=float)
     prior_stdvs = np.asarray(kwargs.pop('prior_stdvs', np.ones(parameter_count)), dtype=float)
     proposal_scales = np.asarray(kwargs.pop('proposal_scales', np.full(parameter_count, 0.05)), dtype=float)
+    initial_values = kwargs.pop('initial_values', None)
     for name, values in (
         ('prior_means', prior_means),
         ('prior_stdvs', prior_stdvs),
@@ -18185,6 +18186,12 @@ def _sample_generic(**kwargs):
     ):
         if values.shape != (parameter_count,):
             raise ValueError('%s must have one entry per parameter.' % name)
+    if initial_values is not None:
+        initial_values = np.asarray(initial_values, dtype=float)
+        if initial_values.shape != (parameter_count,):
+            raise ValueError('initial_values must have one entry per parameter.')
+        for name, value in zip(parameter_names, initial_values):
+            kwargs['init' + name] = float(value)
 
     indxpara = tdpy.gdatstrt()
     indxpara.bacp = np.array([], dtype=int)
