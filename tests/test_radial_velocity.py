@@ -57,3 +57,25 @@ def test_data_informed_element_proposal_is_a_normalized_density_on_the_unit_cube
     peri = 1.2 * (1000. / 1.2)**draws[:, 1]  # [day]
     # the injected period dominates the periodogram, so most proposed periods land near it
     assert np.mean(np.abs(np.log(peri / 17.)) < 0.02) > 0.5
+
+
+def retr_llik_flat(gdat, strgmodl, cntpmodl):
+    return 0.
+
+
+def test_number_of_planets_follows_its_uniform_prior_when_the_likelihood_is_flat(tmp_path):
+    from pcat import sampling
+    from pcat.main import readfile
+    from pcat.radial_velocity import retr_dictpcatrvel
+
+    rng = np.random.default_rng(4)
+    time = np.sort(rng.uniform(0., 300., 30))  # [day]
+    rvel = rng.normal(0., 2., time.size)  # [m/s]
+    dictpcat = retr_dictpcatrvel(time, rvel, np.full(time.size, 2.), np.zeros(time.size, int), str(tmp_path), 'flat',
+                                 maxmnumbplan=3, retr_llik=retr_llik_flat, factpriodoff=0., probjump=0.2,
+                                 numbswep=30000, numbsamp=3000, boolmakeplot=False, boolmakeplotinit=False,
+                                 typeverb=0, inittype='rand', typeseed=1)
+    sampling.sample(**dictpcat)
+    posterior = readfile(str(tmp_path / 'pcat_runs' / 'flat' / 'data' / 'outp' / 'flat' / 'gdatfinlpost'))
+    frac = np.bincount(np.asarray(posterior.listpostnumbelem).astype(int).ravel(), minlength=4) / 3000.
+    assert frac == pytest.approx(np.full(4, 0.25), abs=0.06)

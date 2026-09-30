@@ -2369,6 +2369,18 @@ def calc_probprop(gdat, gdatmodi):
         gdatmodi.this.ljcb = 0.
         gdatmodi.this.ltrp = 0.
     
+    # ratio of the probabilities of selecting the reverse and forward dimension-changing moves
+    if gdatmodi.this.indxproptype in (1, 2):
+        l = gdatmodi.indxpopltran
+        numbelem = int(np.rint(gdatmodi.this.paragenrscalfull[gmod.indxpara.numbelem[l]]))
+        limt = (gmod.minmpara.numbelem[l], gmod.maxmpara.numbelem[l])
+        if gdatmodi.this.indxproptype == 1:
+            gdatmodi.this.ltrp = np.log(retr_probpropbrde(gdat, gmod, numbelem + 1, *limt)[1]) - \
+                                 np.log(retr_probpropbrde(gdat, gmod, numbelem, *limt)[0])
+        else:
+            gdatmodi.this.ltrp = np.log(retr_probpropbrde(gdat, gmod, numbelem - 1, *limt)[0]) - \
+                                 np.log(retr_probpropbrde(gdat, gmod, numbelem, *limt)[1])
+    
     for l in gmod.indxpopl:
         if gdatmodi.this.indxproptype > 0:
             setattr(gdatmodi, 'auxiparapop%d' % l, gdatmodi.this.auxipara)
@@ -2381,6 +2393,25 @@ def retr_auxiparaelem(gdat, numbparagenrelemsing):
     if retr_drawpropelem is None:
         return np.random.rand(numbparagenrelemsing)
     return np.asarray(retr_drawpropelem(gdat), dtype=float)
+
+
+def retr_probpropbrde(gdat, gmod, numbelem, minmnumbelem, maxmnumbelem):
+    '''Probabilities that prop_stat proposes a birth and a death from a state with numbelem elements.'''
+
+    if minmnumbelem == maxmnumbelem:
+        return 0., 0.
+    probtran = gdat.probtran if getattr(gdat, 'probtran', None) is not None else 0.
+    probspmr = min(max(float(gdat.probspmr if getattr(gdat, 'probspmr', None) is not None else 0.), 0.), 1.)
+    probnotjump = 1. - getattr(gdat, 'probjump', 0.) if numbelem > 0 else 1.
+    probbrde = 1. if numbelem == 0 or (numbelem == maxmnumbelem and numbelem == 1) else 1. - probspmr
+    if numbelem == maxmnumbelem:
+        fracbrth = 0.
+    elif numbelem == minmnumbelem or (gmod.boollens and numbelem <= 1):
+        fracbrth = 1.
+    else:
+        fracbrth = 0.5
+    probbrde = probnotjump * probtran * probbrde
+    return probbrde * fracbrth, probbrde * (1. - fracbrth)
 
 
 def retr_unitrefl(valu):

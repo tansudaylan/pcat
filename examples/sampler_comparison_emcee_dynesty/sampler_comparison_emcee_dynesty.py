@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-"""Compare PCAT with emcee and dynesty on the same simulated sinusoid posterior.
+"""Compare PCAT with emcee and dynesty on simulated radial-velocity (RV) data.
 
-The data are simulated and labeled as such: 40 epochs of a sinusoidal signal
-(for example a radial-velocity curve) with Gaussian noise. All three samplers
-use the same likelihood and the same uniform priors. The script records wall-
-clock time, number of likelihood evaluations, and effective sample size (ESS),
-then plots the marginal posteriors and the sampling efficiency.
+All data are simulated and labeled as such. The comparison has two parts.
+
+Fixed dimension: 40 epochs of one sinusoidal signal with Gaussian noise. All three samplers use the
+same likelihood and uniform priors. The script records wall-clock time, likelihood evaluations,
+effective sample size (ESS), and the fraction of samples in the true period mode.
+
+Variable dimension: 60 epochs containing two Keplerian planets, with the number of planets unknown
+(0 to 3). PCAT samples the number of planets and their orbits in one run. emcee cannot compare models
+of different dimension, and dynesty needs one nested-sampling run per planet count, whose evidences
+give the posterior on the count. Both use the same marginalized likelihood (offset analytically,
+jitter numerically) and the same priors, including a uniform prior on the count, so their posteriors
+on the number of planets must agree.
 """
 
 from tdpy.verbosity import print
@@ -198,10 +205,189 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=60000, help="PCAT sweeps.")
     parser.add_argument("--numbstep", type=int, default=4000, help="emcee steps per walker.")
+    parser.add_argument("--numbswepplan", type=int, default=200000, help="PCAT sweeps, variable planet count.")
+    parser.add_argument("--nliveplan", type=int, default=1000, help="dynesty live points, variable planet count.")
+    parser.add_argument("--part", choices=("fixed", "variable", "both"), default="both")
     parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     arguments = parser.parse_args()
+    configure_style(arguments.typeplotback)
+    if arguments.part in ("fixed", "both"):
+        compare_fixed_dimension(arguments)
+    if arguments.part in ("variable", "both"):
+        compare_variable_dimension(arguments)
 
+
+# simulated two-planet system: period [d], semi-amplitude [m s^-1], eccentricity, argument of periastron [rad], mean anomaly [rad]
+PLANETS = np.array([[9.1, 6.0, 0.1, 1.0, 0.5], [61.0, 3.0, 0.0, 0.0, 2.0]])
+MAXM_NUMB_PLAN = 3
+NOISE_PLAN = 1.5  # [m s^-1], reported uncertainty
+JITTER_PLAN = 1.0  # [m s^-1], extra white noise the samplers must marginalize
+
+
+def simulate_planets(seed=11):
+    """Return simulated epochs [d], velocities [m s^-1], uncertainties [m s^-1], and the reference time [d]."""
+    from tdpy.exoplanet import keplerian_radial_velocity
+
+    rng = np.random.default_rng(seed)
+    time_obs = np.sort(rng.uniform(0.0, 800.0, 60)) + 8000.0  # [d]
+    timerefr = 0.5 * (time_obs[0] + time_obs[-1])
+    velocity = np.sum(keplerian_radial_velocity(time_obs[:, None], *PLANETS.T[[0, 1, 2, 3, 4]], timerefr), 1)
+    velocity += 4.0 + rng.normal(0.0, np.hypot(NOISE_PLAN, JITTER_PLAN), time_obs.size)
+    return time_obs, velocity, np.full(time_obs.size, NOISE_PLAN), timerefr
+
+
+class PlanetLikelihood:
+    """PCAT's marginalized RV likelihood for a fixed number of planets, counting its evaluations."""
+
+    def __init__(self, time_obs, velocity, stdv, timerefr, numbplan):
+        from pcat.radial_velocity import retr_matrdesi
+
+        self.time_obs, self.velocity, self.stdv, self.timerefr, self.numbplan = time_obs, velocity, stdv, timerefr, numbplan
+        self.matrdesi = retr_matrdesi(time_obs, np.zeros(time_obs.size, int), False, timerefr)
+        self.listjitt = np.geomspace(0.1, 30.0, 24)  # [m s^-1], same grid as pcat.radial_velocity
+        self.maxmperi = 2.0 * (time_obs[-1] - time_obs[0])  # [d]
+        self.count = 0
+
+    def prior_transform(self, unit):
+        """Map the unit cube to (P, K, e, omega, M) per planet with PCAT's element priors."""
+        unit = unit.reshape(self.numbplan, 5)
+        return np.column_stack([1.2 * (self.maxmperi / 1.2) ** unit[:, 1], 0.3 * 1000.0 ** unit[:, 0],
+                                0.8 * unit[:, 3], 2.0 * np.pi * unit[:, 4], 2.0 * np.pi * unit[:, 2]]).ravel()
+
+    def __call__(self, values):
+        from pcat.radial_velocity import retr_llik_rvelmarg
+        from tdpy.exoplanet import keplerian_radial_velocity
+
+        self.count += 1
+        model = np.zeros(self.time_obs.size)
+        if self.numbplan > 0:
+            planets = values.reshape(self.numbplan, 5)
+            model = np.sum(keplerian_radial_velocity(self.time_obs[:, None], *planets.T, self.timerefr), 1)
+        return retr_llik_rvelmarg(self.velocity - model, self.stdv, self.matrdesi, self.listjitt)
+
+
+def run_pcat_planets(time_obs, velocity, stdv, numbswep):
+    """One transdimensional PCAT run over 0 to MAXM_NUMB_PLAN planets with a uniform count prior."""
+    from pcat import sampling
+    from pcat.main import readfile, retr_pathrun
+    from pcat.radial_velocity import retr_dictpcatrvel
+
+    strgcnfg = RUN_NAME + "_variable_planet_count"
+    dictpcat = retr_dictpcatrvel(time_obs, velocity, stdv, np.zeros(time_obs.size, int), str(EXAMPLE_PATH), strgcnfg,
+                                 maxmnumbplan=MAXM_NUMB_PLAN, factpriodoff=0.0, probjump=0.2, numbswep=numbswep,
+                                 numbsamp=numbswep // 50, inittype="rand", typeseed=0,
+                                 stdvpropelemfire=[1e-2, 1e-4, 3e-2, 3e-2, 3e-2], boolmakeplot=False,
+                                 boolmakeplotinit=False, typeverb=0)
+    start = time.perf_counter()
+    sampling.sample(**dictpcat)
+    elapsed = time.perf_counter() - start
+    pathrun = Path(retr_pathrun(str(EXAMPLE_PATH), strgcnfg))
+    posterior = readfile(str(pathrun / "data" / "outp" / strgcnfg / "gdatfinlpost"))
+    numbelem = np.asarray(posterior.listpostnumbelem).astype(int).ravel()
+    listperi = [np.asarray(sample[0]["elin"]) for sample, n in zip(posterior.listpostdictelem, numbelem) if n == 2]
+    return {"prob": np.bincount(numbelem, minlength=MAXM_NUMB_PLAN + 1) / numbelem.size, "elapsed": elapsed,
+            # every sweep proposes one state and evaluates its likelihood once
+            "calls": numbswep, "peri": np.sort(np.array(listperi), 1)}
+
+
+def run_dynesty_planets(time_obs, velocity, stdv, timerefr, nlive, seed=5):
+    """One nested-sampling run per planet count; returns log-evidences, costs, and two-planet periods."""
+    output = {"logz": [], "logzerr": [], "elapsed": [], "calls": []}
+    for numbplan in range(MAXM_NUMB_PLAN + 1):
+        likelihood = PlanetLikelihood(time_obs, velocity, stdv, timerefr, numbplan)
+        start = time.perf_counter()
+        if numbplan == 0:
+            logz, logzerr = likelihood(np.zeros(0)), 0.0
+        else:
+            sampler = dynesty.NestedSampler(likelihood, likelihood.prior_transform, 5 * numbplan, nlive=nlive,
+                                            sample="rslice", rstate=np.random.default_rng(seed + numbplan))
+            sampler.run_nested(print_progress=False, dlogz=0.1)
+            results = sampler.results
+            logz, logzerr = results.logz[-1], results.logzerr[-1]
+            if numbplan == 2:
+                output["peri"] = np.sort(results.samples_equal().reshape(-1, 2, 5)[:, :, 0], 1)
+        output["elapsed"].append(time.perf_counter() - start)
+        output["calls"].append(likelihood.count)
+        output["logz"].append(logz)
+        output["logzerr"].append(logzerr)
+    logz = np.array(output["logz"])
+    # uniform prior on the count, so its posterior is proportional to the evidence
+    output["prob"] = np.exp(logz - np.logaddexp.reduce(logz))
+    # propagate evidence uncertainties by resampling the log-evidences
+    rng = np.random.default_rng(seed)
+    draws = rng.normal(logz, output["logzerr"], (2000, logz.size))
+    draws = np.exp(draws - np.logaddexp.reduce(draws, axis=1)[:, None])
+    output["proberr"] = np.std(draws, 0)
+    return output
+
+
+def plot_planet_count(pcat_result, dynesty_result, typefileplot):
+    """Posterior on the number of planets from one PCAT run and from dynesty evidences."""
+    numbplan = np.arange(MAXM_NUMB_PLAN + 1)
+    figure, axis = plt.subplots(figsize=(3.4, 2.6))
+    axis.bar(numbplan - 0.2, pcat_result["prob"], 0.4, color=COLORS["PCAT"], label="PCAT, 1 run")
+    axis.bar(numbplan + 0.2, dynesty_result["prob"], 0.4, yerr=dynesty_result["proberr"], color=COLORS["dynesty"],
+             label=f"dynesty, {MAXM_NUMB_PLAN} runs")
+    axis.axvline(PLANETS.shape[0], color="0.4", ls="--", label="Simulated count")
+    axis.set_yscale("log")
+    axis.set_ylim(1e-4, 2.0)
+    axis.set_xticks(numbplan)
+    axis.set_xlabel("Number of planets")
+    axis.set_ylabel("Posterior probability")
+    axis.legend(loc="upper left")
+    save(figure, "sampler_comparison_planet_count_posterior", typefileplot)
+
+
+def plot_planet_cost(pcat_result, dynesty_result, typefileplot):
+    """Likelihood evaluations and wall-clock time to obtain the posterior on the number of planets."""
+    figure, axes = plt.subplots(1, 2, figsize=(7.0, 2.6))
+    for axis, key, label in [(axes[0], "calls", "Likelihood evaluations"), (axes[1], "elapsed", "Wall-clock time [s]")]:
+        axis.bar("PCAT", pcat_result[key], color=COLORS["PCAT"], label="PCAT, all counts at once")
+        bottom = 0.0
+        for numbplan in range(1, MAXM_NUMB_PLAN + 1):
+            value = dynesty_result[key][numbplan]
+            axis.bar("dynesty", value, bottom=bottom, color=COLORS["dynesty"], alpha=0.35 + 0.2 * numbplan,
+                     label=f"dynesty, {numbplan} planet{'s' if numbplan > 1 else ''}")
+            bottom += value
+        axis.set_ylabel(label)
+    axes[1].legend(loc="upper left")
+    figure.tight_layout()
+    save(figure, "sampler_comparison_planet_count_cost", typefileplot)
+
+
+def plot_planet_periods(pcat_result, dynesty_result, typefileplot):
+    """Period posteriors of the two-planet solution from PCAT and dynesty."""
+    figure, axes = plt.subplots(1, 2, figsize=(7.0, 2.6))
+    for k, axis in enumerate(axes):
+        values = np.concatenate([pcat_result["peri"][:, k], dynesty_result["peri"][:, k]])
+        bins = np.linspace(*np.percentile(values, [1.0, 99.0]), 40)
+        axis.hist(pcat_result["peri"][:, k], bins=bins, density=True, histtype="step", lw=1.5, color=COLORS["PCAT"],
+                  label="PCAT")
+        axis.hist(dynesty_result["peri"][:, k], bins=bins, density=True, histtype="step", lw=1.5,
+                  color=COLORS["dynesty"], label="dynesty")
+        axis.axvline(PLANETS[k, 0], color="0.4", ls="--", label="Simulated truth")
+        axis.set_xlabel(f"Period of planet {'bc'[k]} [d]")
+        axis.set_yticks([])
+    axes[0].set_ylabel("Posterior density")
+    axes[0].legend(loc="upper left")
+    figure.tight_layout()
+    save(figure, "sampler_comparison_two_planet_periods", typefileplot)
+
+
+def compare_variable_dimension(arguments):
+    time_obs, velocity, stdv, timerefr = simulate_planets()
+    pcat_result = run_pcat_planets(time_obs, velocity, stdv, arguments.numbswepplan)
+    dynesty_result = run_dynesty_planets(time_obs, velocity, stdv, timerefr, arguments.nliveplan)
+    for name, result in [("PCAT", pcat_result), ("dynesty", dynesty_result)]:
+        print(f"{name}: P(N) {np.round(result['prob'], 4)}, {np.sum(result['calls'])} calls, "
+              f"{np.sum(result['elapsed']):.0f} s")
+    plot_planet_count(pcat_result, dynesty_result, arguments.typefileplot)
+    plot_planet_cost(pcat_result, dynesty_result, arguments.typefileplot)
+    plot_planet_periods(pcat_result, dynesty_result, arguments.typefileplot)
+
+
+def compare_fixed_dimension(arguments):
     time_obs, velocity = simulate_data()
     results = {}
     runners = {
@@ -226,7 +412,6 @@ def main():
         if name == "dynesty":
             print(f"dynesty log-evidence {output[3][0]:.2f} +- {output[3][1]:.2f}")
 
-    configure_style(arguments.typeplotback)
     plot_marginals(results, arguments.typefileplot)
     plot_efficiency(results, arguments.typefileplot)
 
