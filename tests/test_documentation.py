@@ -95,7 +95,12 @@ def test_figure_examples_display_visuals_in_notebooks():
         print(f"Reading from {notebook}...")
         cells = json.loads(notebook.read_text())["cells"]
         code = "\n".join("".join(cell["source"]) for cell in cells if cell["cell_type"] == "code")
-        assert "display_example_visuals(" in code or "display(Image(" in code, name
+        assert (
+            "display_example_visuals(" in code
+            or "display(Image(" in code
+            or "display_posterior_maps(" in code
+            or "save_and_show(" in code and "posterior.listpostcntpmodl" in code
+        ), name
 
 
 def test_verified_pcat_publications_have_examples():
@@ -140,6 +145,7 @@ def test_verified_pcat_publications_have_examples():
                 assert posterior_product in code
         else:
             assert "load_example_posterior" in code
+            assert "display_posterior_maps(" in code
 
 
 def test_rubin_dp1_notebook_preserves_real_data_scope():

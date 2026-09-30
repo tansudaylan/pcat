@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproduce the scaled mock-catalog analysis of Daylan et al. (2017)."""
+"""Run a synthetic PCAT analysis inspired by Daylan et al. (2017)."""
 
 from __future__ import annotations
 
@@ -75,12 +75,14 @@ def build_fermi_psf() -> tuple[np.ndarray, np.ndarray]:
     return parameters, np.deg2rad(angular_scale_deg)
 
 
-def build_configuration(smoke: bool = False, typefileplot: str = "png") -> dict[str, object]:
+def build_configuration(smoke: bool = False, typefileplot: str = "png",
+                        quick: bool = False) -> dict[str, object]:
     """Return the published mock-population assumptions in a runnable PCAT setup."""
     number_sources = 40 if smoke else 300
-    number_sweeps = 10_000 if smoke else 1_000_000
-    number_samples = 1_000 if smoke else 10_000
-    number_side = 48 if smoke else 100
+    reduced_run = smoke or quick
+    number_sweeps = 10_000 if reduced_run else 1_000_000
+    number_samples = 1_000 if reduced_run else 10_000
+    number_side = 48 if reduced_run else 100
     diffuse_template = build_ngpc_diffuse_template(number_side)
     psf_parameters, psf_scale = build_fermi_psf()
     model_overrides = {
@@ -134,11 +136,12 @@ def build_configuration(smoke: bool = False, typefileplot: str = "png") -> dict[
     }
 
 
-def run_reproduction(smoke: bool = False, typefileplot: str = "png") -> object:
+def run_reproduction(smoke: bool = False, typefileplot: str = "png",
+                     quick: bool = False) -> object:
     """Run PCAT and write its chain and figures under the example directory."""
     from pcat.sampling import sample
 
-    return sample(**build_configuration(smoke, typefileplot))
+    return sample(**build_configuration(smoke, typefileplot, quick))
 
 
 def read_posterior(run: object) -> object:
@@ -151,6 +154,7 @@ def read_posterior(run: object) -> object:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--smoke", action="store_true", help="Run a small pipeline check.")
+    parser.add_argument("--quick", action="store_true", help="Run the 300-source mock at reduced resolution and depth.")
     parser.add_argument("--fresh", action="store_true", help="Remove cached output first.")
     parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
     arguments = parser.parse_args()
@@ -162,7 +166,7 @@ def main() -> int:
             if path.exists():
                 print(f"Removing cached output {path}...")
                 shutil.rmtree(path)
-    run_reproduction(arguments.smoke, arguments.typefileplot)
+    run_reproduction(arguments.smoke, arguments.typefileplot, arguments.quick)
     print(f"PCAT wrote outputs under {OUTPUT_ROOT}")
     return 0
 

@@ -24,7 +24,7 @@ These examples showcase the PCAT model families used by the papers. They do not 
 
 - `gaussian_mixture_catalog/`: transdimensional inference of a compact Gaussian mixture
 - `chandra_point_source_catalog/`: point-source inference in a simulated Chandra-style image
-- `daylan+2017_fermi_point_sources/`: a scaled mock-catalog reproduction of Daylan et al. (2017)
+- `daylan+2017_fermi_point_sources/`: a 300-source synthetic analog of the mock analysis in Daylan et al. (2017)
 - `daylan+2018_strong_lens_subhalos/`: a simulated HST strong-lens catalog and one-subhalo comparison inspired by Daylan et al. (2018)
 - `portillo+2017_crowded_sdss_m2/`: a scaled crowded-field SDSS catalog analysis inspired by Portillo et al. (2017)
 - `feder+2020_multiband_sdss_deblending/`: five-band SDSS probabilistic deblending inspired by Feder et al. (2020)

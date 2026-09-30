@@ -113,6 +113,29 @@ def test_notebook_visuals_display_saved_figures(tmp_path, monkeypatch):
         demo.display_example_visuals("mock", "visuals/missing*.png")
 
 
+def test_notebook_posterior_maps_use_state_and_write_to_example_visuals(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    import IPython.display
+
+    monkeypatch.setattr(demo, "__file__", str(tmp_path / "pcat" / "demo.py"))
+    monkeypatch.setattr(IPython.display, "display", lambda figure: None)
+    posterior = SimpleNamespace(
+        cntpdata=np.ones((2, 16, 1)),
+        listpostcntpmodl=np.ones((3, 2, 16, 1)),
+        shapcart=(4, 4),
+    )
+
+    paths = demo.display_posterior_maps(posterior, "mock", "mock_posterior", channels=(0, 1))
+
+    assert [path.name for path in paths] == [
+        "mock_posterior_channel00.png",
+        "mock_posterior_channel01.png",
+    ]
+    assert all(path.parent == tmp_path / "examples" / "mock" / "visuals" for path in paths)
+    assert all(path.is_file() for path in paths)
+
+
 @pytest.mark.parametrize(
     ("example_name", "run_name", "expected"),
     [
@@ -220,6 +243,7 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
 
     full = module.build_configuration()
     smoke = module.build_configuration(smoke=True, typefileplot="pdf")
+    quick = module.build_configuration(quick=True)
 
     assert full["typeexpr"] == "ferm"
     assert full["truenumbelempop0"] == 300
@@ -253,6 +277,14 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
     assert smoke["boolcondcatl"] is True
     assert smoke["makeanim"] is True
     assert smoke["typefileplot"] == "pdf"
+    assert quick["truenumbelempop0"] == 300
+    assert quick["numbelempop0reg0"] == 300
+    assert quick["numbsidecart"] == 48
+    assert quick["numbswep"] == 10_000
+    assert quick["numbsamp"] == 1_000
+    assert quick["truefluxdistslop"] == pytest.approx(-1.8)
+    assert len(quick["indxenerincl"]) == 3
+    assert len(quick["indxdqltincl"]) == 2
 
     diffuse_template = smoke["dicttrue"]["sbrtbacknorm"][1]
     assert diffuse_template.shape == (3, 48**2, 2)

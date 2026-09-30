@@ -24,8 +24,8 @@ Primary use cases include
 - transdimensional flare catalogs with Gaussian, exponential, FRED, and Davenport profiles
 - fixed-dimensional physical models with custom likelihoods
 
-Daylan, Portillo, and Finkbeiner (2017) introduced the core method for gamma-ray
-point-source populations. The maintained examples extend the framework to
+[Daylan, Portillo, and Finkbeiner (2017)](https://doi.org/10.3847/1538-4357/aa679e)
+introduced the core method for gamma-ray point-source populations. The maintained examples extend the framework to
 Gaussian mixtures, strong gravitational lenses, spectral lines, catalog
 association, and detector point-spread functions.
 
@@ -349,4 +349,4 @@ python -m sphinx -E -a -W --keep-going -b html docs docs/_build/html
 
 ## References
 
-- Daylan, Portillo, and Finkbeiner (2017), *Inference of Unresolved Point Sources at High Galactic Latitudes Using Probabilistic Catalogs*, The Astrophysical Journal, 839, 4
+- [Daylan, Portillo, and Finkbeiner (2017)](https://doi.org/10.3847/1538-4357/aa679e), *Inference of Unresolved Point Sources at High Galactic Latitudes Using Probabilistic Catalogs*, The Astrophysical Journal, 839, 4

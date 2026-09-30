@@ -1,42 +1,49 @@
-# Daylan et al. 2017 mock analysis
+# Daylan et al. 2017 point-source mock analysis
 
-This example reproduces the central synthetic analysis in Section IV of
+This synthetic analysis follows the mock-run setup in
 [Daylan, Portillo, and Finkbeiner (2017)](https://doi.org/10.3847/1538-4357/aa679e),
-published as ApJ 839, 4. It generates a Fermi-LAT-like Poisson image on a
-40 degree by 40 degree Cartesian projection about the North Galactic Pole from
-a uniform population of 300 point sources whose flux distribution has the
-published power-law slope of -1.8. The image uses the published three energy
-bins and two event classes. It then runs transdimensional PCAT inference and
-writes PCAT's data, model, residual, flux-distribution, association, population,
-and hyperparameter diagnostics.
+ApJ 839, 4. It samples a 300-source population with flux-distribution slope
+$-1.8$ in a $40^\circ\times40^\circ$ field around the North Galactic Pole,
+using the paper's three energy bins and two conversion classes. PCAT jointly
+samples source catalogs and produces mock count maps, a posterior flux
+distribution, and the posterior source-count distribution.
 
-Run the publication-scale configuration with:
+Run the full synthetic configuration with:
 
 ```bash
 python 'examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py' --fresh
 ```
 
-Use `--typefileplot pdf` for PDF figures. A fast end-to-end check is available:
+This uses 100 by 100 pixels, 1,000,000 sweeps, and 10,000 retained samples.
+The notebook uses the same 300-source population and analysis structure with
+48 by 48 pixels, 10,000 sweeps, and 1,000 retained samples:
+
+```bash
+python 'examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py' --quick --fresh
+```
+
+Use `--typefileplot pdf` for PDF output. A smaller 40-source pipeline check is
+available with:
 
 ```bash
 python 'examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py' --smoke --fresh
 ```
 
-The original analysis used Pass 7 source-class exposure from weeks 9--217 and
-the mission diffuse template. Those archival inputs are not distributed with
-this repository. This self-contained example uses constant exposure and a
-deterministic, dust-like high-latitude morphology as an explicit synthetic proxy
-for the diffuse template. It does not reproduce the paper's numerical Fermi-LAT
-measurements or claim agreement with its posterior values.
+The paper used Pass 7 exposure from weeks 9--217 and the Fermi diffuse template.
+Those inputs and its exact source realization are not included here. This
+example uses constant exposure and a deterministic spatial template, so its
+posterior values are not measurements from Fermi-LAT and are not expected to
+match the paper's results. The quick run is intended for visualization rather
+than convergence claims.
 
-The notebook runs the smoke configuration, loads the finalized posterior, and
-saves posterior-derived count maps, source catalogs, source-count probabilities,
-and likelihood traces directly under `visuals/`.
+The notebook runs PCAT, loads that run's finalized posterior and injected
+catalog, then creates figure-style comparisons from the actual samples. Its
+three figures follow the data/model/residual, source-flux distribution, and
+source-count summaries in Figures 5, 7, and 11 of the paper. They use synthetic
+data and do not reproduce the published numerical results.
 
-![Simulated counts, posterior model, and residual](visuals/fermi_posterior_count_maps.png)
+![Mock counts, a posterior catalog draw, and residual](visuals/fermi_mock_figure5_style.png)
 
-![Posterior source positions and fluxes](visuals/fermi_posterior_source_catalog.png)
+![Injected and posterior source-flux distributions](visuals/fermi_mock_figure7_style.png)
 
-![Posterior probability of the source count](visuals/fermi_posterior_source_count.png)
-
-![Posterior log-likelihood trace](visuals/fermi_posterior_log_likelihood.png)
+![Posterior distribution of the number of sources](visuals/fermi_mock_figure11_style.png)
