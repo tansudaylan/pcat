@@ -31,6 +31,10 @@ docs = [
   "sphinx>=8",
   "sphinx-rtd-theme>=3",
 ]
+examples = [
+  "dynesty",
+  "emcee",
+]
 
 [tool.setuptools]
 packages = ["pcat"]

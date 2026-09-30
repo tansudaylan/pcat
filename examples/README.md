@@ -33,7 +33,25 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `rubin_dp1_confirmed_strong_lenses/`: an RSP-only workflow that crossmatches confirmed SIMBAD lens systems to real Rubin DP1 imaging, retrieves all catalog-footprint matches, and runs demonstration PCAT fits
 - `catalog_association_completeness_purity/`: completeness and purity across catalog-matching radii
 - `voigt_spectral_line_catalog/`: nominal and high-signal Voigt-profile line detection in simulated spectra
+- `proposal_profiling/`: execution time, prior-support fraction, and acceptance of each proposal type on the simulated Voigt spectrum
+- `sampler_comparison_emcee_dynesty/`: PCAT, emcee, and dynesty on one simulated sinusoid posterior
 - `fermi_lat_pg1553_event_filter/`: a Fermi Large Area Telescope event-filter configuration for PG 1553+113
+
+## Proposal profiling
+
+PCAT stores the wall-clock time and proposal type of every sweep. On the simulated Voigt spectrum with split and merge moves enabled (20,000 sweeps, one process), a within-model, birth, or death sweep takes a median of 0.28 ms, a split 0.33 ms, and a merge 0.37 ms. Acceptance is 1% for within-model, 35% for birth, 0.2% for death, 40% for split, and 6% for merge moves. The chain stays at the three-line upper bound of the fitting model although the simulation contains two lines, so death and merge proposals dominate the sweep count. The run takes about 20 s.
+
+![Time per sweep by proposal type](proposal_profiling/visuals/proposal_time_per_sweep.png)
+
+![Acceptance and cost by proposal type](proposal_profiling/visuals/proposal_acceptance_and_cost.png)
+
+## PCAT, emcee, and dynesty
+
+The data are simulated: 40 epochs over 30 d of a 5 m/s sinusoid with a 3.7 d period and 2 m/s noise. The three samplers share the likelihood and uniform priors on amplitude (0 to 15 m/s), period (2 to 6 d), and phase (0 to 2&pi;). PCAT (60,000 sweeps, adaptive proposal scales) and dynesty (500 live points) place all samples in the true period mode and agree on the marginal posteriors, e.g. period 3.722 &plusmn; 0.023 d. emcee (16 walkers, 4,000 steps, initialized across the prior) places 12% of its samples in secondary period modes, so its effective sample size (ESS) is not meaningful. dynesty is the most efficient on this fixed-dimensional problem, with 900 effective samples per second against 35 for PCAT, and it also returns the log-evidence, &minus;23.7 &plusmn; 0.3. PCAT evaluates the likelihood 2.6 times per sweep in this mode. Its distinct capability is transdimensional sampling, where neither emcee nor dynesty can change the number of model components within one run.
+
+![Marginal posteriors](sampler_comparison_emcee_dynesty/visuals/sampler_comparison_marginal_posteriors.png)
+
+![Sampling efficiency](sampler_comparison_emcee_dynesty/visuals/sampler_comparison_efficiency.png)
 
 ## Running
 

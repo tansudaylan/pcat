@@ -508,6 +508,9 @@ def _set_element_amplitude_indices(gmod):
             raise ValueError('Amplitude parameter %s is missing from population %d.' % (name, population))
         indices.append(gmod.namepara.genrelem[population].index(name))
     gmod.indxpara.genrelemampl = np.asarray(indices, dtype=int)
+    # split/merge move these components with a Gaussian offset of width radispmr
+    gmod.boolcompposi = [np.array([name in ('xpos', 'ypos', 'elin') for name in gmod.namepara.genrelem[population]])
+                         for population in gmod.indxpopl]
 
 
 def narr_task(message, gdat=None, phase='during', major=False, force=False, typeverb=None):
@@ -2003,19 +2006,13 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                 gdatmodi.this.auxipara[g] = icdf_trap(gdat, strgmodl, np.random.rand(), gmodthis.paragenrscalfull, gmod.scalpara.genrelem[gdatmodi.indxpopltran][g], \
                                                                                                      gmod.namepara.genrelem[gdatmodi.indxpopltran][g], gdatmodi.indxpopltran)
 
-        # determine the new parameters
-        if gmod.typeelem[gdatmodi.indxpopltran].startswith('lghtline'):
-            gdatmodi.compfrst[0] = gdatmodi.comppare[0] + (1. - gdatmodi.this.auxipara[1]) * gdatmodi.this.auxipara[0]
-        else:
-            gdatmodi.compfrst[0] = gdatmodi.comppare[0] + (1. - gdatmodi.this.auxipara[2]) * gdatmodi.this.auxipara[0]
-            gdatmodi.compfrst[1] = gdatmodi.comppare[1] + (1. - gdatmodi.this.auxipara[2]) * gdatmodi.this.auxipara[1]
+        # determine the new parameters so that the amplitude-weighted position is conserved
+        indxcompposi = np.where(gmod.boolcompposi[gdatmodi.indxpopltran])[0]
+        fracampl = gdatmodi.this.auxipara[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]]
+        gdatmodi.compfrst[indxcompposi] = gdatmodi.comppare[indxcompposi] + (1. - fracampl) * gdatmodi.this.auxipara[indxcompposi]
+        gdatmodi.compseco[indxcompposi] = gdatmodi.comppare[indxcompposi] - fracampl * gdatmodi.this.auxipara[indxcompposi]
         gdatmodi.compfrst[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] = gdatmodi.this.auxipara[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] * \
                                                                                                         gdatmodi.comppare[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]]
-        if gmod.typeelem[gdatmodi.indxpopltran].startswith('lghtline'):
-            gdatmodi.compseco[0] = gdatmodi.comppare[0] - gdatmodi.this.auxipara[1] * gdatmodi.this.auxipara[0]
-        else:
-            gdatmodi.compseco[0] = gdatmodi.comppare[0] - gdatmodi.this.auxipara[2] * gdatmodi.this.auxipara[0]
-            gdatmodi.compseco[1] = gdatmodi.comppare[1] - gdatmodi.this.auxipara[2] * gdatmodi.this.auxipara[1]
         gdatmodi.compseco[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] = (1. - gdatmodi.this.auxipara[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]]) * \
                                                                                                         gdatmodi.comppare[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]]
         for g in range(gmod.numbparagenrelemsing[gdatmodi.indxpopltran]):
@@ -2029,13 +2026,12 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         gmodnext.paragenrscalfull[gdatmodi.indxsamptran[1]] = cdfn_trap(gdat, gdatmodi, strgmodl, gdatmodi.compseco, gdatmodi.indxpopltran)
         gmodnext.paragenrscalfull[gdatmodi.indxsamptran[1]] = gdatmodi.compseco
         
-        # check for prior boundaries
-        if gmod.typeelem[gdatmodi.indxpopltran].startswith('lghtline'):
-            if np.fabs(gdatmodi.compfrst[0]) > gdat.maxmelin or np.fabs(gdatmodi.compseco[0]) > gdat.maxmelin:
-                gdatmodi.this.boolpropfilt = False
-        else:
-            if np.fabs(gdatmodi.compfrst[0]) > maxmxpos or np.fabs(gdatmodi.compseco[0]) > maxmxpos or \
-                                                                    np.fabs(gdatmodi.compfrst[1]) > maxmypos or np.fabs(gdatmodi.compseco[1]) > maxmypos:
+        # check for prior boundaries of the positional components (spatial positions default to the data half-width)
+        for g in np.where(gmod.boolcompposi[gdatmodi.indxpopltran])[0]:
+            nameposi = gmod.namepara.genrelem[gdatmodi.indxpopltran][g]
+            minmposi = getattr(gmod.minmpara, nameposi, -gdat.maxmgangdata)
+            maxmposi = getattr(gmod.maxmpara, nameposi, gdat.maxmgangdata)
+            if not (minmposi <= gdatmodi.compfrst[g] <= maxmposi and minmposi <= gdatmodi.compseco[g] <= maxmposi):
                 gdatmodi.this.boolpropfilt = False
         if gdatmodi.compfrst[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] < getattr(gmod.minmpara, gmod.nameparagenrelemampl[gdatmodi.indxpopltran]) or \
            gdatmodi.compseco[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] < getattr(gmod.minmpara, gmod.nameparagenrelemampl[gdatmodi.indxpopltran]):
@@ -2052,7 +2048,8 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         ## first element index to be merged
         gdatmodi.mergindxelemfrst = gmodthis.indxelemfull[gdatmodi.indxpopltran][gdatmodi.indxelemfullmergfrst]
          
-        # find the probability of merging this element with the others 
+        # find the probability of merging this element with the others (weights are relative to the chosen primary)
+        gdatmodi.indxelemfullmodi = [gdatmodi.indxelemfullmergfrst]
         probmerg = retr_probmerg(gdat, gdatmodi, gmodthis.paragenrscalfull, thisindxparagenrfullelem, gdatmodi.indxpopltran, 'seco', typeelem=gmod.typeelem)
         
         indxelemfulltemp = np.arange(len(gmodthis.indxelemfull[gdatmodi.indxpopltran]))
@@ -2105,11 +2102,8 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         gdatmodi.indxelemmodi = [gdatmodi.mergindxelemfrst, gdatmodi.mergindxelemseco]
 
         # auxiliary parameters
-        if gmod.typeelem[gdatmodi.indxpopltran].startswith('lghtline'):
-            gdatmodi.this.auxipara[0] = gdatmodi.compseco[0] - gdatmodi.compfrst[0]
-        else:
-            gdatmodi.this.auxipara[0] = gdatmodi.compseco[0] - gdatmodi.compfrst[0]
-            gdatmodi.this.auxipara[1] = gdatmodi.compseco[1] - gdatmodi.compfrst[1]
+        indxcompposi = np.where(gmod.boolcompposi[gdatmodi.indxpopltran])[0]
+        gdatmodi.this.auxipara[indxcompposi] = gdatmodi.compseco[indxcompposi] - gdatmodi.compfrst[indxcompposi]
         gdatmodi.this.auxipara[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] = gdatmodi.compfrst[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] / \
                                         (gdatmodi.compfrst[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] + gdatmodi.compseco[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]]) 
         for g, nameparagenrelem in enumerate(gmod.namepara.genrelem[gdatmodi.indxpopltran]):
@@ -2119,17 +2113,12 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         # merged element
         gdatmodi.comppare[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] = gdatmodi.compfrst[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] + \
                                                                                                 gdatmodi.compseco[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]]
-        if gdatmodi.comppare[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] > getattr(gdat, 'maxm' + gmod.nameparagenrelemampl[gdatmodi.indxpopltran]):
+        if gdatmodi.comppare[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]] > getattr(gmod.maxmpara, gmod.nameparagenrelemampl[gdatmodi.indxpopltran]):
             gdatmodi.this.boolpropfilt = False
             if gdat.typeverb > 1:
                 print('Proposal rejected due to falling outside the prior.')
             return
 
-        if gmod.typeelem[gdatmodi.indxpopltran].startswith('lghtline'):
-            gdatmodi.comppare[0] = gdatmodi.compfrst[0] + (1. - gdatmodi.this.auxipara[1]) * (gdatmodi.compseco[0] - gdatmodi.compfrst[0])
-        else:
-            gdatmodi.comppare[0] = gdatmodi.compfrst[0] + (1. - gdatmodi.this.auxipara[2]) * (gdatmodi.compseco[0] - gdatmodi.compfrst[0])
-            gdatmodi.comppare[1] = gdatmodi.compfrst[1] + (1. - gdatmodi.this.auxipara[2]) * (gdatmodi.compseco[1] - gdatmodi.compfrst[1])
         for g, nameparagenrelem in enumerate(gmod.namepara.genrelem[gdatmodi.indxpopltran]):
             if gmod.boolcompposi[gdatmodi.indxpopltran][g]:
                 gdatmodi.comppare[g] = gdatmodi.compfrst[g] + (1. - gdatmodi.this.auxipara[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]]) * \
@@ -4180,6 +4169,9 @@ def init_image( \
             gdat.radispmr = 0.5 / gdat.anglfact
         if gdat.typeexpr == 'gmix':
             gdat.radispmr = 0.2
+        if gdat.typeexpr == 'fire':
+            # blended lines are closer than the narrowest allowed line width, 0.1 of the geometric-mean energy
+            gdat.radispmr = 0.1 * np.sqrt(gdat.limtener[0] * gdat.limtener[1])
     
     print('gdat.radispmr')
     print(gdat.radispmr)
@@ -8700,6 +8692,10 @@ def init_stat(gdat):
                     continue
                 if not (gdat.inittype == 'pert' and gmod.namepara.genr.base.startswith('numbelem')):
                     gmod.indxpara.true = k
+                    # placeholder slots with a zero-width prior have no defined CDF; keep their initial unit value
+                    if gmod.scalpara.genrbase[k] in ['self', 'logt', 'atan'] and \
+                            not gmod.maxmpara.genrbase[k] > gmod.minmpara.genrbase[k]:
+                        continue
                     trueparascale = None
                     if hasattr(gmodstat, 'paragenrscalfull') and gmodstat.paragenrscalfull is not None and \
                                     len(gmodstat.paragenrscalfull) > gmod.indxpara.true:
@@ -10444,8 +10440,9 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                         setattr(gmodstat, 'reca' + strgfeat + 'pop%d' % q, reca)
         
         strgcnfgsimu = getattr(gdat, 'strgcnfgsimu', None)
-        print('gdat.strgcnfgsimu')
-        print(strgcnfgsimu)
+        if gdat.typeverb > 1:
+            print('gdat.strgcnfgsimu')
+            print(strgcnfgsimu)
         if strgcnfgsimu is not None:
             if gmod.numbpopl > 0:
                 for l in gmod.indxpopl:
@@ -10501,14 +10498,15 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
             boolasscrefr = getattr(gdat, 'boolasscrefr', [])
             indxrefr = getattr(gdat, 'indxrefr', [])
 
-            print('gdat.boolinforefr')
-            print(boolinforefr)
-            print('gdat.boolasscrefr')
-            print(boolasscrefr)
-            print('strgmodl')
-            print(strgmodl)
-            print('gdat.typedata')
-            print(gdat.typedata)
+            if gdat.typeverb > 1:
+                print('gdat.boolinforefr')
+                print(boolinforefr)
+                print('gdat.boolasscrefr')
+                print(boolasscrefr)
+                print('strgmodl')
+                print(strgmodl)
+                print('gdat.typedata')
+                print(gdat.typedata)
 
             for q in indxrefr:
 
@@ -19465,6 +19463,9 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
 
             stopchro(gdat, gdatmodi, 'plot')
             
+        # save the execution time for the sweep before it is persisted below
+        stopchro(gdat, gdatmodi, 'totl')
+        
         ## variables to be saved for each sweep
         for strg in gdat.liststrgvarbarryswep:
             workdict['list' + gdat.strgpdfn + strg][gdatmodi.cntrswep, ...] = getattr(gdatmodi.this, strg)
@@ -19564,9 +19565,6 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
             print(gdatmodi.this.lliktotl)
             print('Chi2 per degree of freedom')
             print(gdatmodi.this.chi2doff)
-        
-        # save the execution time for the sweep
-        stopchro(gdat, gdatmodi, 'totl')
         
         if boollogg:
             print('Chronometers: ')

@@ -29,6 +29,14 @@ UTILITY_EXAMPLES = [
         ROOT / "roman_strong_lens_perturber_catalog" / "roman_strong_lens_perturber_catalog.py",
         ROOT / "roman_strong_lens_perturber_catalog" / "visuals" / "roman_strong_lens_perturber_catalog.png",
     ),
+    (
+        ROOT / "proposal_profiling" / "proposal_profiling.py",
+        ROOT / "proposal_profiling" / "visuals" / "proposal_time_per_sweep.png",
+    ),
+    (
+        ROOT / "sampler_comparison_emcee_dynesty" / "sampler_comparison_emcee_dynesty.py",
+        ROOT / "sampler_comparison_emcee_dynesty" / "visuals" / "sampler_comparison_efficiency.png",
+    ),
 ]
 
 
