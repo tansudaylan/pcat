@@ -66,11 +66,15 @@ The injected FRED shape is asymmetric (fast rise, slow decay), but PCAT's Voigt 
 
 ## Proposal profiling
 
-PCAT stores the wall-clock time and proposal type of every sweep. On the simulated Voigt spectrum with split and merge moves enabled (20,000 sweeps, one process), a within-model, birth, or death sweep takes a median of 0.28 ms, a split 0.33 ms, and a merge 0.37 ms. Acceptance is 1% for within-model, 35% for birth, 0.2% for death, 40% for split, and 6% for merge moves. The chain stays at the three-line upper bound of the fitting model although the simulation contains two lines, so death and merge proposals dominate the sweep count. The run takes about 20 s.
+PCAT stores the wall-clock time and proposal type of every sweep, as well as a breakdown of that time into internal pipeline phases (proposal, likelihood, model evaluation, prior, etc.). On the simulated Voigt spectrum with split and merge moves enabled (20,000 sweeps, one process, about 20 s), a within-model, birth, or death sweep takes a median of 0.28 ms, a split 0.32 ms, and a merge 0.37 ms. Acceptance is 1% for within-model, 30% for birth, 0.2% for death, 33% for split, and 5% for merge moves. The chain stays near the three-line upper bound of the fitting model although the simulation contains two lines, so death and merge proposals dominate the sweep count.
+
+Most of the mean 0.67 ms per sweep goes to bookkeeping around the proposal (process, propose, parse, and save the state), not the physics evaluation itself (model, spectrum, and likelihood together take under 0.03 ms). A separate, tertiary bookkeeping step that runs after each sweep (not counted in the sweep total) costs 1.47 ms on average, more than twice the sweep itself, and is the clearest target for future speedups.
 
 ![Time per sweep by proposal type](proposal_profiling/visuals/proposal_time_per_sweep.png)
 
 ![Acceptance and cost by proposal type](proposal_profiling/visuals/proposal_acceptance_and_cost.png)
+
+![Time breakdown by internal pipeline phase](proposal_profiling/visuals/proposal_time_breakdown_by_phase.png)
 
 ## PCAT, emcee, and dynesty
 

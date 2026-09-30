@@ -4,7 +4,9 @@
 The run fits the simulated Voigt spectral-line data set of the
 ``voigt_spectral_line_catalog`` example with birth, death, split, merge, and
 within-model proposals enabled. PCAT records the wall-clock time of every sweep
-and the proposal type used, and this script summarizes those records.
+and the proposal type used, as well as a per-sweep breakdown into pipeline
+phases (proposal, likelihood, model evaluation, prior, etc.); this script
+summarizes both.
 """
 
 import argparse
@@ -23,6 +25,16 @@ sys.path.insert(0, str(EXAMPLE_PATH.parent / "voigt_spectral_line_catalog"))
 
 # proposal-type order used by PCAT (gdat.nameproptype)
 LABELS = ["Within-model", "Birth", "Death", "Split", "Merge"]
+
+# descriptive labels for PCAT's per-sweep pipeline phase timers (gdat.listnamechro/listlablchro)
+PHASE_LABELS = {
+    "prop": "Proposal", "diag": "Diagnostics", "save": "Save", "plot": "Plot",
+    "proc": "Process", "elem": "Parse", "modl": "Model", "llik": "Likelihood",
+    "sbrtmodl": "Total emission", "spec": "Spectrum calculation",
+    "elemsbrtdfnc": "Dfnc S Brght", "elemdeflsubh": "Subh Defl",
+    "elemsbrtextsbgrd": "Bkg Exts S Brght", "psfnconv": "Img for PSF Conv.",
+    "expo": "Exposure", "lpri": "Prior", "tert": "Tertiary",
+}
 
 
 def run_sampler(numbswep):
@@ -60,15 +72,21 @@ def run_sampler(numbswep):
 
 
 def read_chain():
-    """Return per-sweep proposal type, acceptance, prior filter, and time."""
+    """Return per-sweep proposal type, acceptance, prior filter, time, and pipeline-phase times."""
     path = EXAMPLE_PATH / "data" / "outp" / RUN_NAME / "gdatmodi0000post.h5"
     print(f"Reading from {path}...")
     with h5py.File(path, "r") as file:
+        phase = {
+            key[len("listpostchro"):]: file[key][()].ravel() * 1e3  # [ms]
+            for key in file.keys()
+            if key.startswith("listpostchro") and key != "listpostchrototl"
+        }
         return {
             "type": file["listpostindxproptype"][()].ravel().astype(int),
             "accp": file["listpostboolpropaccp"][()].ravel().astype(bool),
             "filt": file["listpostboolpropfilt"][()].ravel().astype(bool),
             "time": file["listpostchrototl"][()].ravel() * 1e3,  # [ms]
+            "phase": phase,
         }
 
 
@@ -137,6 +155,26 @@ def plot_acceptance_and_cost(chain, typefileplot):
     save(figure, "proposal_acceptance_and_cost", typefileplot)
 
 
+def plot_time_breakdown_by_phase(chain, typefileplot):
+    """Show the mean per-sweep time spent in each internal pipeline phase."""
+    meantime = {name: times.mean() for name, times in chain["phase"].items() if times.mean() > 1e-6}
+    # 'tert' is measured after, not inside, the sweep loop, so it is not part of chrototl
+    names = sorted((name for name in meantime if name != "tert"), key=meantime.get)
+    labels = [PHASE_LABELS.get(name, name.title()) for name in names]
+    values = [meantime[name] for name in names]
+    figure, axis = plt.subplots(figsize=(6.5, 3.4))
+    axis.barh(range(len(names)), values, color="C0")
+    axis.set_yticks(range(len(names)), labels)
+    axis.axvline(chain["time"].mean(), color="C3", ls="--", lw=1.2,
+                label=f"Total sweep, mean {chain['time'].mean():.3f} ms")
+    if "tert" in meantime:
+        axis.axvline(meantime["tert"], color="0.4", ls=":", lw=1.2,
+                    label=f"Tertiary bookkeeping (outside the sweep), mean {meantime['tert']:.3f} ms")
+    axis.set_xlabel("Mean wall-clock time per sweep [ms]")
+    axis.legend(loc="lower right", fontsize=8)
+    save(figure, "proposal_time_breakdown_by_phase", typefileplot)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=20000)
@@ -151,6 +189,7 @@ def main():
     configure_style(arguments.typeplotback)
     plot_time_per_proposal(chain, arguments.typefileplot)
     plot_acceptance_and_cost(chain, arguments.typefileplot)
+    plot_time_breakdown_by_phase(chain, arguments.typefileplot)
     for k, label in enumerate(LABELS):
         indx = chain["type"] == k
         if indx.any():
