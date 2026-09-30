@@ -16,3 +16,5 @@ visuals/
 !examples/simulated_rubin_cluster_lens/visuals/
 !examples/simulated_rubin_cluster_lens/visuals/*.png
 !examples/simulated_rubin_cluster_lens/visuals/*.pdf
+CODING_STANDARDS.md
+REFACTORING_PROGRESS.md
