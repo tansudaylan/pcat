@@ -316,3 +316,15 @@ def test_documentation_distinguishes_posterior_and_candidate_animations():
     assert "Candidate frames are proposal diagnostics, not posterior samples" in sampling
     assert "including rejected candidates" in outputs
     assert "examples/proposal_state_animation/visuals/post/anim/proposal_candidates.gif" in readme
+
+
+def test_readme_lists_daylan_applications_first_without_reproduction_language():
+    readme = (REPOSITORY_ROOT / "README.md").read_text()
+    applications = readme.split("## Applications\n", 1)[1].split("\n## ", 1)[0]
+    headings = [line for line in applications.splitlines() if line.startswith("### ")]
+
+    assert headings[:2] == [
+        "### [Daylan et al. 2017 Fermi-LAT point-source populations](examples/daylan+2017_fermi_point_sources/)",
+        "### [Daylan et al. 2018 Strong-lens subhalo catalogs](examples/daylan+2018_strong_lens_subhalos/)",
+    ]
+    assert "reproduc" not in applications.lower()

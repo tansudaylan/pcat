@@ -162,6 +162,10 @@ leaves existing fixed-``numbswep`` behavior unchanged.
 
 ## Applications
 
+### [Daylan et al. 2017 Fermi-LAT point-source populations](examples/daylan+2017_fermi_point_sources/)
+
+### [Daylan et al. 2018 Strong-lens subhalo catalogs](examples/daylan+2018_strong_lens_subhalos/)
+
 ### Keplerian signals in radial-velocity data
 
 ``pcat.radial_velocity.retr_dictpcatrvel`` configures a transdimensional search
@@ -208,13 +212,6 @@ seeing at their injected values. It omits foreground galaxy light, neighboring
 cluster members, correlated sky noise, and point-spread-function uncertainty.
 The figure therefore demonstrates parameter recovery in a controlled simulation
 rather than a forecast for Rubin Observatory or an analysis of observed data.
-
-### Daylan et al. 2017 reproduction
-
-The synthetic reproduction of the original PCAT point-source analysis is in
-[`examples/daylan+2017_fermi_point_sources`](examples/daylan+2017_fermi_point_sources). It preserves the published 300-source
-population and flux-distribution slope while clearly separating this scaled,
-self-contained run from the archival Fermi-LAT data analysis.
 
 ## Installation
 
