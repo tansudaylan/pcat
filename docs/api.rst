@@ -64,6 +64,16 @@ decomposed into smaller modules.
    processes. ``dictpcatinpt`` contains shared settings and ``dictargsvari``
    contains per-configuration overrides keyed by configuration name.
 
+.. py:function:: pcat.sampling.sample_fixed(**configuration)
+
+   Run a fixed-dimensional likelihood through the same native PCAT sampling
+   and persistence pipeline.
+
+.. py:function:: pcat.sampling.sample_fixed_chains(...)
+
+   Compatibility adapter that returns walker-first chains from the native PCAT
+   fixed-dimensional sampler for existing ``tdpy.mcmc`` integrations.
+
 .. py:function:: pcat.main.retr_listgdat(liststrgcnfg, typegdat="finlpost")
 
    Load the requested persisted state for each run tag in a configuration

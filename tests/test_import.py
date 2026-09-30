@@ -20,3 +20,8 @@ def test_sampling_api_preserves_main_compatibility():
     assert sampling.init_image is main.init_image
     assert sampling.sample is main.sample
     assert sampling.sample_parallel is main.sample_parallel
+    from pcat.fixed import sample_allesfitter_pcat, sample_fixed, sample_fixed_chains
+
+    assert sampling.sample_fixed is sample_fixed
+    assert sampling.sample_fixed_chains is sample_fixed_chains
+    assert sampling.sample_allesfitter_pcat is sample_allesfitter_pcat

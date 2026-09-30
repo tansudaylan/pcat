@@ -13,6 +13,10 @@ def gaussian_log_likelihood(gdat, strgmodl, values):
     return -0.5 * values @ np.linalg.inv(covariance) @ values
 
 
+def scalar_log_likelihood(gdat, strgmodl, values):
+    return -0.5 * values[0] ** 2
+
+
 def constant_legacy_likelihood(values, state):
     return np.log(3.)
 
@@ -96,6 +100,30 @@ def test_generic_model_uses_main_sampling_pipeline(tmp_path):
         atol=0.25,
     )
     assert np.max(result.gmrbparagenrscalbase) < 1.1
+
+
+def test_native_sampler_preserves_unrelated_empty_output_directories(tmp_path):
+    sibling_visuals = tmp_path / 'mcmc' / 'visuals'
+    sibling_visuals.mkdir(parents=True)
+
+    sample(
+        typeexpr='gener',
+        retr_llik=scalar_log_likelihood,
+        parameter_names=('x',),
+        prior_types=('self',),
+        prior_minima=(-2.0,),
+        prior_maxima=(2.0,),
+        initial_values=(0.0,),
+        pathbase=str(tmp_path),
+        strgcnfg='preserve_sibling_outputs',
+        numbproc=1,
+        numbswep=8,
+        numbburn=2,
+        numbsamp=6,
+        typeverb=-1,
+    )
+
+    assert sibling_visuals.is_dir()
 
 
 def test_single_parameter_proposals_adapt_only_selected_scale(tmp_path):

@@ -7326,6 +7326,8 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
     for strgfeatpara in liststrgfeatparalist:
         
         if strgfeatpara == 'name':
+            # names are the feature index itself, so only the array type needs to be fixed here
+            gmod.namepara.genrbase = np.array(gmod.namepara.genrbase)
             continue
 
         gmodtypefeat = getattr(gmod, strgfeatpara + 'para')
@@ -7411,8 +7413,7 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
     for strgfeatpara in liststrgfeatparalist:
         gmodtypefeat = getattr(gmod, strgfeatpara + 'para')
         if not isinstance(gmodtypefeat.genrbase, np.ndarray):
-            print('TURNING gmodtypefeat.genrbase INTO NUMPY ARRAY. THIS SHOULD HAVE BEEN DONE BEFORE.')
-            gmodtypefeat.genrbase = np.array(gmodtypefeat.genrbase)
+            raise TypeError('%spara.genrbase must be a numpy array after feature-array construction.' % strgfeatpara)
 
         dicttemp = dict()
         for scaltype in gdat.listscaltype:
@@ -18158,9 +18159,7 @@ def init( \
     except (AttributeError, KeyError):
         pass
 
-    if hasattr(gdat, 'pathbase'):
-        _remove_empty_directories(gdat.pathbase)
-    elif hasattr(gdat, 'pathplotcnfg'):
+    if hasattr(gdat, 'pathplotcnfg'):
         _remove_empty_directories(gdat.pathplotcnfg)
     
     print('PCAT initialization completed successfully.')
