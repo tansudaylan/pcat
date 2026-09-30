@@ -8058,6 +8058,16 @@ def make_cbar(gdat, axis, imag, strgvarb):
     return cbar
 
 
+def _retr_population_legend_label(gmod, population, prefix):
+    """Return a concise map legend label for an element population."""
+    population_label = None
+    if hasattr(gmod, 'legdpopl') and population < len(gmod.legdpopl):
+        population_label = gmod.legdpopl[population]
+    if not population_label and gmod.numbpopl > 1:
+        population_label = 'Population %d' % population
+    return '%s %s' % (prefix, population_label) if population_label else prefix
+
+
 def make_legdmaps(gdat, strgstat, strgmodl, axis, mosa=False, assc=False):
     
     gmod = getattr(gdat, strgmodl)
@@ -8066,14 +8076,10 @@ def make_legdmaps(gdat, strgstat, strgmodl, axis, mosa=False, assc=False):
     if strgmodl == 'fitt' and (strgstat == 'pdfn' and gdat.boolcondcatl or strgstat == 'this') and gmod.numbpopl > 0:
         for l in gmod.indxpopl:
             colr = retr_colr(gdat, strgstat, strgmodl, l)
-            if hasattr(gmod, 'legdpopl') and l < len(gmod.legdpopl):
-                legdpopl = gmod.legdpopl[l]
-            else:
-                legdpopl = 'Population %d' % l
             if strgstat == 'pdfn':
-                labl = 'Condensed %s' % legdpopl
+                labl = _retr_population_legend_label(gmod, l, 'Condensed')
             else:
-                labl = 'Sample %s' % legdpopl
+                labl = _retr_population_legend_label(gmod, l, 'Sample')
             boolhaselem = hasattr(gmod, 'maxmpara') and hasattr(gmod.maxmpara, 'numbelem') and l < len(gmod.maxmpara.numbelem) and not gmod.maxmpara.numbelem[l] == 0
             if boolhaselem:
                 mrkr = gmod.listelemmrkr[l] if hasattr(gmod, 'listelemmrkr') and l < len(gmod.listelemmrkr) else 'o'

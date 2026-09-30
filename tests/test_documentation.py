@@ -79,7 +79,6 @@ def test_figure_examples_display_visuals_in_notebooks():
         "catalog_association/catalog_association",
         "psf_subpixel/psf_subpixel",
         "rubin_cluster_lens/rubin_cluster_lens",
-        "make_posterior_animation_collage",
         "run_examples",
     )
     for name in figure_examples:
@@ -88,6 +87,18 @@ def test_figure_examples_display_visuals_in_notebooks():
         cells = json.loads(notebook.read_text())["cells"]
         code = "\n".join("".join(cell["source"]) for cell in cells if cell["cell_type"] == "code")
         assert "display_example_visuals(" in code or "display(Image(" in code, name
+
+
+def test_rubin_dp1_notebook_preserves_real_data_scope():
+    notebook = REPOSITORY_ROOT / "examples/rubin_dp1_observed_lenses/rubin_dp1_observed_lenses.ipynb"
+    print(f"Reading from {notebook}...")
+    source = notebook.read_text()
+    assert "get_siav2_service('dp1')" in source
+    assert "cutout-sync-maskedimage" in source
+    assert "otype IN ('gLS', 'gLe')" in source
+    assert "Local fallback data are intentionally not substituted" in source
+    assert "SIMBAD is curated but incomplete" in source
+    assert "gaussian_lens_log_likelihood" in source
 
 
 def test_documentation_excludes_obsolete_interface_terms():

@@ -1,9 +1,187 @@
 """Native plotting functions for PCAT posterior products."""
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+from tdpy.util import save_figure
+
+
+EXAMPLES_ROOT = Path(__file__).resolve().parents[1] / "examples"
+DEFAULT_POSTERIOR_COLLAGE = EXAMPLES_ROOT / "pcat_posterior_samples.gif"
+
+
+@dataclass(frozen=True)
+class PosteriorAnimationPanel:
+    """Describe one posterior-frame sequence in an animation collage."""
+
+    label: str
+    pattern: str
+
+
+POSTERIOR_ANIMATION_PANELS = (
+    PosteriorAnimationPanel(
+        "Gaussian mixture | model intensity",
+        "gmix_demo/visuals/post/fram/thiscntpmodl_*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Point sources | model counts",
+        "Daylan+2017/visuals/post/fram/thiscntpmodlen00evt0_*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Strong lens | model counts",
+        "hst_lens/visuals/post/fram/thiscntpmodl_*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Spectral lines | model and data",
+        "voigt-profile/visuals/post/fram/thisscatcntpevt0_*.png",
+    ),
+)
+
+
+def _animation_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
+    """Use a widely available font with a portable fallback."""
+    name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
+    try:
+        return ImageFont.truetype(name, size)
+    except OSError:
+        return ImageFont.load_default()
+
+
+def _animation_frame_paths(
+    panel: PosteriorAnimationPanel, examples_root: Path
+) -> list[Path]:
+    paths = sorted(examples_root.glob(panel.pattern))
+    if len(paths) < 2:
+        raise RuntimeError(
+            f"{panel.label} requires at least two posterior frames matching "
+            f"{examples_root / panel.pattern}. Run examples/run_examples.py first."
+        )
+    return paths
+
+
+def _animation_sample_index(
+    frame_index: int, output_count: int, input_count: int
+) -> int:
+    """Spread each available sequence over the common animation timeline."""
+    if output_count == 1:
+        return input_count - 1
+    return round(frame_index * (input_count - 1) / (output_count - 1))
+
+
+def make_posterior_animation_collage(
+    output_path: Path = DEFAULT_POSTERIOR_COLLAGE,
+    examples_root: Path = EXAMPLES_ROOT,
+    panels: tuple[PosteriorAnimationPanel, ...] = POSTERIOR_ANIMATION_PANELS,
+    frame_count: int = 10,
+    duration_ms: int = 500,
+    panel_size: int = 480,
+) -> Path:
+    """Write a synchronized two-column collage of posterior frame sequences."""
+    if frame_count < 2:
+        raise ValueError("frame_count must be at least two.")
+    if not panels:
+        raise ValueError("panels must contain at least one frame sequence.")
+
+    sequences = [_animation_frame_paths(panel, examples_root) for panel in panels]
+    column_count = min(2, len(panels))
+    row_count = int(np.ceil(len(panels) / column_count))
+    margin = 20
+    title_height = 66
+    label_height = 42
+    canvas_size = (
+        column_count * panel_size + (column_count + 1) * margin,
+        title_height + row_count * (panel_size + label_height) + (row_count + 1) * margin,
+    )
+    title_font = _animation_font(28, bold=True)
+    label_font = _animation_font(20, bold=True)
+    counter_font = _animation_font(18)
+    frames: list[Image.Image] = []
+
+    for frame_index in range(frame_count):
+        canvas = Image.new("RGB", canvas_size, "white")
+        draw = ImageDraw.Draw(canvas)
+        draw.text((margin, margin), "PCAT posterior samples", fill="black", font=title_font)
+        counter = f"draw {frame_index + 1:02d} / {frame_count:02d}"
+        counter_box = draw.textbbox((0, 0), counter, font=counter_font)
+        draw.text(
+            (canvas.width - margin - (counter_box[2] - counter_box[0]), margin + 6),
+            counter,
+            fill="#3f4b4b",
+            font=counter_font,
+        )
+
+        for panel_index, (panel, paths) in enumerate(zip(panels, sequences)):
+            row, column = divmod(panel_index, column_count)
+            x = margin + column * (panel_size + margin)
+            y = title_height + margin + row * (panel_size + label_height + margin)
+            source_index = _animation_sample_index(frame_index, frame_count, len(paths))
+            source_path = paths[source_index]
+            print(f"Reading from {source_path}...")
+            with Image.open(source_path) as source:
+                panel_image = source.convert("RGB").resize(
+                    (panel_size, panel_size), Image.Resampling.LANCZOS
+                )
+            canvas.paste(panel_image, (x, y))
+            draw.rectangle(
+                (x, y, x + panel_size - 1, y + panel_size - 1),
+                outline="#c4cccc",
+                width=2,
+            )
+            draw.text(
+                (x, y + panel_size + 8),
+                panel.label,
+                fill="black",
+                font=label_font,
+            )
+        frames.append(canvas)
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Writing to {output_path}...")
+    frames[0].save(
+        output_path,
+        save_all=True,
+        append_images=frames[1:],
+        duration=duration_ms,
+        loop=0,
+        disposal=2,
+        optimize=True,
+    )
+    return output_path
+
+
+def plot_gelman_rubin(path, statistics, typefileplot='pdf', typeplotback='norm'):
+    """Save the convergence-statistic distribution for a PCAT posterior."""
+    values = np.asarray(statistics)
+    bins = np.linspace(1., np.max(values), 41)
+    figure, axis = plt.subplots()
+    axis.hist(values, bins=bins)
+    axis.set_title('Gelman-Rubin Convergence Test')
+    axis.set_xlabel('PSRF')
+    axis.set_ylabel('$N_p$')
+    output = save_figure(figure, path + 'gmrb', typefileplot, typeplotback)
+    plt.close(figure)
+    return output
+
+
+def plot_autocorrelation(path, autocorrelation, correlation_time, strgextn='',
+                         typefileplot='pdf', typeplotback='norm'):
+    """Save a sampled parameter's autocorrelation sequence."""
+    values = np.asarray(autocorrelation).reshape(-1)
+    figure, axis = plt.subplots(figsize=(6, 4))
+    axis.plot(np.arange(values.size), values)
+    axis.set_xlabel(r'$\tau$')
+    axis.set_ylabel(r'$\xi(\tau)$')
+    axis.text(0.8, 0.8, r'$\tau_{exp} = %.3g$' % correlation_time,
+              ha='center', va='center', transform=axis.transAxes)
+    axis.axhline(0., ls='--', alpha=0.5)
+    plt.tight_layout()
+    output = save_figure(figure, path + 'atcr%s' % strgextn, typefileplot, typeplotback)
+    plt.close(figure)
+    return output
 
 
 def _output_path(path, name, typefileplot):

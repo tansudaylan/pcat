@@ -73,6 +73,7 @@ def main() -> None:
     repo_root = ROOT.parent
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
+    from pcat.plotting import make_posterior_animation_collage
 
     for script, arguments, output_root, run_name, require_initial, require_multiframe in PIPELINE_EXAMPLES:
         visual_root = output_root / "visuals"
@@ -88,7 +89,10 @@ def main() -> None:
             require_multiframe=require_multiframe,
         )
 
-    run_script(ROOT / "make_posterior_animation_collage.py")
+    make_posterior_animation_collage(
+        output_path=ROOT / "pcat_posterior_samples.gif",
+        examples_root=ROOT,
+    )
 
     for script, output_path in UTILITY_EXAMPLES:
         if output_path.exists():

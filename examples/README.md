@@ -11,6 +11,7 @@ These notebooks apply probabilistic cataloging to point-source images, Gaussian 
 - `hst_lens/`: catalog inference in a simulated Hubble Space Telescope lens image
 - `roman_lens_catalog/`: a seeded Roman strong-lens benchmark and its generated diagnostic
 - `rubin_cluster_lens/`: a synthetic Rubin-like cluster-scale lens fitted with PCAT's Poisson image sampler
+- `rubin_dp1_observed_lenses/`: an RSP-only workflow that crossmatches confirmed SIMBAD lens systems to real Rubin DP1 imaging, retrieves all catalog-footprint matches, and runs demonstration PCAT fits
 - `catalog_association/`: completeness and purity across catalog-matching radii
 - `psf_subpixel/`: cubic reconstruction of an oversampled point-spread function
 - `voigt-profile/`: nominal and high-signal Voigt-profile line detection in simulated spectra

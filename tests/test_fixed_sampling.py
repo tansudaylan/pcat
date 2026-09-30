@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 
 from pcat.diagnostics import posterior_convergence
+from pcat.fixed import sample_allesfitter_pcat, sample_fixed_chains
 from pcat.main import readfile, sample
 
 
@@ -10,6 +11,48 @@ def gaussian_log_likelihood(gdat, strgmodl, values):
     gdat.generic_callback_count = getattr(gdat, 'generic_callback_count', 0) + 1
     covariance = np.array([[1.0, 0.6], [0.6, 2.0]])
     return -0.5 * values @ np.linalg.inv(covariance) @ values
+
+
+def constant_legacy_likelihood(values, state):
+    return np.log(3.)
+
+
+def test_fixed_chains_estimate_constant_likelihood_evidence(tmp_path):
+    chain, logprob, evidence = sample_fixed_chains(
+        None, constant_legacy_likelihood, None, ('x',), ('self',),
+        (-1.,), (1.,), None, None, np.array([[0.]]),
+        1, 8, 2, pathbase=str(tmp_path), typeverb=-1,
+        estimate_log_evidence=True, evidence_samples=300, seed=7,
+    )
+    assert chain.shape == (1, 8, 1)
+    assert logprob.shape == (1, 8)
+    assert abs(evidence['log_evidence'] - np.log(3.)) < 4 * evidence['relative_error']
+
+
+def test_allesfitter_adapter_runs_native_pcat(tmp_path, monkeypatch):
+    import sys
+    import types
+    import h5py
+
+    config = types.ModuleType('allesfitter.config')
+    config.init = lambda path: setattr(config, 'BASEMENT', types.SimpleNamespace(
+        datadir=path, bounds=[('uniform', 0., 1.)], theta_0=np.array([0.5]),
+        outdir=str(tmp_path / 'results'),
+        settings={'mcmc_nwalkers': 1, 'mcmc_total_steps': 8, 'mcmc_thin_by': 1},
+    ))
+    likelihood = types.ModuleType('allesfitter.mcmc')
+    likelihood.mcmc_lnlike = lambda values: -0.5 * (values[0] - 0.5)**2
+    allesfitter = types.ModuleType('allesfitter')
+    allesfitter.config = config
+    monkeypatch.setitem(sys.modules, 'allesfitter', allesfitter)
+    monkeypatch.setitem(sys.modules, 'allesfitter.config', config)
+    monkeypatch.setitem(sys.modules, 'allesfitter.mcmc', likelihood)
+
+    path = sample_allesfitter_pcat(str(tmp_path))
+    print('Reading from %s...' % path)
+    with h5py.File(path, 'r') as saved:
+        assert saved['mcmc/chain'].shape == (8, 1, 1)
+        assert np.all(np.isfinite(saved['mcmc/log_prob'][:]))
 
 
 def test_generic_model_uses_main_sampling_pipeline(tmp_path):

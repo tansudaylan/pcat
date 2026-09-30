@@ -2,11 +2,11 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from examples.make_posterior_animation_collage import (
-    DEFAULT_OUTPUT,
-    PANELS,
-    ROOT,
-    make_collage,
+from pcat.plotting import (
+    DEFAULT_POSTERIOR_COLLAGE,
+    EXAMPLES_ROOT,
+    POSTERIOR_ANIMATION_PANELS,
+    make_posterior_animation_collage,
 )
 
 
@@ -19,7 +19,7 @@ def _write_frame(path: Path, color: str, marker: int) -> None:
 
 def test_make_collage_combines_posterior_sequences(tmp_path):
     examples_root = tmp_path / "examples"
-    for panel_index, panel in enumerate(PANELS):
+    for panel_index, panel in enumerate(POSTERIOR_ANIMATION_PANELS):
         relative_pattern = Path(panel.pattern)
         frame_root = examples_root / relative_pattern.parent
         stem = relative_pattern.name.replace("*.png", "")
@@ -27,7 +27,7 @@ def test_make_collage_combines_posterior_sequences(tmp_path):
         _write_frame(frame_root / f"{stem}001.png", "#b44b35", panel_index * 5 + 10)
 
     output_path = tmp_path / "collage.gif"
-    make_collage(
+    make_posterior_animation_collage(
         output_path=output_path,
         examples_root=examples_root,
         frame_count=4,
@@ -42,10 +42,10 @@ def test_make_collage_combines_posterior_sequences(tmp_path):
 
 
 def test_readme_embeds_multiframe_collage():
-    readme_path = ROOT.parent / "README.md"
+    readme_path = EXAMPLES_ROOT.parent / "README.md"
     readme = readme_path.read_text()
-    assert DEFAULT_OUTPUT.is_file()
+    assert DEFAULT_POSTERIOR_COLLAGE.is_file()
     assert "![Posterior samples from four PCAT example problems]" in readme
-    assert str(DEFAULT_OUTPUT.relative_to(ROOT.parent)) in readme
-    with Image.open(DEFAULT_OUTPUT) as animation:
+    assert str(DEFAULT_POSTERIOR_COLLAGE.relative_to(EXAMPLES_ROOT.parent)) in readme
+    with Image.open(DEFAULT_POSTERIOR_COLLAGE) as animation:
         assert animation.n_frames >= 4

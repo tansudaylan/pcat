@@ -31,6 +31,13 @@ Pipeline demonstrations
    Poisson image likelihood, then shows the fitted image, residuals, and
    posterior parameter distributions. It does not analyze Rubin observations.
 
+``rubin_dp1_observed_lenses``
+   Rubin Science Platform notebook for real Data Preview 1 imaging. It queries
+   confirmed SIMBAD lens-system classifications, checks exact DP1 image
+   footprints, retrieves every resulting deep-coadd cutout, displays the full
+   matched sample, and passes each usable cutout to PCAT. DP1 requires Rubin
+   data rights, and SIMBAD does not constitute a complete census of lenses.
+
 Run the image analyses, Roman benchmark, and reduced Voigt calculation with:
 
 .. code-block:: bash

@@ -9,6 +9,7 @@ from pcat.main import (
     _retr_adapted_proposal_scale,
     _retr_chain_convergence,
     _retr_persistent_element_parameter_indices,
+    _retr_population_legend_label,
     _retr_parameter_label,
     _retr_posterior_summary_channels,
     _retr_proposal_type_labels,
@@ -178,6 +179,19 @@ def test_element_parameter_labels_are_descriptive():
 
     assert _retr_parameter_label(model, 0) == "Line flux, population 1, element 2"
     assert _retr_parameter_label(model, 1) == "Gaussian line width, population 2, element 3"
+
+
+def test_single_population_legend_omits_redundant_index():
+    single_population = SimpleNamespace(numbpopl=1)
+    named_population = SimpleNamespace(numbpopl=1, legdpopl=["Point sources"])
+    multiple_populations = SimpleNamespace(numbpopl=2)
+
+    assert _retr_population_legend_label(single_population, 0, "Sample") == "Sample"
+    assert _retr_population_legend_label(named_population, 0, "Sample") == "Sample Point sources"
+    assert (
+        _retr_population_legend_label(multiple_populations, 0, "Condensed")
+        == "Condensed Population 0"
+    )
 
 
 def test_gaussian_cluster_amplitude_index_uses_object_count():

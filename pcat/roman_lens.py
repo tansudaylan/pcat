@@ -76,6 +76,47 @@ def render_lens(
     return gaussian_filter(profile, psf_sigma, mode="constant")
 
 
+def render_lens_counts(
+    config: RomanLensConfig,
+    parameters: np.ndarray,
+    source_size: float,
+    source_axis_ratio: float,
+    source_angle: float,
+) -> np.ndarray:
+    """Return PSF-convolved lens and uniform background counts per pixel."""
+    return render_lens(
+        config, *parameters, source_size, source_axis_ratio, source_angle
+    ) + config.background
+
+
+def poisson_lens_log_likelihood(state: object, model_name: str, parameters: np.ndarray) -> float:
+    """Evaluate a Poisson lens-image likelihood up to data-only terms."""
+    model_counts = render_lens_counts(
+        state.lens_config,
+        parameters,
+        state.lens_source_size,
+        state.lens_source_axis_ratio,
+        state.lens_source_angle,
+    )
+    observed_counts = state.lens_observed_counts
+    return float(np.sum(observed_counts * np.log(model_counts) - model_counts))
+
+
+def gaussian_lens_log_likelihood(state: object, model_name: str, parameters: np.ndarray) -> float:
+    """Evaluate an independent-pixel Gaussian lens-image likelihood."""
+    model_image = render_lens_counts(
+        state.lens_config,
+        parameters,
+        state.lens_source_size,
+        state.lens_source_axis_ratio,
+        state.lens_source_angle,
+    )
+    residual = state.lens_observed_image - model_image
+    variance = state.lens_variance
+    valid = np.isfinite(residual) & np.isfinite(variance) & (variance > 0.0)
+    return float(-0.5 * np.sum(residual[valid] ** 2 / variance[valid] + np.log(variance[valid])))
+
+
 def candidate_positions(einstein_radius: float, number_candidates: int) -> np.ndarray:
     """Place candidate perturbers around the macro Einstein ring."""
     angle = np.linspace(0.0, 2.0 * np.pi, number_candidates, endpoint=False)  # [rad]
