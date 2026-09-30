@@ -300,8 +300,8 @@ def test_documented_posterior_collage_matches_generator():
     examples = (DOCS_ROOT / "examples.rst").read_text()
 
     assert len(POSTERIOR_ANIMATION_PANELS) == 12
-    assert "Posterior samples from twelve maintained examples" in examples
-    for domain in ("strong lenses", "stellar flares", "spectral\nlines"):
+    assert "Twelve genuinely changing inference views from seven maintained workflows" in examples
+    for domain in ("strong lenses", "stellar flares", "simulated spectral lines"):
         assert domain in examples
 
 

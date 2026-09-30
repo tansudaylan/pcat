@@ -191,40 +191,40 @@ POSTERIOR_ANIMATION_PANELS = (
         "gaussian_mixture_catalog/visuals/post/fram/thiscntpmodl_*.png",
     ),
     PosteriorAnimationPanel(
-        "Chandra | residual counts",
-        "chandra_point_source_catalog/visuals/post/fram/thiscntpresien02evt0_swep*.png",
+        "Gaussian mixture | residual counts",
+        "gaussian_mixture_catalog/visuals/post/fram/thiscntpresi_swep*.png",
     ),
     PosteriorAnimationPanel(
-        "Fermi-LAT | Daylan+2017 source model",
+        "Fermi-LAT | low-energy source model",
         "daylan+2017_fermi_point_sources/pcat_runs/daylan2017_mock/visuals/post/fram/thiscntpmodlen00evt0_*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Fermi-LAT | mid-energy source model",
+        "daylan+2017_fermi_point_sources/pcat_runs/daylan2017_mock/visuals/post/fram/thiscntpmodlen01evt0_*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Fermi-LAT | high-energy source model",
+        "daylan+2017_fermi_point_sources/pcat_runs/daylan2017_mock/visuals/post/fram/thiscntpmodlen02evt0_*.png",
     ),
     PosteriorAnimationPanel(
         "Daylan+2018 | subhalo lens model",
         "daylan+2018_strong_lens_subhalos/daylan2018_catalog/visuals/post/fram/thiscntpmodl_swep*.png",
     ),
     PosteriorAnimationPanel(
+        "Daylan+2018 | deflection residual",
+        "daylan+2018_strong_lens_subhalos/daylan2018_catalog/visuals/post/fram/thisdeflresi_swep*.png",
+    ),
+    PosteriorAnimationPanel(
         "HST | simulated strong-lens model",
         "simulated_hst_strong_lens/visuals/post/fram/thiscntpmodl_*.png",
     ),
     PosteriorAnimationPanel(
-        "Portillo+2017 | crowded SDSS residual",
-        "portillo+2017_crowded_sdss_m2/pcat_runs/portillo2017_sdss_m2/visuals/post/fram/thiscntpresien02evt0_swep*.png",
+        "HST | subhalo deflection histogram",
+        "simulated_hst_strong_lens/visuals/post/fram/histodim/thishistdefspop0_swep*.png",
     ),
     PosteriorAnimationPanel(
-        "Feder+2020 | multiband SDSS residual",
-        "feder+2020_multiband_sdss_deblending/pcat_runs/feder2020_multiband_sdss/visuals/post/fram/thiscntpresien02evt0_swep*.png",
-    ),
-    PosteriorAnimationPanel(
-        "Butler+2022 | SPIRE component residual",
-        "butler+2022_spire_sz_component_separation/pcat_runs/butler2022_spire_sz/visuals/post/fram/thiscntpresien01evt1_swep*.png",
-    ),
-    PosteriorAnimationPanel(
-        "Feder+2023 | SPIRE point-diffuse residual",
-        "feder+2023_point_diffuse_spire/pcat_runs/feder2023_point_diffuse_spire/visuals/post/fram/thiscntpresien01evt1_swep*.png",
-    ),
-    PosteriorAnimationPanel(
-        "Hall+2026 | Herschel multiplicity residual",
-        "hall+2026_herschel_dsfg_multiplicity/pcat_runs/hall2026_dsfg_multiplicity/visuals/post/fram/thiscntpresien01evt1_swep*.png",
+        "JWST MIRI | line-center catalog",
+        "jwst_miri_ngc7027_line_catalog/visuals/post/fram/histodim/thishistelinpop0_swep*.png",
     ),
     PosteriorAnimationPanel(
         "Stellar flares | variable time-series model",
@@ -255,7 +255,38 @@ def _animation_frame_paths(
             f"{panel.label} requires at least two posterior frames matching "
             f"{examples_root / panel.pattern}. Run examples/run_all_examples.py first."
         )
+    unique_frames = set()
+    for path in paths:
+        with Image.open(path) as image:
+            unique_frames.add(image.convert("RGB").tobytes())
+    if len(unique_frames) < 2:
+        raise RuntimeError(
+            f"{panel.label} has no visual evolution across {len(paths)} frames. "
+            "Increase the example depth or select a changing posterior product."
+        )
     return paths
+
+
+def _quantize_shared_palette(frames: list[Image.Image]) -> list[Image.Image]:
+    """Quantize RGB animation frames against one shared palette."""
+    if not frames:
+        raise ValueError("frames must contain at least one image")
+    sample_size = 128
+    samples = []
+    for frame in frames:
+        sample = frame.copy()
+        sample.thumbnail((sample_size, sample_size), Image.Resampling.LANCZOS)
+        samples.append(sample.convert("RGB"))
+    palette_source = Image.new("RGB", (sample_size, sample_size * len(samples)), "white")
+    for index, sample in enumerate(samples):
+        palette_source.paste(sample, (0, index * sample_size))
+    adaptive_palette = palette_source.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+    palette = Image.new("P", (1, 1))
+    palette.putpalette(adaptive_palette.getpalette())
+    return [
+        frame.convert("RGB").quantize(palette=palette, dither=Image.Dither.NONE)
+        for frame in frames
+    ]
 
 
 def _animation_sample_index(
@@ -326,6 +357,7 @@ def make_image_sequence_animation(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Writing to {output_path}...")
+    frames = _quantize_shared_palette(frames)
     frames[0].save(
         output_path,
         save_all=True,
@@ -333,7 +365,7 @@ def make_image_sequence_animation(
         duration=duration_ms,
         loop=0,
         disposal=2,
-        optimize=True,
+        optimize=False,
     )
     return output_path
 
@@ -414,6 +446,7 @@ def make_posterior_animation_collage(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Writing to {output_path}...")
+    frames = _quantize_shared_palette(frames)
     frames[0].save(
         output_path,
         save_all=True,
@@ -421,7 +454,7 @@ def make_posterior_animation_collage(
         duration=duration_ms,
         loop=0,
         disposal=2,
-        optimize=True,
+        optimize=False,
     )
     return output_path
 

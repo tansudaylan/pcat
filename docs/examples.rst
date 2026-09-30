@@ -51,14 +51,14 @@ their outputs. It intentionally excludes workflows requiring authenticated
 services or mission downloads, the long radial-velocity analysis, and notebooks
 whose role is interactive inspection.
 
-Posterior samples from twelve maintained examples are synchronized below. The
-panels span Gaussian mixtures, X-ray and gamma-ray point sources, strong lenses,
-Sloan Digital Sky Survey and Herschel deblending, stellar flares, and spectral
-lines. Every panel uses simulated data and a fixed intensity scale across its
-frames.
+Twelve genuinely changing inference views from seven maintained workflows are
+synchronized below. The panels span Gaussian mixtures, Fermi-LAT point sources,
+strong lenses, Hubble Space Telescope imaging, the public JWST MIRI spectrum,
+stellar flares, and simulated spectral lines. Every source plot uses fixed
+limits across its sequence, and the final GIF uses one shared color palette.
 
 .. image:: ../examples/pcat_posterior_samples.gif
-   :alt: Animated posterior samples from twelve maintained PCAT examples
+   :alt: Twelve dynamic PCAT posterior inference views
    :width: 760px
    :align: center
 

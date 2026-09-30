@@ -30,14 +30,15 @@ association, and detector point-spread functions.
 
 ## Posterior samples
 
-![Posterior samples from twelve PCAT example problems](examples/pcat_posterior_samples.gif)
+![Twelve dynamic PCAT posterior inference views](examples/pcat_posterior_samples.gif)
 
-Each synchronized frame combines model and residual sequences from twelve PCAT
-examples spanning Gaussian mixtures, Chandra and Fermi-LAT point sources,
-strong lenses, SDSS deblending, SPIRE point-plus-diffuse inference, Voigt lines,
-and stellar flares. The publication-inspired examples use explicitly simulated
-data; the animation illustrates sampler behavior and does not reproduce the
-papers' numerical posterior values.
+Each synchronized frame combines twelve genuinely changing model, residual,
+deflection, and catalog views from Gaussian-mixture, Fermi-LAT point-source,
+strong-lens, Hubble Space Telescope, JWST spectral-line, stellar-flare, and
+Voigt-line examples. Every panel keeps one color palette and its source plot
+uses fixed limits across the sequence. The publication-inspired examples use
+explicitly simulated data; the animation illustrates sampler behavior and does
+not reproduce the papers' numerical posterior values.
 
 ## Every proposed state
 

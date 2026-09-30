@@ -2,11 +2,14 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
+import pytest
 
 from pcat.plotting import (
     DEFAULT_POSTERIOR_COLLAGE,
     EXAMPLES_ROOT,
     POSTERIOR_ANIMATION_PANELS,
+    _animation_frame_paths,
+    _quantize_shared_palette,
     make_image_sequence_animation,
     make_posterior_animation_collage,
 )
@@ -43,6 +46,28 @@ def test_make_collage_combines_posterior_sequences(tmp_path):
         assert animation.info["duration"] == 100
 
 
+def test_collage_rejects_frozen_source_sequence(tmp_path):
+    panel = POSTERIOR_ANIMATION_PANELS[0]
+    frame_root = tmp_path / Path(panel.pattern).parent
+    stem = Path(panel.pattern).name.replace("*.png", "")
+    _write_frame(frame_root / f"{stem}000.png", "#254f5b", 5)
+    _write_frame(frame_root / f"{stem}001.png", "#254f5b", 5)
+
+    with pytest.raises(RuntimeError, match="no visual evolution"):
+        _animation_frame_paths(panel, tmp_path)
+
+
+def test_animation_frames_use_one_shared_palette():
+    frames = [
+        Image.new("RGB", (32, 32), color)
+        for color in ("#A51C30", "#007360", "#202020")
+    ]
+    quantized = _quantize_shared_palette(frames)
+
+    assert all(frame.mode == "P" for frame in quantized)
+    assert all(frame.getpalette() == quantized[0].getpalette() for frame in quantized[1:])
+
+
 def test_make_image_sequence_animation_includes_every_cutout(tmp_path):
     images = [
         np.full((12, 10), value, dtype=float)
@@ -67,9 +92,23 @@ def test_readme_embeds_multiframe_collage():
     readme_path = EXAMPLES_ROOT.parent / "README.md"
     readme = readme_path.read_text()
     assert DEFAULT_POSTERIOR_COLLAGE.is_file()
-    assert "![Posterior samples from twelve PCAT example problems]" in readme
+    assert "![Twelve dynamic PCAT posterior inference views]" in readme
     assert str(DEFAULT_POSTERIOR_COLLAGE.relative_to(EXAMPLES_ROOT.parent)) in readme
     with Image.open(DEFAULT_POSTERIOR_COLLAGE) as animation:
         assert animation.n_frames >= 16
         assert animation.info["duration"] <= 150
         assert animation.width >= 1700
+        frames = []
+        for frame_index in range(animation.n_frames):
+            animation.seek(frame_index)
+            frames.append(animation.convert("RGB"))
+    panel_size = 560
+    margin = 20
+    title_height = 66
+    label_height = 42
+    for panel_index in range(len(POSTERIOR_ANIMATION_PANELS)):
+        row, column = divmod(panel_index, 3)
+        x = margin + column * (panel_size + margin)
+        y = title_height + margin + row * (panel_size + label_height + margin)
+        crops = [frame.crop((x, y, x + panel_size, y + panel_size)).tobytes() for frame in frames]
+        assert len(set(crops)) > 1, POSTERIOR_ANIMATION_PANELS[panel_index].label
