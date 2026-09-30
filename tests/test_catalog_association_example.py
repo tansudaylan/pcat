@@ -31,7 +31,7 @@ def test_catalog_association_example_writes_nonblank_figure(tmp_path, capsys, mo
     assert image[..., :3].min() < 0.8
     assert summary["number_sources"] == 80
     assert 0.7 < summary["completeness"] < 0.9
-    assert 0.6 < summary["purity"] < 0.9
+    assert 0.8 < summary["purity"] <= 1.0
     output = capsys.readouterr().out
     assert f"Reading from {output_path}..." in output
     assert f"Writing to {output_path}..." in output

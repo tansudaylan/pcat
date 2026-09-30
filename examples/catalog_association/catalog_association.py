@@ -15,7 +15,7 @@ from pcat.associate import associate_catalogs
 def simulate_catalogs(
     number_sources: int = 80,
     seed: int = 814,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Return seeded reference and measured catalogs with contaminants."""
     random = np.random.default_rng(seed)
     coordinates_source = random.uniform(-2.0, 2.0, size=(number_sources, 2))  # [arcsec]
@@ -36,7 +36,16 @@ def simulate_catalogs(
     magnitude_contaminants = random.uniform(19.0, 24.0, size=number_contaminants)  # [mag]
     coordinates_target = np.vstack((coordinates_recovered, coordinates_contaminants))
     magnitude_target = np.concatenate((magnitude_recovered, magnitude_contaminants))
-    return coordinates_source, magnitude_source, coordinates_target, magnitude_target
+    target_is_genuine = np.concatenate(
+        (np.ones(recovered.sum(), dtype=bool), np.zeros(number_contaminants, dtype=bool))
+    )
+    return (
+        coordinates_source,
+        magnitude_source,
+        coordinates_target,
+        magnitude_target,
+        target_is_genuine,
+    )
 
 
 def association_rates(
@@ -44,6 +53,7 @@ def association_rates(
     magnitude_source: np.ndarray,
     coordinates_target: np.ndarray,
     magnitude_target: np.ndarray,
+    target_is_genuine: np.ndarray,
     radii: np.ndarray,
     magnitude_difference_maximum: float = 0.5,  # [mag]
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -51,13 +61,14 @@ def association_rates(
     completeness = np.empty(radii.size)
     purity = np.empty(radii.size)
     for index, radius in enumerate(radii):
-        matched_source = associate_catalogs(
+        _, genuine_source = associate_catalogs(
             coordinates_source,
             magnitude_source,
             coordinates_target,
             magnitude_target,
             radius,
             magnitude_difference_maximum,
+            confidence_target=target_is_genuine,
         )
         matched_target = associate_catalogs(
             coordinates_target,
@@ -67,8 +78,8 @@ def association_rates(
             radius,
             magnitude_difference_maximum,
         )
-        completeness[index] = matched_source.mean()
-        purity[index] = matched_target.mean()
+        completeness[index] = (genuine_source > 0.5).mean()
+        purity[index] = target_is_genuine[matched_target].mean() if matched_target.any() else 1.0
     return completeness, purity
 
 
