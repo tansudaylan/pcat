@@ -7,16 +7,19 @@ is unknown. It samples an ensemble of catalogs rather than returning only one
 best-fit catalog. The framework was introduced by `Daylan, Portillo, and
 Finkbeiner (2017) <https://doi.org/10.3847/1538-4357/aa679e>`_ in ApJ 839, 4.
 
-PCAT supports simulated and supplied data, population-level priors, birth and
-death proposals, posterior catalog summaries, convergence diagnostics, static
-figures, and posterior animations. The examples cover point-source images,
-Gaussian mixtures, strong gravitational lenses, and spectral-line detection.
+PCAT supports arbitrary user-supplied likelihood functions, point-source and
+strong-lens models for imaging data, lensed source emission, and spectral-line
+models for spectral data. Its transdimensional models infer the number and
+parameters of catalog elements jointly. Simulated and supplied data,
+population-level priors, posterior catalog summaries, convergence diagnostics,
+static figures, and posterior animations use a shared pipeline.
 
 .. toctree::
    :maxdepth: 2
    :caption: User guide
 
    getting_started
+   capabilities
    examples
    outputs
    troubleshooting

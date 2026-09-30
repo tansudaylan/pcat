@@ -17,6 +17,35 @@ The core method is introduced in Daylan, Portillo & Finkbeiner (2017) and extend
 
 PCAT compares catalog configurations with different numbers of sources, samples source and population parameters jointly, quantifies detection and membership probabilities, and evaluates posterior predictions against image or photon-count data.
 
+Fixed-dimensional models with custom likelihoods use the same proposal,
+acceptance, persistence, convergence, and final-processing pipeline as
+transdimensional catalog models:
+
+```python
+from pcat.main import sample
+
+result = sample(
+	typeexpr="gener",
+	retr_llik=log_likelihood,
+	parameter_names=("mean", "scale"),
+	prior_types=("self", "gaus"),
+	prior_minima=(-5.0, 0.0),
+	prior_maxima=(5.0, 5.0),
+	prior_means=(0.0, 1.0),
+	prior_stdvs=(1.0, 0.2),
+	proposal_scales=(0.05, 0.05),
+	pathbase="/path/to/run-root",
+	strgcnfg="fixed-example",
+)
+```
+
+``"self"`` parameters have uniform priors between their minima and maxima;
+``"gaus"`` parameters use the specified means and standard deviations. PCAT
+proposes in unit-prior coordinates and applies its existing inverse-CDF
+transforms. Generic runs set birth/death and split/merge probabilities to zero,
+so only the native type-0 within-model proposal is active. The returned object
+is the normal persisted ``gdatfinlpost`` state.
+
 ## Installation
 
 A modern installation path is:

@@ -12,7 +12,12 @@ Pipeline demonstrations
    birth and death transitions.
 
 ``hst_lens``
-   Hubble Space Telescope Wide Field Camera 3 lensing-style image inference.
+   Hubble Space Telescope Wide Field Camera 3 image inference with lens mass,
+   foreground lens-galaxy emission, source emission, and lensed emission.
+
+   .. code-block:: bash
+
+      python examples/hst_lens/generate_demo.py
 
 Run the image analyses, Roman benchmark, and reduced Voigt calculation with:
 
@@ -33,7 +38,8 @@ Publication and instrument examples
       python 'examples/Daylan+2017/generate_reproduction.py' --smoke --fresh
 
 ``voigt-profile``
-   Simulated nominal and high-signal Voigt-profile line detection.
+   Transdimensional detection of an unknown number of Voigt-profile emission
+   lines in simulated spectral data.
 
    .. code-block:: bash
 

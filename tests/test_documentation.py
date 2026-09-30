@@ -10,7 +10,14 @@ def test_documentation_pages_are_in_the_toctree():
     index = (DOCS_ROOT / "index.rst").read_text()
     pages = {path.stem for path in DOCS_ROOT.glob("*.rst")} - {"index", "prospec_migration"}
 
-    assert pages == {"api", "examples", "getting_started", "outputs", "troubleshooting"}
+    assert pages == {
+        "api",
+        "capabilities",
+        "examples",
+        "getting_started",
+        "outputs",
+        "troubleshooting",
+    }
     for page in pages:
         assert f"   {page}\n" in index
 
@@ -18,6 +25,7 @@ def test_documentation_pages_are_in_the_toctree():
 def test_documented_example_commands_resolve():
     relative_paths = [
         "examples/chan_demo/generate_demo.py",
+        "examples/hst_lens/generate_demo.py",
         "examples/run_examples.py",
         "examples/Daylan+2017/generate_reproduction.py",
         "examples/voigt-profile/pcat_voigt_profile_detection.py",
@@ -49,3 +57,20 @@ def test_documentation_dependencies_are_declared():
         "sphinx>=8",
         "sphinx-rtd-theme>=3",
     ]
+
+
+def test_documentation_covers_primary_capabilities():
+    capabilities = (DOCS_ROOT / "capabilities.rst").read_text()
+
+    required_terms = {
+        'typeexpr="gener"',
+        "retr_llik",
+        "lghtpnts",
+        "lensed emission",
+        "lghtlinevoig",
+        "spectral data",
+    }
+    missing_terms = required_terms - {
+        term for term in required_terms if term in capabilities
+    }
+    assert not missing_terms

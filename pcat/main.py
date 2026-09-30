@@ -5275,12 +5275,13 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
     #            if strgfeat in gdat.refr.namepara.elem[q]:
     #                gdat.namepara.elemcomm[q][l].append(strgfeat)
     
-    if not hasattr(gdat.true, 'lablpopl') and hasattr(gdat.true, 'typeelem'):
-        gdat.true.lablpopl = [str(name).title() for name in gdat.true.typeelem]
+    if hasattr(gdat, 'true'):
+        if not hasattr(gdat.true, 'lablpopl') and hasattr(gdat.true, 'typeelem'):
+            gdat.true.lablpopl = [str(name).title() for name in gdat.true.typeelem]
+        if not hasattr(gdat.true, 'lablmodl'):
+            gdat.true.lablmodl = 'True'
     if not hasattr(gdat.fitt, 'lablpopl') and hasattr(gdat.fitt, 'typeelem'):
         gdat.fitt.lablpopl = [str(name).title() for name in gdat.fitt.typeelem]
-    if not hasattr(gdat.true, 'lablmodl'):
-        gdat.true.lablmodl = 'True'
     if not hasattr(gdat.fitt, 'lablmodl'):
         gdat.fitt.lablmodl = 'Fitted'
 
@@ -9000,6 +9001,30 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     if not hasattr(gmodstat, 'paragenrscalfull'):
         numbparagenr = getattr(gmod, 'numbparagenr', 0)
         gmodstat.paragenrscalfull = np.zeros(numbparagenr)
+
+    if gdat.typeexpr == 'gener':
+        values = np.asarray(gmodstat.paragenrscalfull, dtype=float)
+        for name, value in zip(gmod.namepara.genrbase, values):
+            setattr(gmodstat, name, float(value))
+        llik = np.atleast_1d(gdat.retr_llik(gdat, strgmodl, values)).astype(float)
+        if np.any(np.isnan(llik)) or np.any(np.isposinf(llik)):
+            raise ValueError('The generic likelihood callback returned NaN or positive infinity.')
+        gmodstat.lpri = np.zeros(gmod.numblpri)
+        gmodstat.lpritotl = 0.
+        gmodstat.llik = llik
+        gmodstat.lliktotl = float(np.sum(llik))
+        gmodstat.llikmean = float(np.mean(llik))
+        gmodstat.llikcmea = gmodstat.llikmean
+        gmodstat.lpostotl = retr_lpostotl(
+            gmodstat.lpritotl,
+            gmodstat.lliktotl,
+            getattr(gdat, 'strgpdfn', 'post'),
+        )
+        gmodstat.cntpmodl = np.ones((1, 1, 1))
+        gmodstat.numbelem = np.zeros(0, dtype=int)
+        gmodstat.numbelempopl = np.zeros(0, dtype=int)
+        gmodstat.indxelemfull = []
+        return
     
     if gmod.typeevalpsfn != 'none' and (strgmodl == 'true' or boolinit or gdat.boolmodipsfn):
         psfp = gmodstat.paragenrscalfull[gmod.indxpara.psfp]
@@ -11906,7 +11931,8 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                   listindxelemfull = getattr(gdatfinl, 'list' + strgpdfn + 'indxelemfull', [])
             listllik = getattr(gdatfinl, 'list' + strgpdfn + 'llik')
             listlliktotl = getattr(gdatfinl, 'list' + strgpdfn + 'lliktotl')
-            indxsamptotlmlik = np.argmax(np.sum(np.sum(np.sum(listllik, 3), 2), 1))
+            axisllik = tuple(range(1, listllik.ndim))
+            indxsamptotlmlik = np.argmax(np.sum(listllik, axis=axisllik))
             
             # copy the np.maximum likelihood sample
             for strgvarb in listgdatmodi[0].liststrgvarbarrysamp:
@@ -17325,6 +17351,12 @@ def init( \
                 if stdvpropelemfire.size not in [1, gdat.stdp[numbstdpbase:].size]:
                     raise ValueError('stdvpropelemfire must be scalar or provide one scale per FIRE element parameter.')
                 gdat.stdp[numbstdpbase:] = stdvpropelemfire
+
+            if gdat.typeexpr == 'gener':
+                stdvpropbase = np.asarray(gdat.stdvpropbase, dtype=float)
+                if stdvpropbase.shape != gdat.stdp.shape:
+                    raise ValueError('stdvpropbase must provide one unit-space scale per parameter.')
+                gdat.stdp[:] = stdvpropbase
         
         if (gdat.stdp > 1e100).any():
             raise Exception('')
@@ -17487,6 +17519,9 @@ def init( \
                             if hasattr(gdat.fitt.this, 'paragenrunitfull') and indxelempara < gdat.fitt.this.paragenrunitfull.size:
                                 gdat.fitt.this.paragenrunitfull[indxelempara] = 0.5
         
+        if not hasattr(gdat.fitt.this, 'paragenrunitfull'):
+            init_stat(gdat)
+
         # process the parameter vector
         proc_samp(gdat, None, 'this', 'fitt', boolinit=True)
     
@@ -18121,8 +18156,93 @@ def init( \
     
     print('PCAT initialization completed successfully.')
     return gdat
+def _sample_generic(**kwargs):
+    """Register fixed base parameters, then execute the standard PCAT pipeline."""
+    parameter_names = list(kwargs.pop('parameter_names'))
+    prior_types = np.asarray(kwargs.pop('prior_types'), dtype=object)
+    prior_minima = np.asarray(kwargs.pop('prior_minima'), dtype=float)
+    prior_maxima = np.asarray(kwargs.pop('prior_maxima'), dtype=float)
+    parameter_count = len(parameter_names)
+    if len(set(parameter_names)) != parameter_count:
+        raise ValueError('Generic PCAT parameter names must be unique.')
+    for name, values in (
+        ('prior_types', prior_types),
+        ('prior_minima', prior_minima),
+        ('prior_maxima', prior_maxima),
+    ):
+        if values.shape != (parameter_count,):
+            raise ValueError('%s must have one entry per parameter.' % name)
+    if not np.all(np.isin(prior_types, ['self', 'gaus'])):
+        raise ValueError("Generic PCAT priors must use 'self' or 'gaus' scaling.")
+
+    prior_means = np.asarray(kwargs.pop('prior_means', np.zeros(parameter_count)), dtype=float)
+    prior_stdvs = np.asarray(kwargs.pop('prior_stdvs', np.ones(parameter_count)), dtype=float)
+    proposal_scales = np.asarray(kwargs.pop('proposal_scales', np.full(parameter_count, 0.05)), dtype=float)
+    for name, values in (
+        ('prior_means', prior_means),
+        ('prior_stdvs', prior_stdvs),
+        ('proposal_scales', proposal_scales),
+    ):
+        if values.shape != (parameter_count,):
+            raise ValueError('%s must have one entry per parameter.' % name)
+
+    indxpara = tdpy.gdatstrt()
+    indxpara.bacp = np.array([], dtype=int)
+    indxpara.numbelem = np.array([], dtype=int)
+    for index, name in enumerate(parameter_names):
+        setattr(indxpara, name, index)
+    dictfitt = {
+        'indxpopl': np.array([], dtype=int),
+        'typeelem': [],
+        'indxpara': indxpara,
+    }
+    for feature, values in (
+        ('minm', prior_minima),
+        ('maxm', prior_maxima),
+        ('scal', prior_types),
+        ('mean', prior_means),
+        ('stdv', prior_stdvs),
+        ('lablroot', np.asarray(parameter_names, dtype=object)),
+        ('lablunit', np.full(parameter_count, '', dtype=object)),
+        ('labl', np.asarray(parameter_names, dtype=object)),
+        ('labltotl', np.asarray(parameter_names, dtype=object)),
+        ('name', np.asarray(parameter_names, dtype=object)),
+    ):
+        container = tdpy.gdatstrt()
+        for name, value in zip(parameter_names, values):
+            setattr(container, name, value)
+        dictfitt[feature + 'para'] = container
+
+    kwargs.update({
+        'typeexpr': 'gener',
+        'typedata': 'inpt',
+        'dictfitt': dictfitt,
+        'stdvpropbase': proposal_scales,
+        'probtran': 0.,
+        'probspmr': 0.,
+        'boolcondcatl': False,
+        'boolmakeplot': False,
+        'boolmakeplotinit': False,
+        'boolmakeplotfram': False,
+        'boolmakeplotfinlprio': False,
+        'boolmakeplotfinlpost': False,
+        'makeanim': False,
+        'numbener': 1,
+        'numbpixl': 1,
+        'numbdqlt': 1,
+        'numbdata': 1,
+        'sbrtdata': np.zeros((1, 1, 1)),
+        'cntpdata': np.ones((1, 1, 1)),
+        'expo': np.ones((1, 1, 1)),
+    })
+    gdat = init(kwargs)
+    return readfile(gdat.pathoutpcnfg + 'gdatfinlpost')
+
+
 def sample(**kwargs):
     typeexpr = kwargs.get('typeexpr')
+    if typeexpr == 'gener':
+        return _sample_generic(**kwargs)
     if isinstance(typeexpr, str) and (typeexpr in ['chan', 'ferm', 'fire', 'gmix'] or typeexpr.startswith('HST_WFC3')):
         gdat = init_image(**kwargs)
         return init(gdat.__dict__)
@@ -18685,7 +18805,10 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
     
     # re-seed the random number generator for this chain
     if gdat.boolseedchan:
-        np.random.seed(indxprocwork + 1000)
+        if gdat.typeseed == 'rand':
+            np.random.seed()
+        else:
+            np.random.seed(int(gdat.typeseed) + indxprocwork)
 
     # construct a global object for the walker
     gdatmodi = tdpy.gdatstrt()
@@ -19247,7 +19370,11 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
                 listnumbelem = workdict['list' + gdat.strgpdfn + 'numbelem'][:gdatmodi.numbsampactl]
                 listindxelemfull = workdict['list' + gdat.strgpdfn + 'indxelemfull']
                 indxparapersist = _retr_persistent_element_parameter_indices(gmod, listindxelemfull)
-                if indxparapersist.size > 0:
+                if gmod.numbpopl == 0:
+                    listparameter = workdict[
+                        'list' + gdat.strgpdfn + 'paragenrscalbase'
+                    ][:gdatmodi.numbsampactl]
+                elif indxparapersist.size > 0:
                     listpara = workdict['list' + gdat.strgpdfn + 'paragenrscalfull'][:gdatmodi.numbsampactl]
                     listparameter = listpara[:, indxparapersist]
                 else:

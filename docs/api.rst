@@ -6,8 +6,8 @@ Sampling
 
 .. py:function:: pcat.main.sample(**configuration)
 
-   Dispatch an image or general PCAT configuration, execute sampling and final
-   processing, and return the final global state object.
+   Dispatch an image, catalog, or fixed-dimensional PCAT configuration, execute
+   sampling and final processing, and return the final global state object.
 
    Frequently used configuration keys include:
 
@@ -25,6 +25,16 @@ Sampling
        that proposal is unsupported.
    * ``boolmakeplotinit``, ``boolmakeplotfram``, ``boolmakeplotfinlpost``, and
      ``makeanim`` for visual-output controls.
+
+   ``typeexpr="gener"`` registers ``parameter_names`` as ordinary base
+   parameters. ``prior_types`` accepts ``"self"`` for bounded uniform priors
+   and ``"gaus"`` for Gaussian priors. ``prior_minima``, ``prior_maxima``,
+   ``prior_means``, ``prior_stdvs``, and ``proposal_scales`` each contain one
+   value per parameter. The callback ``retr_llik(gdat, strgmodl, values)``
+   returns the log likelihood only. PCAT's unit-coordinate transforms encode
+   the priors. Generic runs use the standard type-0 proposal and set
+   transdimensional proposal probabilities to zero. See :doc:`capabilities`
+   for a complete example and the image and spectral model families.
 
 .. py:function:: pcat.main.init(configuration)
 
