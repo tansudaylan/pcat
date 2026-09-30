@@ -292,6 +292,31 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
     assert np.std(diffuse_template[1, :, 0]) > 0.15
 
 
+def test_split_merge_jacobian_changes_counterfactual_acceptance_probability():
+    from types import SimpleNamespace
+
+    script = (
+        REPOSITORY_ROOT / "examples" / "proposal_state_animation"
+        / "proposal_state_animation.py"
+    )
+    module = load_example_module("pcat_jacobian_proposal_example", script)
+    worker = SimpleNamespace(
+        listpostindxproptype=np.array([3, 4, 3, 4]),
+        listpostaccpprob=np.array([0.2, 0.2, 0.9, 1.0]),
+        listpostaccplprb=np.log(np.array([0.2, 0.2, 0.9, 1.0])),
+        listpostljcb=np.array([np.log(2.0), -np.log(2.0), 0.0, 0.0]),
+        listpostboolpropaccp=np.array([False, False, True, True]),
+        listpostboolpropfilt=np.ones(4),
+    )
+
+    summary = module.summarize_jacobian_acceptance(worker)
+
+    assert summary["split"]["actual"].tolist() == pytest.approx([0.2, 0.9])
+    assert summary["split"]["without_jacobian"].tolist() == pytest.approx([0.1, 0.9])
+    assert summary["merge"]["actual"].tolist() == pytest.approx([0.2, 1.0])
+    assert summary["merge"]["without_jacobian"].tolist() == pytest.approx([0.4, 1.0])
+
+
 def test_daylan2018_smoke_configuration_generates_proposal_animation(tmp_path, monkeypatch):
     script_path = (
         REPOSITORY_ROOT / "examples" / "daylan+2018_strong_lens_subhalos"

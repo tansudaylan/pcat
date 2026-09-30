@@ -18075,7 +18075,7 @@ def init( \
     
         # list of variables for which the posterior is collected at each proposal
         try:
-            gdat.liststrgvarbarryswep = ['memoresi', 'accpprob', 'boolpropfilt', 'boolpropaccp', 'indxproptype', 'amplpert', 'facttmpr']
+            gdat.liststrgvarbarryswep = ['memoresi', 'accpprob', 'accplprb', 'boolpropfilt', 'boolpropaccp', 'indxproptype', 'amplpert', 'facttmpr']
             for namechro in gdat.listnamechro:
                 gdat.liststrgvarbarryswep += ['chro' + namechro]
             gdat.liststrgvarbarryswep += ['ltrp']
@@ -19129,6 +19129,7 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
     gdatmodi.this.ltrp = np.zeros(1)
     gdatmodi.this.ljcb = np.zeros(1)
     gdatmodi.this.accpprob = np.zeros(1)
+    gdatmodi.this.accplprb = np.array([-np.inf])
     gdatmodi.this.memoresi = np.zeros(1)
     gdatmodi.this.amplpert = np.zeros(1)
     gdatmodi.this.facttmpr = 1.
@@ -19485,6 +19486,7 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
                 print('gdatmodi.this.accplprb')
                 print(gdatmodi.this.accplprb)
         else:
+            gdatmodi.this.accplprb = -np.inf
             gdatmodi.this.accpprob[0] = 0.
     
         # accept or reject the proposal

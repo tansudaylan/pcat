@@ -23,10 +23,13 @@ def test_voigt_split_merge_run_records_proposal_durations(tmp_path):
     with h5py.File(path, 'r') as file:
         proposal_types = file['listpostindxproptype'][()].ravel()
         durations = file['listpostchrototl'][()].ravel()
+        log_acceptance = file['listpostaccplprb'][()].ravel()
+        acceptance = file['listpostaccpprob'][()].ravel()
     # all five proposal families are exercised: within, birth, death, split, merge
     assert set(np.unique(proposal_types)) == {0, 1, 2, 3, 4}
     # per-sweep totals are durations [s], not clock readings
     assert np.all(durations > 0.) and np.all(durations < 1.)
+    np.testing.assert_allclose(np.exp(np.minimum(log_acceptance, 0.)), acceptance)
     animation_path = tmp_path / 'pcat_runs' / 'voigt_spmr' / 'visuals' / 'post' / 'anim' / 'proposal_activity.gif'
     assert animation_path.is_file()
     with Image.open(animation_path) as animation:
