@@ -20,6 +20,8 @@ visuals/
 !examples/simulated_rubin_cluster_lens/visuals/
 !examples/simulated_rubin_cluster_lens/visuals/*.png
 !examples/simulated_rubin_cluster_lens/visuals/*.pdf
+!examples/variable_number_exoplanets_radial_velocity/visuals/
+!examples/variable_number_exoplanets_radial_velocity/visuals/*.png
 CODING_STANDARDS.md
 REFACTORING_PROGRESS.md
 examples/*/visuals/*/

@@ -110,6 +110,12 @@ def retr_spec(gdat, flux, sind=None, curv=None, expc=None, sindcolr=None,
 
 
 def retr_elem_spec(gdat, typeelem, spectype, dictelem):
+    if typeelem == 'lghtlinekepl':
+        # Keplerian RV curves [m/s] at the observation times gdat.timervel [day], one column per element
+        from tdpy.exoplanet import keplerian_radial_velocity
+        return keplerian_radial_velocity(gdat.timervel[:, None], dictelem['elin'][None, :], dictelem['flux'][None, :],
+                                         dictelem['ecce'][None, :], dictelem['argp'][None, :], dictelem['phas'][None, :],
+                                         getattr(gdat, 'timervelrefr', 0.))
     if typeelem == 'lghtlinevoig':
         return retr_spec(gdat, dictelem['flux'], elin=dictelem['elin'], sigm=dictelem['sigm'],
                          gamm=dictelem['gamm'], spectype=spectype)
@@ -1570,6 +1576,8 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         thisindxparagenrfullelem = None
     
     gdatmodi.this.boolpropfilt = True 
+    # log density [unit-cube] of an optional data-informed element proposal; zero when elements are drawn from the prior
+    gdatmodi.this.lpdfpropelem = 0.
 
     # maintain a bounded history of visited unit-parameter vectors for the optional DE-MC within-model proposal
     if getattr(gdat, 'probdemc', 0.) > 0.:
@@ -1887,7 +1895,9 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
     if gdatmodi.this.indxproptype > 0:
         gdatmodi.indxsamptran = []
         if gdatmodi.this.indxproptype == 1:
-            gdatmodi.this.auxipara = np.random.rand(gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
+            gdatmodi.this.auxipara = retr_auxiparaelem(gdat, gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
+            if getattr(gdat, 'retr_lpdfpropelem', None) is not None:
+                gdatmodi.this.lpdfpropelem = gdat.retr_lpdfpropelem(gdat, gdatmodi.this.auxipara)
         elif gdatmodi.this.indxproptype != 2:
             gdatmodi.this.auxipara = np.empty(gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
 
@@ -1965,6 +1975,8 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         gdatmodi.indxsamptran.append(indxparagenrfullelemdeth)
         
         gdatmodi.this.auxipara = gmodthis.paragenrscalfull[indxparagenrfullelemdeth]
+        if getattr(gdat, 'retr_lpdfpropelem', None) is not None:
+            gdatmodi.this.lpdfpropelem = -gdat.retr_lpdfpropelem(gdat, gmodthis.paragenrunitfull[indxparagenrfullelemdeth])
 
     # jump: redraw one existing element's parameters from its own prior, keeping numbelem fixed
     if gdatmodi.this.indxproptype == 5:
@@ -1985,7 +1997,10 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             return
         gdatmodi.indxsamptran.append(indxparagenrfullelemjump)
 
-        gdatmodi.this.auxipara = np.random.rand(gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
+        gdatmodi.this.auxipara = retr_auxiparaelem(gdat, gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
+        if getattr(gdat, 'retr_lpdfpropelem', None) is not None:
+            gdatmodi.this.lpdfpropelem = gdat.retr_lpdfpropelem(gdat, gdatmodi.this.auxipara) - \
+                                         gdat.retr_lpdfpropelem(gdat, gmodthis.paragenrunitfull[indxparagenrfullelemjump])
         gmodnext.paragenrunitfull[indxparagenrfullelemjump] = gdatmodi.this.auxipara
 
     if gdatmodi.this.indxproptype in (3, 4):
@@ -2326,6 +2341,10 @@ def calc_probprop(gdat, gdatmodi):
         # the redrawn element's own prior term cancels its independence-proposal density exactly
         gdatmodi.this.lpau = gdatmodi.next.lpritotl - gdatmodi.this.lpritotl
 
+    # Hastings correction when births, deaths, and jumps draw elements from a data-informed density instead of the prior
+    if gdatmodi.this.indxproptype in (1, 2, 5):
+        gdatmodi.this.lpau += getattr(gdatmodi.this, 'lpdfpropelem', 0.)
+
     if gdatmodi.this.indxproptype in (3, 4) and gdatmodi.this.boolpropfilt:
         ## the ratio of the probability of the reverse and forward proposals, and
         if gdatmodi.this.indxproptype == 3:
@@ -2339,11 +2358,8 @@ def calc_probprop(gdat, gdatmodi):
             
             gdatmodi.this.ltrp = -np.log(gdatmodi.this.numbelem[gdatmodi.indxpopltran]) - np.log(gdatmodi.this.probmergtotl)
         
-        ## Jacobian
-        if gmod.typeelem[gdatmodi.indxpopltran].startswith('lghtline'):
-            gdatmodi.this.ljcb = np.log(gdatmodi.comppare[1])
-        else:
-            gdatmodi.this.ljcb = np.log(gdatmodi.comppare[2])
+        ## Jacobian of the amplitude-fraction split, i.e., the parent amplitude
+        gdatmodi.this.ljcb = np.log(gdatmodi.comppare[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]])
         if gdatmodi.this.indxproptype == 4:
             gdatmodi.this.ljcb *= -1.
         
@@ -2354,6 +2370,15 @@ def calc_probprop(gdat, gdatmodi):
     for l in gmod.indxpopl:
         if gdatmodi.this.indxproptype > 0:
             setattr(gdatmodi, 'auxiparapop%d' % l, gdatmodi.this.auxipara)
+
+
+def retr_auxiparaelem(gdat, numbparagenrelemsing):
+    '''Draw the unit-cube parameters of a new element from the prior or from an optional data-informed density.'''
+
+    retr_drawpropelem = getattr(gdat, 'retr_drawpropelem', None)
+    if retr_drawpropelem is None:
+        return np.random.rand(numbparagenrelemsing)
+    return np.asarray(retr_drawpropelem(gdat), dtype=float)
 
 
 def retr_unitrefl(valu):
@@ -6519,32 +6544,47 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
         gmod.numbparagenrelem = int(np.sum(gmod.numbparagenrelempopl))
     if gdat.typeexpr == 'fire' and gmod.numbpopl > 0 and all(len(names) == 0 for names in gmod.namepara.genrelem):
         widthenerbin = np.median(np.diff(gdat.blimpara.enerfull))  # [m^-1]
-        names = ['flux', 'elin', 'sigm', 'gamm']
-        bounds = {
-            'flux': (1e-3, 1e1),
-            'elin': (gdat.blimpara.enerfull[0], gdat.blimpara.enerfull[-1]),
-            'sigm': (0.35 * widthenerbin, 0.75 * widthenerbin),
-            'gamm': (0.05 * widthenerbin, 0.25 * widthenerbin),
-        }
+        if gmod.typeelem[0] == 'lghtlinekepl':
+            # Keplerian RV signals on a time axis: flux is the semi-amplitude K [m/s] and elin the period P [day]
+            names = ['flux', 'elin', 'phas', 'ecce', 'argp']
+            scales = ['logt', 'logt', 'self', 'self', 'self']
+            bounds = {
+                'flux': (0.3, 300.),
+                'elin': (1.2, 2. * (gdat.blimpara.enerfull[-1] - gdat.blimpara.enerfull[0])),
+                'phas': (0., 2. * np.pi),
+                'ecce': (0., 0.8),
+                'argp': (0., 2. * np.pi),
+            }
+        else:
+            names = ['flux', 'elin', 'sigm', 'gamm']
+            scales = ['logt'] * len(names)
+            bounds = {
+                'flux': (1e-3, 1e1),
+                'elin': (gdat.blimpara.enerfull[0], gdat.blimpara.enerfull[-1]),
+                'sigm': (0.35 * widthenerbin, 0.75 * widthenerbin),
+                'gamm': (0.05 * widthenerbin, 0.25 * widthenerbin),
+            }
         bounds.update(getattr(gdat, 'limtparaelem', None) or {})
-        for name, (minm, maxm) in bounds.items():
+        for name, scal in zip(names, scales):
+            minm, maxm = bounds[name]
             setattr(gmod.minmpara, name, minm)
             setattr(gmod.maxmpara, name, maxm)
-            setattr(gmod.scalpara, name, 'logt')
+            setattr(gmod.scalpara, name, scal)
             setattr(gdat.minmpara, name, minm)
             setattr(gdat.maxmpara, name, maxm)
             if not hasattr(gdat.blimpara, name):
-                bins = np.geomspace(minm, maxm, getattr(gdat, 'numbbinsplot', 20) + 1)
+                numbbinsplot = getattr(gdat, 'numbbinsplot', 20)
+                bins = np.geomspace(minm, maxm, numbbinsplot + 1) if scal == 'logt' else np.linspace(minm, maxm, numbbinsplot + 1)
                 setattr(gdat.blimpara, name, bins)
                 setattr(gdat.bctrpara, name, 0.5 * (bins[:-1] + bins[1:]))
             for l in gmod.indxpopl:
                 setattr(gmod.minmpara, name + 'pop%d' % l, minm)
                 setattr(gmod.maxmpara, name + 'pop%d' % l, maxm)
-                setattr(gmod.scalpara, name + 'pop%d' % l, 'logt')
+                setattr(gmod.scalpara, name + 'pop%d' % l, scal)
         gmod.namepara.genrelem = [list(names) for _ in gmod.indxpopl]
         gmod.namepara.elem = [list(names) for _ in gmod.indxpopl]
         gmod.namepara.derielemodim = [[] for _ in gmod.indxpopl]
-        gmod.scalpara.genrelem = [['logt'] * len(names) for _ in gmod.indxpopl]
+        gmod.scalpara.genrelem = [list(scales) for _ in gmod.indxpopl]
         gmod.indxparagenrelemsing = [np.arange(len(names), dtype=int) for _ in gmod.indxpopl]
         gmod.indxparaderielemsing = [np.array([], dtype=int) for _ in gmod.indxpopl]
         gmod.numbparagenrelemsing = np.full(gmod.numbpopl, len(names), dtype=int)
@@ -9184,17 +9224,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                 if typeelem[l] == 'lghtpntspuls' or typeelem[l] == 'lghtpntsagnntrue':
                     dictelem[l]['flux'] = retr_flux(gdat, dictelem[l]['lumi'], dictelem[l]['dlos'])
                 # evaluate spectra
-                if typeelem[l].startswith('lghtline'):
-                    if typeelem[l] == 'lghtlinevoig':
-                        dictelem[l]['spec'] = retr_spec(gdat, dictelem[l]['flux'], elin=dictelem[l]['elin'], sigm=dictelem[l]['sigm'], \
-                                                                                                          gamm=dictelem[l]['gamm'], spectype=spectype[l])
-                    else:
-                        dictelem[l]['spec'] = retr_spec(gdat, dictelem[l]['flux'], \
-                                                                                            elin=dictelem[l]['elin'], edisintp=gdat.edisintp, spectype=spectype[l])
-                else:
-                    sindcolr = [dictelem[l]['sindcolr%04d' % i] for i in gdat.indxenerinde]
-                    dictelem[l]['spec'] = retr_spec(gdat, dictelem[l]['flux'], sind=dictelem[l]['sind'], curv=dictelem[l]['curv'], \
-                                                                                                expc=dictelem[l]['expc'], sindcolr=sindcolr, spectype=spectype[l])
+                dictelem[l]['spec'] = retr_elem_spec(gdat, typeelem[l], spectype[l], dictelem[l])
 
     # determine the indices of the pixels over which element kernels will be evaluated
     if gdat.boolbindspat:
@@ -10806,17 +10836,7 @@ def eval_modl(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                 if gmod.typeelem[l] == 'lghtpntspuls' or gmod.typeelem[l] == 'lghtpntsagnntrue':
                     gmodstat.dictelem[l]['flux'] = retr_flux(gdat, gmodstat.dictelem[l]['lumi'], gmodstat.dictelem[l]['dlos'])
                 # evaluate spectra
-                if gmod.typeelem[l].startswith('lghtline'):
-                    if gmod.typeelem[l] == 'lghtlinevoig':
-                        gmodstat.dictelem[l]['spec'] = retr_spec(gdat, gmodstat.dictelem[l]['flux'], elin=gmodstat.dictelem[l]['elin'], sigm=gmodstat.dictelem[l]['sigm'], \
-                                                                                                          gamm=gmodstat.dictelem[l]['gamm'], spectype=gmod.spectype[l])
-                    else:
-                        gmodstat.dictelem[l]['spec'] = retr_spec(gdat, gmodstat.dictelem[l]['flux'], \
-                                                                                            elin=gmodstat.dictelem[l]['elin'], edisintp=gdat.edisintp, spectype=gmod.spectype[l])
-                else:
-                    sindcolr = [gmodstat.dictelem[l]['sindcolr%04d' % i] for i in gdat.indxenerinde]
-                    gmodstat.dictelem[l]['spec'] = retr_spec(gdat, gmodstat.dictelem[l]['flux'], sind=gmodstat.dictelem[l]['sind'], curv=gmodstat.dictelem[l]['curv'], \
-                                                                                                expc=gmodstat.dictelem[l]['expc'], sindcolr=sindcolr, spectype=gmod.spectype[l])
+                gmodstat.dictelem[l]['spec'] = retr_elem_spec(gdat, gmod.typeelem[l], gmod.spectype[l], gmodstat.dictelem[l])
 
     stopchro(gdat, gdatmodi, 'elem')
     
@@ -17081,7 +17101,7 @@ def init( \
                     if l < 0 or l >= len(genrelemfitt):
                         continue
                     for nameparagenrelem in genrelemfitt[l]:
-                        gdat.lablstdp = np.append(gdat.lablstdp, getattr(gdat.fitt.labltotlpara, nameparagenrelem))
+                        gdat.lablstdp = np.append(gdat.lablstdp, getattr(gdat.fitt.labltotlpara, nameparagenrelem, nameparagenrelem))
                         gdat.namestdp = np.append(gdat.namestdp, nameparagenrelem + 'pop%d' % l)
             except AttributeError as excp:
                 print('Note: Could not set proposal names: %s' % str(excp))
@@ -17692,11 +17712,12 @@ def init( \
             if not gdat.boolsqzeexpo and np.amax(gdat.cntpdata) < 1.:
                 raise Exception('Data counts per pixel is less than 1.')
             
-            # check the data
-            if (np.fabs(gdat.cntpdata - np.round(gdat.cntpdata)) > 1e-3).any():
-                raise Exception('')
-            if np.amin(gdat.cntpdata) < 0.:
-                raise Exception('')
+            # check the data, which must be counts unless a custom likelihood interprets them
+            if getattr(gdat, 'retr_llik', None) is None:
+                if (np.fabs(gdat.cntpdata - np.round(gdat.cntpdata)) > 1e-3).any():
+                    raise Exception('Data are not integer counts.')
+                if np.amin(gdat.cntpdata) < 0.:
+                    raise Exception('Data counts are negative.')
         except (AttributeError, KeyError, IndexError):
             pass
     

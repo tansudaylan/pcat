@@ -124,6 +124,22 @@ stop and their retained samples are truncated to a common length before
 final aggregation. This feature is opt-in; the default ``boolcheckconv=False``
 leaves existing fixed-``numbswep`` behavior unchanged.
 
+### Keplerian signals in radial-velocity data
+
+``pcat.radial_velocity.retr_dictpcatrvel`` configures a transdimensional search
+for a variable number of planets in a stellar radial-velocity (RV) time series.
+Each element is a Keplerian orbit with semi-amplitude, period, mean anomaly,
+eccentricity, and argument of periastron. The Gaussian likelihood marginalizes
+one velocity offset per instrument (and optionally a linear trend) analytically
+and a common stellar jitter numerically on a log-uniform grid. Births and jumps
+draw periods from a periodogram-weighted density with the matching Hastings
+correction, which is what makes narrow periodogram peaks reachable. In
+`examples/variable_number_exoplanets_radial_velocity/`, 100,000 sweeps over 120
+simulated epochs take about 1.5 minutes and assign 92% posterior probability to
+the injected three planets.
+
+![Phase-folded posterior RV models](examples/variable_number_exoplanets_radial_velocity/visuals/variable_number_exoplanets_rv_phase_folded.png)
+
 ## Installation
 
 A modern installation path is:
