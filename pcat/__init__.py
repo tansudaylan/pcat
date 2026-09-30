@@ -14,7 +14,7 @@ if not hasattr(tdpy, 'retr_labltotlsing') and hasattr(tdpy, 'retr_labltotl'):
 	tdpy.retr_labltotlsing = tdpy.retr_labltotl
 
 from .main import *
-from .fixed import sample_fixed, sample_fixed_chains, sample_allesfitter_pcat
+from .fixed import sample_fixed, sample_fixed_chains, sample_allesfitter_pcat, sample_posterior
 from .associate import associate_catalogs
 from .diagnostics import binomial_wilson_interval, posterior_convergence
 from .paths import get_data_path, get_repository_path, get_visuals_path

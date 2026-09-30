@@ -69,10 +69,19 @@ decomposed into smaller modules.
    Run a fixed-dimensional likelihood through the same native PCAT sampling
    and persistence pipeline.
 
-.. py:function:: pcat.sampling.sample_fixed_chains(...)
+.. py:function:: pcat.sampling.sample_fixed_chains(state, log_likelihood, log_prior, names, scales, minima, maxima, means, stdvs, initial, chain_count, sample_count, burn_count, **options)
 
-   Compatibility adapter that returns walker-first chains from the native PCAT
-   fixed-dimensional sampler for existing ``tdpy.mcmc`` integrations.
+   Run ``chain_count`` independent native PCAT chains of a fixed-dimensional
+   likelihood ``log_likelihood(values, state)`` and return them as arrays of
+   shape (chains, samples, parameters) with their log posteriors. Extra
+   options, such as ``booladaptstdp``, pass through to PCAT.
+
+.. py:function:: pcat.sampling.sample_posterior(gdat, numbsampwalk, retr_llik, listnamepara, listlablpara, scalpara, minmpara, maxmpara, **options)
+
+   Sample a fixed-dimensional posterior with PCAT chains and return a
+   dictionary of post-burn-in samples keyed by parameter name. Options add
+   Gaussian priors, derived variables, trace and corner plots, and a saved
+   posterior summary that later runs reuse.
 
 .. py:function:: pcat.main.retr_listgdat(liststrgcnfg, typegdat="finlpost")
 

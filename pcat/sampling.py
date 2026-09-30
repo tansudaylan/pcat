@@ -5,7 +5,7 @@ gradually decomposed. New integrations should import sampling operations here.
 """
 
 from .main import init, init_image, sample, sample_parallel
-from .fixed import sample_allesfitter_pcat, sample_fixed, sample_fixed_chains
+from .fixed import sample_allesfitter_pcat, sample_fixed, sample_fixed_chains, sample_posterior
 
 __all__ = [
 	"init",
@@ -15,4 +15,5 @@ __all__ = [
 	"sample_fixed",
 	"sample_fixed_chains",
 	"sample_parallel",
+	"sample_posterior",
 ]

@@ -77,6 +77,12 @@ transforms. Generic runs set birth/death and split/merge probabilities to zero,
 so only the native type-0 within-model proposal is active. The returned object
 is the normal persisted ``gdatfinlpost`` state.
 
+PCAT is the only sampler in this software ecosystem. For quick fits of a
+likelihood ``retr_llik(para, gdat)``, ``pcat.fixed.sample_posterior`` returns a
+dictionary of posterior samples keyed by parameter name, optionally with
+derived variables, trace plots, and a saved posterior summary. It runs several
+independent PCAT chains and discards their burn-in.
+
 By default, type-0 moves perturb one parameter at a time. Set
 ``probpropblock`` above zero to mix in correlated block moves using
 ``proposal_correlation``; ``factpropblock`` scales those block increments.
