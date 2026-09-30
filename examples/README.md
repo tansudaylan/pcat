@@ -33,10 +33,23 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `rubin_dp1_confirmed_strong_lenses/`: an RSP-only workflow that crossmatches confirmed SIMBAD lens systems to real Rubin DP1 imaging, retrieves all catalog-footprint matches, and runs demonstration PCAT fits
 - `catalog_association_completeness_purity/`: completeness and purity across catalog-matching radii
 - `voigt_spectral_line_catalog/`: nominal and high-signal Voigt-profile line detection in simulated spectra
+- `jwst_miri_ngc7027_line_catalog/`: transdimensional emission-line catalog of the planetary nebula NGC 7027 from a real JWST MIRI MRS spectrum
 - `proposal_profiling/`: execution time, prior-support fraction, and acceptance of each proposal type on the simulated Voigt spectrum
 - `sampler_comparison_emcee_dynesty/`: PCAT, emcee, and dynesty on one simulated sinusoid posterior
 - `population_grid/`: corner, histogram, and pair plots of two simulated sample populations
 - `fermi_lat_pg1553_event_filter/`: a Fermi Large Area Telescope event-filter configuration for PG 1553+113
+
+## Emission lines of NGC 7027 in a JWST MIRI spectrum
+
+The input is the public level-3 JWST Mid-Infrared Instrument (MIRI) Medium Resolution Spectrometer (MRS) spectrum of the planetary nebula NGC 7027 from program 1523 (channel 1 short, file `jw01523-o001_t002_miri_ch1-short_x1d.fits`), which the script downloads from MAST. PCAT fits 5.30 to 5.535 &mu;m, 294 wavelength bins, with a variable number (0 to 25) of Voigt emission lines on top of a continuum template. The template is a running median of the spectrum with lines iteratively masked. PCAT's likelihood is Poisson, so each bin's flux density is converted to effective counts whose Poisson variance equals the pipeline uncertainty plus a 1% floor for calibration and fringe residuals.
+
+The chain shown has 19 (+1/&minus;2) lines. Six lines appear in every sampled catalog: [Fe II] 5.340 &mu;m, H<sub>2</sub> 0&ndash;0 S(7) 5.511 &mu;m, and unidentified lines at 5.380, 5.449, 5.459, and 5.525 &mu;m. A line at 5.374 &mu;m appears in 45% of catalogs. H<sub>2</sub> S(7) carries 1.1 &times; 10<sup>&minus;15</sup> W m<sup>&minus;2</sup> and [Fe II] 7 &times; 10<sup>&minus;17</sup> W m<sup>&minus;2</sup>. The remaining lines are faint and sit where the fixed continuum template departs from the data, especially at the window edges, so they absorb continuum structure. The continuum amplitude is not sampled. The sampler does not fully mix between line configurations. Independent 200,000-sweep chains settle at 14 to 19 lines, differ by up to 150 in log-likelihood, and differ by 10 to 30% in bright-line fluxes. Within-chain flux uncertainties are therefore underestimated, and the H<sub>2</sub> residual reaches &minus;9&sigma; in this chain. A run takes 200,000 sweeps and 5 to 7 min on one core.
+
+![NGC 7027 spectrum and PCAT model](jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_spectrum_fit.png)
+
+![Posterior line catalog samples](jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_catalog_samples.png)
+
+![Posterior of the number of lines](jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_count_posterior.png)
 
 ## Proposal profiling
 
@@ -70,4 +83,10 @@ Run either Voigt configuration at its full sampling depth with:
 ```bash
 python examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py --configuration nomi
 python examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py --configuration s2nrhigh
+```
+
+The JWST example needs network access to MAST on its first run and `astroquery`:
+
+```bash
+python examples/jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py
 ```

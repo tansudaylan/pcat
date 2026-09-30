@@ -287,6 +287,10 @@ class _PCATMCMCCompat(object):
     @staticmethod
     def plot_hist(path, listvarb, strg, titl=None, numbbins=30, truepara=None, typefileplot='pdf', **kwargs):
         ydat = np.asarray(listvarb).reshape(-1)
+        # element slots that are never occupied in the posterior hold only NaNs
+        ydat = ydat[np.isfinite(ydat)]
+        if ydat.size == 0:
+            return
         figr, axis = plt.subplots(figsize=(5, 4))
         axis.hist(ydat, bins=numbbins, histtype='step', color='k')
         if truepara is not None and np.isfinite(truepara):
@@ -3251,6 +3255,8 @@ def init_image( \
          indxenerfull=None, \
          indxdqltfull=None, \
          binsenerfull=None, \
+         ## dictionary of (minimum, maximum) bounds overriding default element-parameter bounds, e.g. {'sigm': (1., 10.)}
+         limtparaelem=None, \
          asymfluxprop=False, \
          
          ## Boolean flag to make the PSF model informed
@@ -3514,6 +3520,10 @@ def init_image( \
         print('gdat.typeexpr')
         print(gdat.typeexpr)
         raise Exception('gdat.typeexpr is not defined.')
+
+    # user-provided energy bin edges, e.g. those of an observed spectrum
+    if gdat.binsenerfull is not None:
+        blim = np.sort(np.asarray(gdat.binsenerfull, dtype=float))
 
     if gdat.typeexpr != 'gmix':
         setp_varb(gdat, 'enerfull', blim=blim)
@@ -4003,10 +4013,7 @@ def init_image( \
     
         setp_varb(gdat, 'cntpmodl', labl=['$C_{M}$', ''], scal='asnh', strgmodl=strgmodl)
         
-        if isinstance(gdat.fitt.maxmpara, dict):
-            raise Exception('')
-
-        if isinstance(gdat.true.maxmpara, dict):
+        if isinstance(gmod.maxmpara, dict):
             raise Exception('')
 
         for strgstat in ['this', 'next']:
@@ -4261,7 +4268,8 @@ def init_image( \
     gdat.refrindxpoplassc = [[] for q in gdat.indxrefr] 
     
     # temp -- this allows up to 3 reference populations
-    gdat.true.colrelem = ['darkgreen', 'olivedrab', 'mediumspringgreen']
+    if gdat.typedata == 'simu':
+        gdat.true.colrelem = ['darkgreen', 'olivedrab', 'mediumspringgreen']
     # temp -- this allows up to 3 reference populations
     gdat.fitt.colrelem = ['royalblue', 'dodgerblue', 'navy']
     if gdat.typedata == 'simu':
@@ -4377,8 +4385,8 @@ def init_image( \
             gmod.minmpara.numbelem[l] = getattr(gmod.minmpara, 'numbelempop%d' % l)
             gmod.maxmpara.numbelem[l] = getattr(gmod.maxmpara, 'numbelempop%d' % l)
     
-    if gdat.typedata == 'simu':
-        setp_modlemis_finl(gdat, strgmodl='true')
+    # builds the fitting model, and the true model for simulated data
+    setp_modlemis_finl(gdat, strgmodl='true' if gdat.typedata == 'simu' else 'fitt')
             
     for strgmodl in gdat.liststrgmodl:
         
@@ -6233,18 +6241,19 @@ def retr_refrchaninit(gdat):
     ## 'bind' and 'scat'
     gdat.liststrgelemtdimtype = ['bind']
 
+    # seed the RNG before the simulated data and the initial state are drawn
+    if gdat.typeseed == 'rand':
+        np.random.seed()
+    else:
+        if gdat.typeverb > 0:
+            print('Setting the seed for the RNG to %d...' % gdat.typeseed)
+        np.random.seed(gdat.typeseed)
+
     # generate true data
     if gdat.typedata == 'simu':
         
         if gdat.typeverb > 0:
             print('Generating simulated data...')
-
-        if gdat.typeseed == 'rand':
-            np.random.seed()
-        else:
-            if gdat.typeverb > 0:
-                print('Setting the seed for the RNG to %d...' % gdat.typeseed)
-            np.random.seed(gdat.typeseed)
     
         gdat.true.this.indxpara = tdpy.gdatstrt()
         
@@ -6589,6 +6598,7 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
             'sigm': (0.35 * widthenerbin, 0.75 * widthenerbin),
             'gamm': (0.05 * widthenerbin, 0.25 * widthenerbin),
         }
+        bounds.update(getattr(gdat, 'limtparaelem', None) or {})
         for name, (minm, maxm) in bounds.items():
             setattr(gmod.minmpara, name, minm)
             setattr(gmod.maxmpara, name, maxm)
@@ -9914,7 +9924,6 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                     
                     # construct gdatmodi
                     gdatmoditemp = None
-                    gdat.true.next.indxpara = tdpy.gdatstrt()
 
                     gdatmoditemp = tdpy.gdatstrt()
                     gdatmoditemp.this = tdpy.gdatstrt()
@@ -11609,7 +11618,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
     if boolgdatfinl and boolgdatfinlgood:
         if gdatfinl.fitt.numbpopl > 0:
             if gdatfinl.typedata == 'inpt':
-                if gdatfinl.boolcrex or gdatfinl.boolcrin:
+                if getattr(gdatfinl, 'boolcrex', False) or getattr(gdatfinl, 'boolcrin', False):
                     if gdatfinl.strgcnfgsimu is not None:
                         path = gdatfinl.pathoutpcnfgsimu + 'gdatfinlpost'
                         gdatsimu = readfile(path)
@@ -12082,7 +12091,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
        
         if gdatfinl.fitt.numbpopl > 0 and strgpdfn == 'post':
             if gdatfinl.typedata == 'inpt':
-                if gdatfinl.boolcrex or gdatfinl.boolcrin:
+                if getattr(gdatfinl, 'boolcrex', False) or getattr(gdatfinl, 'boolcrin', False):
                     if gdatfinl.strgcnfgsimu is not None:
                         path = gdatfinl.pathoutpcnfgsimu + 'gdatfinlpost'
                         gdatsimu = readfile(path)
@@ -12092,7 +12101,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
 
             ## perform corrections
             if gdatfinl.typedata == 'inpt':
-                if gdatfinl.boolcrex or gdatfinl.boolcrin:
+                if getattr(gdatfinl, 'boolcrex', False) or getattr(gdatfinl, 'boolcrin', False):
 
                     for gmod.namepara.genr.elemvarbhist in gdatfinl.liststrgvarbhist:
                         strgvarb = gmod.namepara.genr.elemvarbhist[0]
@@ -16628,6 +16637,9 @@ def init( \
         gdat.typemaskexpo = 'zero'
     if not hasattr(gdat, 'expo'):
         gdat.expo = np.ones((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
+    if gdat.typedata == 'inpt' and not hasattr(gdat, 'cntpdata') and hasattr(gdat, 'sbrtdata'):
+        # observed counts from the input surface brightness and exposure
+        gdat.cntpdata = retr_cntp(gdat, gdat.sbrtdata)
     if not hasattr(gdat, 'cntpdata'):
         gdat.cntpdata = np.ones((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
     if not hasattr(gdat, 'varidata'):
@@ -16884,6 +16896,9 @@ def init( \
             gdat.indxenerinde = np.setdiff1d(gdat.indxener, gdat.indxenerpivt)
     if not hasattr(gdat, 'expo'):
         gdat.expo = np.ones((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
+    if gdat.typedata == 'inpt' and not hasattr(gdat, 'cntpdata') and hasattr(gdat, 'sbrtdata'):
+        # observed counts from the input surface brightness and exposure
+        gdat.cntpdata = retr_cntp(gdat, gdat.sbrtdata)
     if not hasattr(gdat, 'cntpdata'):
         gdat.cntpdata = np.ones((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
     if not hasattr(gdat, 'indxspatmean'):
@@ -19450,10 +19465,13 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
             if gdat.typeverb > 0:
                 print('Process %d started making a frame.' % gdatmodi.indxprocwork)
 
+            # plotting must not consume the sampler's random draws, or chains would depend on cached figures
+            staterand = np.random.get_state()
             try:
                 plot_samp(gdat, gdatmodi, 'this', 'fitt', 'fram')
             except Exception as excp:
                 print('Warning: skipping frame plotting for this sample due to plotting error: %s' % str(excp))
+            np.random.set_state(staterand)
 
             if gdat.typeverb > 0:
                 print('Process %d finished making a frame.' % gdatmodi.indxprocwork)

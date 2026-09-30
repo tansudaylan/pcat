@@ -13,6 +13,8 @@ visuals/
 !examples/proposal_profiling/visuals/*.png
 !examples/sampler_comparison_emcee_dynesty/visuals/
 !examples/sampler_comparison_emcee_dynesty/visuals/*.png
+!examples/jwst_miri_ngc7027_line_catalog/visuals/
+!examples/jwst_miri_ngc7027_line_catalog/visuals/*.png
 !examples/simulated_rubin_cluster_lens/visuals/
 !examples/simulated_rubin_cluster_lens/visuals/*.png
 !examples/simulated_rubin_cluster_lens/visuals/*.pdf
