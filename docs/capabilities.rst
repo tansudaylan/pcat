@@ -6,6 +6,62 @@ models and transdimensional catalogs. A run can use simulated data or supplied
 data, and its model can contain a fixed set of parameters, a variable number of
 elements, or both.
 
+Functionality overview
+----------------------
+
+.. list-table:: Maintained PCAT workflows
+   :header-rows: 1
+   :widths: 18 24 21 37
+
+   * - Workflow
+     - Model
+     - Inference
+     - Maintained example
+   * - Arbitrary likelihood
+     - User callback and configured priors
+     - Fixed-dimensional scalar or correlated proposals
+     - ``typeexpr="gener"`` example below
+   * - Point-source imaging
+     - Catalog, background, exposure, and point-spread function
+     - Variable source count and source parameters
+     - ``chan_demo`` and ``Daylan+2017``
+   * - Gaussian mixtures
+     - Variable-width components in two-dimensional data
+     - Birth and death catalog transitions
+     - ``gmix_demo``
+   * - Strong-lens imaging
+     - Lens mass, foreground light, source light, and lensed emission
+     - Fixed or variable perturber catalog
+     - ``hst_lens``, ``Daylan+2018``, and ``roman_lens_catalog``
+   * - Spectral lines
+     - Voigt profiles in spectral data
+     - Variable line count and profile parameters
+     - ``voigt-profile``
+   * - Catalog association
+     - Positions, values, confidence, and significance
+     - Completeness and purity versus matching criteria
+     - ``catalog_association``
+   * - Instrument response
+     - Oversampled point-spread function
+     - Piecewise-cubic subpixel reconstruction
+     - ``psf_subpixel``
+
+Inference and proposal engine
+-----------------------------
+
+PCAT supports fixed-dimensional parameters and populations of exchangeable
+elements. Within-model proposals update parameters already in the state. Birth
+and death proposals change the catalog size, while supported element models can
+also use split and merge proposals. Multiple independent workers can sample a
+configuration, and :func:`pcat.main.sample_parallel` can execute related
+configurations for controlled comparisons.
+
+Parameters are sampled in unit-prior coordinates and transformed to their
+physical priors. Fixed-dimensional runs can mix single-parameter updates with
+correlated block proposals. Catalog runs can include population
+hyperparameters, spatial priors, spectral models, backgrounds, exposure,
+point-spread functions, and instrument-specific response settings.
+
 User-supplied likelihoods
 -------------------------
 
@@ -109,3 +165,25 @@ model-count probabilities, catalog summaries, associations, convergence and
 proposal diagnostics, posterior-predictive models, residuals, static figures,
 and animations. See :doc:`outputs` for the file layout and interpretation
 requirements.
+
+Catalog summaries and diagnostics
+---------------------------------
+
+PCAT can condense posterior catalogs, associate inferred elements with a
+reference catalog, and evaluate completeness and false-discovery summaries.
+The public :func:`pcat.associate_catalogs` utility performs coordinate-and-value
+matching for external catalogs. :func:`pcat.posterior_convergence` reports
+Gelman-Rubin statistics and effective sample sizes from a completed state.
+For fixed-dimensional posterior samples with normalized bounded or Gaussian
+priors, :func:`pcat.diagnostics.estimate_evidence` provides a defensive
+importance-sampling evidence estimate and its effective sample size.
+
+Persistence, plotting, and reproducibility
+------------------------------------------
+
+Every full run can persist its initialized, worker, and final state as paired
+pickle and HDF5 files. Final processing aggregates workers and creates model,
+residual, parameter, catalog, association, and convergence products. The
+plotting API creates one- and two-parameter posterior projections, while the
+animation API assembles chain frames into GIF files. See :doc:`outputs` for the
+directory layout and :doc:`api` for the callable interfaces.

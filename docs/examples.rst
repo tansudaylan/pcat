@@ -25,6 +25,15 @@ Run the image analyses, Roman benchmark, and reduced Voigt calculation with:
 
    python examples/run_examples.py
 
+Posterior samples from four maintained examples are synchronized below. The
+panels show model intensity for a Gaussian mixture, model counts for point
+sources and a strong lens, and the model with data for spectral lines.
+
+.. image:: ../examples/pcat_posterior_samples.gif
+   :alt: Animated posterior samples from four maintained PCAT examples
+   :width: 760px
+   :align: center
+
 Publication and instrument examples
 -----------------------------------
 
@@ -36,6 +45,15 @@ Publication and instrument examples
    .. code-block:: bash
 
       python 'examples/Daylan+2017/generate_reproduction.py' --smoke --fresh
+
+``Daylan+2018``
+   Simulated Hubble Space Telescope Wide Field Camera 3 strong-lens analysis
+   comparing a variable subhalo catalog with a fixed one-subhalo fit.
+
+   .. code-block:: bash
+
+      python 'examples/Daylan+2018/generate_reproduction.py' --smoke
+      python 'examples/Daylan+2018/generate_reproduction.py' --smoke --one-subhalo
 
 ``voigt-profile``
    Transdimensional detection of an unknown number of Voigt-profile emission
@@ -53,9 +71,37 @@ Publication and instrument examples
 
       python examples/roman_lens_catalog/roman_lens_catalog_diagnostic.py
 
+   .. image:: ../examples/roman_lens_catalog/roman_lens_catalog_diagnostic.png
+      :alt: Simulated Roman strong-lens images, residual, and catalog posterior
+      :width: 720px
+      :align: center
+
+   The four panels trace one simulated detector image through the macro-lens
+   model and residual, then summarize catalog posterior probabilities across
+   the seeded lens population.
+
 ``fermi_lat_pg1553``
    Fermi Large Area Telescope event-filter configuration for PG 1553+113. This
    utility requires the Fermi Science Tools and local mission data.
+
+Analysis utilities
+------------------
+
+``catalog_association``
+   Seeded completeness and purity calculation for coordinate-and-value catalog
+   matching across a range of association radii.
+
+   .. code-block:: bash
+
+      python examples/catalog_association/catalog_association.py
+
+``psf_subpixel``
+   Reconstruction of an oversampled point-spread function with PCAT's
+   piecewise-cubic detector-pixel model, including interpolation residuals.
+
+   .. code-block:: bash
+
+      python examples/psf_subpixel/psf_subpixel.py
 
 Scientific interpretation
 -------------------------
