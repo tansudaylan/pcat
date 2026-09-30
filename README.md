@@ -1,6 +1,6 @@
 # PCAT
 
-<img src="docs/_static/pcat_logo.png" alt="PCAT logo" width="160">
+<img src="https://raw.githubusercontent.com/tansudaylan/pcat/master/docs/_static/pcat_banner.png" alt="PCAT, the Probabilistic Cataloger" width="480">
 
 ## Purpose
 

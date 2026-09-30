@@ -14,8 +14,10 @@ exclude_patterns = ["_build", "_site", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
-html_logo = "_static/pcat_logo.png"
-html_favicon = "_static/pcat_logo.png"
+html_logo = "_static/pcat_icon.png"
+html_favicon = "_static/pcat_icon.png"
+# black navigation header so the crimson icon and white project name stand out
+html_theme_options = {"style_nav_header_background": "#000000", "logo_only": False}
 htmlhelp_basename = "PCATdoc"
 
 latex_documents = [
