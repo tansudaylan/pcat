@@ -175,6 +175,7 @@ def test_proposal_defaults_enable_transdimensional_moves():
         "deth",
         "splt",
         "merg",
+        "jump",
     ]
     assert state.lablproptype[1] == "Birth proposal"
 

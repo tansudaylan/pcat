@@ -29,6 +29,7 @@ import pickle
 # multiprocessing
 import multiprocessing as mp
 
+from collections import deque
 from copy import deepcopy
 
 # utilities
@@ -410,11 +411,17 @@ def _configure_proposal_types(gdat, gmod):
     if getattr(gdat, 'probspmr', None) is None:
         gdat.probspmr = gdat.probtran / 2. if gmod.numbpopl > 0 else 0.
     gdat.probbrde = 1. - gdat.probspmr
-    if not 0. <= gdat.probtran <= 1. or not 0. <= gdat.probspmr <= 1.:
+    if getattr(gdat, 'probjump', None) is None:
+        gdat.probjump = 0.
+    if getattr(gdat, 'probdemc', None) is None:
+        gdat.probdemc = 0.
+    if getattr(gdat, 'numbdemchist', None) is None:
+        gdat.numbdemchist = 1000
+    if not 0. <= gdat.probtran <= 1. or not 0. <= gdat.probspmr <= 1. or not 0. <= gdat.probjump <= 1. or not 0. <= gdat.probdemc <= 1.:
         raise ValueError('Proposal probabilities must be between zero and one.')
     gdat.nameproptype = ['with']
     if gmod.numbpopl > 0:
-        gdat.nameproptype += ['brth', 'deth', 'splt', 'merg']
+        gdat.nameproptype += ['brth', 'deth', 'splt', 'merg', 'jump']
     gdat.nameproptype = np.asarray(gdat.nameproptype)
     gdat.lablproptype = _retr_proposal_type_labels(gdat.nameproptype)
     gdat.numbproptype = len(gdat.nameproptype)
@@ -429,6 +436,7 @@ def _retr_proposal_type_labels(names):
         'deth': 'Death proposal',
         'splt': 'Split proposal',
         'merg': 'Merge proposal',
+        'jump': 'Jump proposal',
     }
     return [labels.get(str(name), str(name)) for name in names]
 
@@ -1535,6 +1543,12 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
     
     gdatmodi.this.boolpropfilt = True 
 
+    # maintain a bounded history of visited unit-parameter vectors for the optional DE-MC within-model proposal
+    if getattr(gdat, 'probdemc', 0.) > 0.:
+        if not hasattr(gdatmodi, 'dequedemchist'):
+            gdatmodi.dequedemchist = deque(maxlen=int(getattr(gdat, 'numbdemchist', 1000)))
+        gdatmodi.dequedemchist.append(np.copy(gmodthis.paragenrunitfull))
+
     # index of the population in which a transdimensional proposal will be attempted
     numbelemtemp = 0
     if gmod.numbpopl > 0:
@@ -1551,7 +1565,14 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         maxmnumbelemtran = gmod.maxmpara.numbelem[gdatmodi.indxpopltran]
     
     # forced death or birth does not check for the prior on the dimensionality on purpose!
-    if gmod.numbpopl > 0 and (deth or brth or np.random.rand() < probtran) and \
+    if gmod.numbpopl > 0 and numbelemtemp > 0 and not brth and not deth and \
+                        np.random.rand() < getattr(gdat, 'probjump', 0.):
+
+        # dimension-preserving jump: redraw one existing element from its own prior
+        gdatmodi.this.indxproptype = 5
+        gdatmodi.this.indxjumpindxelem = int(np.random.choice(int(numbelemtemp)))
+
+    elif gmod.numbpopl > 0 and (deth or brth or np.random.rand() < probtran) and \
                         not (numbelemtemp == minmnumbelemtran and numbelemtemp == maxmnumbelemtran):
 
         if brth or deth or np.random.rand() < probbrde or \
@@ -1720,7 +1741,7 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         gdatmodi.this.indxproptype = 0
     
     if gdat.booldiag:
-        if gdat.probspmr == 0 and gdatmodi.this.indxproptype > 2:
+        if gdat.probspmr == 0 and gdatmodi.this.indxproptype in (3, 4):
             print('')
             print('')
             print('')
@@ -1761,7 +1782,18 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                     gdatmodi.this.stdp = stdpcomp / (np.minimum(thiscompampl, compampl) / minmcompampl)**0.5
         
         ## propose a step
-        if gdat.typeexpr == 'gener' and hasattr(gdat, 'proposal_correlation'):
+        numbdemchist = len(getattr(gdatmodi, 'dequedemchist', ()))
+        if getattr(gdat, 'probdemc', 0.) > 0. and numbdemchist >= 10 and np.random.rand() < gdat.probdemc:
+            # differential-evolution jump using two random past visited states (ter Braak 2006);
+            # this proposal is symmetric, so it leaves the standard Metropolis acceptance ratio unchanged
+            factdemcgamma = getattr(gdat, 'factdemcgamma', None)
+            if factdemcgamma is None:
+                factdemcgamma = 2.38 / np.sqrt(2. * thisindxsampfull.size)
+            indxa, indxb = np.random.choice(numbdemchist, size=2, replace=False)
+            vecta = gdatmodi.dequedemchist[indxa][thisindxsampfull]
+            vectb = gdatmodi.dequedemchist[indxb][thisindxsampfull]
+            diffparagenrunitfull = factdemcgamma * (vecta - vectb) + 1e-6 * np.random.normal(size=thisindxsampfull.size)
+        elif gdat.typeexpr == 'gener' and hasattr(gdat, 'proposal_correlation'):
             correlation = gdat.proposal_correlation[
                 np.ix_(thisindxsampfull, thisindxsampfull)
             ]
@@ -1906,7 +1938,29 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
         
         gdatmodi.this.auxipara = gmodthis.paragenrscalfull[indxparagenrfullelemdeth]
 
-    if gdatmodi.this.indxproptype > 2:
+    # jump: redraw one existing element's parameters from its own prior, keeping numbelem fixed
+    if gdatmodi.this.indxproptype == 5:
+        numbactvelem = len(gmodthis.indxelemfull[gdatmodi.indxpopltran])
+        if numbactvelem <= 0:
+            gdatmodi.this.boolpropfilt = False
+            return
+        jumpindxindxelem = getattr(gdatmodi.this, 'indxjumpindxelem', None)
+        if jumpindxindxelem is None or jumpindxindxelem >= numbactvelem:
+            jumpindxindxelem = int(np.random.choice(numbactvelem))
+
+        gdatmodi.indxelemmodi = [gmodthis.indxelemfull[gdatmodi.indxpopltran][jumpindxindxelem]]
+        gdatmodi.indxelemfullmodi = [jumpindxindxelem]
+        # parameter indices to be redrawn
+        indxparagenrfullelemjump = retr_indxparagenrelem_safe(gdatmodi.indxelemmodi[0])
+        if indxparagenrfullelemjump is None:
+            gdatmodi.this.boolpropfilt = False
+            return
+        gdatmodi.indxsamptran.append(indxparagenrfullelemjump)
+
+        gdatmodi.this.auxipara = np.random.rand(gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
+        gmodnext.paragenrunitfull[indxparagenrfullelemjump] = gdatmodi.this.auxipara
+
+    if gdatmodi.this.indxproptype in (3, 4):
         gdatmodi.comppare = np.empty(gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
         gdatmodi.compfrst = np.empty(gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
         gdatmodi.compseco = np.empty(gmod.numbparagenrelemsing[gdatmodi.indxpopltran])
@@ -2129,6 +2183,8 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                                                                             gdatmodi.indxsamptran[0], gdatmodi.indxsamptran[1]))
         if gdatmodi.this.indxproptype == 4:
             gdatmodi.indxsampmodi = np.concatenate((np.array([gmod.indxpara.numbelem[gdatmodi.indxpopltran]]), gdatmodi.indxsamptran[0]))
+        if gdatmodi.this.indxproptype == 5:
+            gdatmodi.indxsampmodi = gdatmodi.indxsamptran[0]
     
     if gmod.numbpopl > 0:
         if gdatmodi.this.indxproptype == 0:
@@ -2153,7 +2209,7 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             print('indxparagenrfullelem')
             print(indxparagenrfullelem)
     
-    if gdatmodi.this.indxproptype == 1:
+    if gdatmodi.this.indxproptype == 1 or gdatmodi.this.indxproptype == 5:
         for g, nameparagenrelem in enumerate(gmod.namepara.genrelem[gdatmodi.indxpopltran]):
             gmodnext.paragenrscalfull[gdatmodi.indxsamptran[0][g]] = icdf_trap(gdat, strgmodl, gdatmodi.this.auxipara[g], gmodthis.paragenrscalfull, \
                                                                             gmod.scalpara.genrelem[gdatmodi.indxpopltran][g], \
@@ -2238,8 +2294,11 @@ def calc_probprop(gdat, gdatmodi):
                                             gdatmodi.this.paragenrscalfull, dictelemtemp, [1])
         if gdatmodi.this.indxproptype == 4:
             gdatmodi.this.lpau *= -1.
+    elif gdatmodi.this.indxproptype == 5:
+        # the redrawn element's own prior term cancels its independence-proposal density exactly
+        gdatmodi.this.lpau = gdatmodi.next.lpritotl - gdatmodi.this.lpritotl
 
-    if gdatmodi.this.indxproptype > 2 and gdatmodi.this.boolpropfilt:
+    if gdatmodi.this.indxproptype in (3, 4) and gdatmodi.this.boolpropfilt:
         ## the ratio of the probability of the reverse and forward proposals, and
         if gdatmodi.this.indxproptype == 3:
             gdatmodi.this.probmergtotl = retr_probmerg(gdat, gdatmodi, gdatmodi.next.paragenrscalfull, gdatmodi.next.indxparagenrelemfull, gdatmodi.indxpopltran, 'pair', \

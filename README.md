@@ -81,7 +81,21 @@ By default, type-0 moves perturb one parameter at a time. Set
 ``probpropblock`` above zero to mix in correlated block moves using
 ``proposal_correlation``; ``factpropblock`` scales those block increments.
 These moves retain PCAT's standard acceptance, adaptation, persistence, and
-final-processing machinery.
+final-processing machinery. Set ``probdemc`` above zero to mix in
+differential-evolution jumps (ter Braak 2006) drawn from a bounded history of
+the chain's own visited states (``numbdemchist``, default 1,000 states); this
+proposal is symmetric, so it needs no change to the acceptance ratio and can
+help mixing when parameters are correlated in ways ``proposal_correlation``
+does not capture.
+
+For transdimensional runs (``numbpopl`` > 0), set ``probjump`` above zero to
+mix in a dimension-preserving jump: one randomly chosen existing element is
+redrawn entirely from its own prior, holding the number of elements fixed.
+Because the redrawn element's prior exactly cancels its independence-proposal
+density, its acceptance ratio is the plain likelihood ratio, with no Jacobian
+or transition-probability term. This can help the sampler escape local optima
+in element parameters (e.g. near-degenerate positions) that birth, death,
+split, and merge moves reach only indirectly.
 
 ## Installation
 
