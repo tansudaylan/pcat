@@ -11,3 +11,6 @@ visuals/
 !examples/psf_subpixel/visuals/psf_subpixel.png
 !examples/roman_lens_catalog/visuals/
 !examples/roman_lens_catalog/visuals/roman_lens_catalog_diagnostic.png
+!examples/rubin_cluster_lens/visuals/
+!examples/rubin_cluster_lens/visuals/rubin_cluster_image_fit.png
+!examples/rubin_cluster_lens/visuals/rubin_cluster_posterior.png

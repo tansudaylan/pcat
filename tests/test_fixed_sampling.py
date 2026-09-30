@@ -88,7 +88,10 @@ def test_single_parameter_proposals_adapt_only_selected_scale(tmp_path):
     assert np.all(worker.numbpropstdp > 50)
 
 
-def test_generic_model_honors_explicit_plot_settings(tmp_path):
+def test_generic_model_honors_explicit_plot_settings(tmp_path, monkeypatch):
+    import tdpy
+
+    monkeypatch.setattr(tdpy, 'mcmc', object(), raising=False)
     sample(
         typeexpr='gener',
         retr_llik=gaussian_log_likelihood,

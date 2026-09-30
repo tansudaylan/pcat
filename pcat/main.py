@@ -510,10 +510,6 @@ def _set_element_amplitude_indices(gmod):
     gmod.indxpara.genrelemampl = np.asarray(indices, dtype=int)
 
 
-if not hasattr(tdpy, 'mcmc'):
-    tdpy.mcmc = _PCATMCMCCompat()
-
-
 def narr_task(message, gdat=None, phase='during', major=False, force=False, typeverb=None):
 
     '''
@@ -14230,7 +14226,7 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
                 path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscaljoin')
                 listtruetrap = [_retr_true_parameter_value(gdat, gmod.namepara.genr[index])
                                 for index in indxtrapplot]
-                tdpy.mcmc.plot_grid(path, 'joint_persistent_line_parameters',
+                _PCATMCMCCompat.plot_grid(path, 'joint_persistent_line_parameters',
                                     listparagenrscalfull[:, indxtrapplot], listlabltrap,
                                     truepara=listtruetrap)
 
@@ -14242,10 +14238,10 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
                     maximum_likelihood = gdat.mlikparagenrscalfull[index]
                     truepara = _retr_true_parameter_value(gdat, name)
                     path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscaltrac') + name
-                    tdpy.mcmc.plot_trac(path, values, label, truepara=truepara, scalpara=scale,
+                    _PCATMCMCCompat.plot_trac(path, values, label, truepara=truepara, scalpara=scale,
                                         listvarbdraw=[maximum_likelihood])
                     path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalhist') + name
-                    tdpy.mcmc.plot_hist(path, values, label, truepara=truepara, scalpara=scale,
+                    _PCATMCMCCompat.plot_hist(path, values, label, truepara=truepara, scalpara=scale,
                                         listvarbdraw=[maximum_likelihood])
     
     if gdat.typeverb > 0:
@@ -14275,9 +14271,9 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
         
         mlik = getattr(gdat, 'mlik' + name)
         path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscaltrac') + name
-        tdpy.mcmc.plot_trac(path, listvarb, labltotl, truepara=truepara, scalpara=scal, listvarbdraw=[mlik], listlabldraw=[''], listcolrdraw=['r'])
+        _PCATMCMCCompat.plot_trac(path, listvarb, labltotl, truepara=truepara, scalpara=scal, listvarbdraw=[mlik], listlabldraw=[''], listcolrdraw=['r'])
         path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalhist') + name
-        tdpy.mcmc.plot_hist(path, listvarb, labltotl, truepara=truepara, scalpara=scal, listvarbdraw=[mlik], listlabldraw=[''], listcolrdraw=['r'])
+        _PCATMCMCCompat.plot_hist(path, listvarb, labltotl, truepara=truepara, scalpara=scal, listvarbdraw=[mlik], listlabldraw=[''], listcolrdraw=['r'])
        
         for nameseco in listnamescal[indxname + 1:]:
             namereqrseco = ['scal' + nameseco, 'list' + strgpdfn + nameseco, 'mlik' + nameseco]
@@ -14304,7 +14300,7 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
                 
             listjoin = np.vstack((listvarb, listvarbseco)).T
     
-            tdpy.mcmc.plot_grid(pathjoin, name + nameseco, listjoin, [labltotl, labltotlseco], scalpara=[scal, scalseco], truepara=[truepara, trueparaseco], \
+            _PCATMCMCCompat.plot_grid(pathjoin, name + nameseco, listjoin, [labltotl, labltotlseco], scalpara=[scal, scalseco], truepara=[truepara, trueparaseco], \
                                                                                                 join=True, listvarbdraw=[np.array([mlik, mlikseco])])
 
     if gdat.typeverb > 0:
@@ -14315,7 +14311,7 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
     path = getattr(gdat, 'path' + strgpdfn + 'finlvarbscalcova')
     truepara = [_retr_true_parameter_value(gdat, name) for name in gmod.namepara.genrbase]
     mlikpara = gdat.mlikparagenrscalbase
-    tdpy.mcmc.plot_grid(path, 'paragenrscalbase', listparagenrscalbase, gmod.labltotlpara.genr.basetotl, truepara=truepara, listvarbdraw=[mlikpara])
+    _PCATMCMCCompat.plot_grid(path, 'paragenrscalbase', listparagenrscalbase, gmod.labltotlpara.genr.basetotl, truepara=truepara, listvarbdraw=[mlikpara])
     
     # stacked posteiors binned in position and flux
     if gmod.numbpopl > 0 and gdat.numbpixl > 1:
@@ -14352,7 +14348,7 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
         path = getattr(gdat, 'path' + strgpdfn + 'finl') + strgpdfntemp
         
         varb = getattr(gdat, 'list' + strgpdfn + strgpdfntemp)
-        tdpy.mcmc.plot_hist(path, varb, labl)
+        _PCATMCMCCompat.plot_hist(path, varb, labl)
         listvarbdraw = []
         listlabldraw = []
         listcolrdraw = []
@@ -14361,7 +14357,7 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
             listlabldraw += ['True model']
             listcolrdraw += [gdat.refr.colr]
         
-        tdpy.mcmc.plot_trac(path, getattr(gdat, 'list' + strgpdfn + strgpdfntemp), labl, \
+        _PCATMCMCCompat.plot_trac(path, getattr(gdat, 'list' + strgpdfn + strgpdfntemp), labl, \
                                 listvarbdraw=listvarbdraw, listlabldraw=listlabldraw, listcolrdraw=listcolrdraw)
     
     # plot resident memory
