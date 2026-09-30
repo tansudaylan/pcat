@@ -159,6 +159,66 @@ def test_single_parameter_proposals_adapt_only_selected_scale(tmp_path):
     assert np.all(worker.numbpropstdp > 50)
 
 
+def test_dynamic_convergence_stops_sampling_early_single_process(tmp_path):
+    """boolcheckconv should stop a single-process run well before the requested numbswep."""
+    result = sample(
+        typeexpr='gener',
+        retr_llik=scalar_log_likelihood,
+        parameter_names=('x',),
+        prior_types=('self',),
+        prior_minima=(-3.0,),
+        prior_maxima=(3.0,),
+        initial_values=(0.0,),
+        proposal_scales=(0.5,),
+        pathbase=str(tmp_path),
+        strgcnfg='dynamic_stop_single',
+        numbproc=1,
+        numbswep=200_000,
+        numbburn=100,
+        numbsampconvmin=200,
+        numbsampconvcheck=50,
+        maxmconvrhat=1.2,
+        numbsampconveffc=20.,
+        numbconvpass=2,
+        boolcheckconv=True,
+        typeverb=-1,
+    )
+
+    assert result.boolconv is True
+    assert result.numbswep < 200_000
+    assert np.all(np.isfinite(result.listpostparagenrscalbase))
+
+
+def test_dynamic_convergence_stops_sampling_early_multiple_processes(tmp_path):
+    """boolcheckconv should also stop a multi-process run early via the shared cross-worker check."""
+    result = sample(
+        typeexpr='gener',
+        retr_llik=scalar_log_likelihood,
+        parameter_names=('x',),
+        prior_types=('self',),
+        prior_minima=(-3.0,),
+        prior_maxima=(3.0,),
+        initial_values=(0.0,),
+        proposal_scales=(0.5,),
+        pathbase=str(tmp_path),
+        strgcnfg='dynamic_stop_multi',
+        numbproc=2,
+        numbswep=200_000,
+        numbburn=100,
+        numbsampconvmin=200,
+        numbsampconvcheck=50,
+        maxmconvrhat=1.2,
+        numbsampconveffc=20.,
+        numbconvpass=2,
+        boolcheckconv=True,
+        typeverb=-1,
+    )
+
+    assert result.boolconv is True
+    assert result.numbswep < 200_000
+    assert np.all(np.isfinite(result.listpostparagenrscalbase))
+
+
 def test_demc_proposal_recovers_gaussian_posterior_without_bias(tmp_path):
     """The optional DE-MC within-model jump (probdemc) should not bias the recovered posterior."""
     result = sample(

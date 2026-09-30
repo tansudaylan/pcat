@@ -12,6 +12,7 @@ from pcat.main import (
     _configure_proposal_types,
     _retr_adapted_proposal_scale,
     _retr_chain_convergence,
+    _retr_multichain_convergence,
     _retr_persistent_element_parameter_indices,
     _retr_population_legend_label,
     _retr_parameter_label,
@@ -91,6 +92,41 @@ def test_chain_convergence_rejects_drifting_chain():
 
     assert not converged
     assert maximum_rhat > 1.05 or minimum_ess < 100
+
+
+def test_multichain_convergence_accepts_independent_chains_with_the_same_target():
+    random = np.random.default_rng(9)
+    chains = [random.normal(size=(2000, 3)) for _ in range(4)]
+
+    converged, maximum_rhat, minimum_ess = _retr_multichain_convergence(
+        chains, maxmrhat=1.05, minmess=500
+    )
+
+    assert converged
+    assert maximum_rhat < 1.05
+    assert minimum_ess > 500
+
+
+def test_multichain_convergence_rejects_chains_stuck_at_different_means():
+    random = np.random.default_rng(10)
+    chains = [random.normal(loc=offset, size=(2000, 2)) for offset in (0.0, 5.0, 10.0, 15.0)]
+
+    converged, maximum_rhat, minimum_ess = _retr_multichain_convergence(
+        chains, maxmrhat=1.05, minmess=100
+    )
+
+    assert not converged
+    assert maximum_rhat > 1.05
+
+
+def test_multichain_convergence_requires_at_least_two_chains():
+    random = np.random.default_rng(11)
+    converged, maximum_rhat, minimum_ess = _retr_multichain_convergence(
+        [random.normal(size=(2000, 2))], maxmrhat=1.05, minmess=100
+    )
+
+    assert not converged
+    assert np.isinf(maximum_rhat)
 
 
 def test_proposal_scale_adaptation_tracks_acceptance():

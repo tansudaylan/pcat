@@ -97,6 +97,33 @@ or transition-probability term. This can help the sampler escape local optima
 in element parameters (e.g. near-degenerate positions) that birth, death,
 split, and merge moves reach only indirectly.
 
+### Dynamic convergence-based stopping
+
+By default PCAT samples for a fixed number of sweeps (``numbswep``). Set
+``boolcheckconv=True`` to instead stop automatically once the chain(s) have
+converged, using split-chain (or, with ``numbproc`` > 1, genuinely
+cross-chain) Gelman-Rubin R-hat combined with an effective-sample-size (ESS)
+floor computed from the autocorrelation time. Relevant settings:
+
+- ``numbsampconvmin``: minimum number of retained samples before the first
+  check is attempted.
+- ``numbsampconvcheck``: how often (in retained samples) to re-check
+  convergence after the minimum is reached.
+- ``maxmconvrhat``: maximum split-chain/cross-chain R-hat to accept as
+  converged (closer to 1 is stricter).
+- ``numbsampconveffc``: minimum ESS to accept as converged.
+- ``numbconvpass``: number of consecutive passing checks required before
+  sampling stops (guards against a single lucky check).
+
+With ``numbproc`` == 1, R-hat/ESS are computed by splitting the single chain
+in half. With ``numbproc`` > 1, each worker shares its running diagnostic
+statistics with the others via a ``multiprocessing.Manager``-backed
+dictionary, and R-hat/ESS are computed genuinely across all worker chains;
+once every worker independently observes the shared stop signal, all workers
+stop and their retained samples are truncated to a common length before
+final aggregation. This feature is opt-in; the default ``boolcheckconv=False``
+leaves existing fixed-``numbswep`` behavior unchanged.
+
 ## Installation
 
 A modern installation path is:

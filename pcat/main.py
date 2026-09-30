@@ -299,6 +299,63 @@ def _retr_representative_atcr(atcr, timeatcr):
     return atcrflat[indx], timeflat[indx]
 
 
+def _retr_multichain_convergence(listchains, maxmrhat=1.01, minmess=200.):
+    """Evaluate Gelman-Rubin R-hat and effective sample size across two or more independent chains."""
+    numbchain = len(listchains)
+    if numbchain < 2:
+        return False, np.inf, 0.
+    listvalues = []
+    for chain in listchains:
+        values = np.asarray(chain, dtype=float)
+        if values.ndim == 1:
+            values = values[:, None]
+        elif values.ndim > 2:
+            values = values.reshape(values.shape[0], -1)
+        values = values[np.all(np.isfinite(values), axis=1)]
+        listvalues.append(values)
+    numbsamp = min(values.shape[0] for values in listvalues)
+    if numbsamp < 4:
+        return False, np.inf, 0.
+    listvalues = [values[-numbsamp:] for values in listvalues]
+
+    boolvary = np.std(listvalues[0], axis=0) > 0.
+    for values in listvalues[1:]:
+        boolvary = boolvary | (np.std(values, axis=0) > 0.)
+    if not np.any(boolvary):
+        return False, np.inf, 0.
+    listvalues = [values[:, boolvary] for values in listvalues]
+
+    chains = np.stack(listvalues, axis=1)
+    variwith = np.mean(np.var(chains, axis=0, ddof=1), axis=0)
+    varibtwn = numbsamp * np.var(np.mean(chains, axis=0), axis=0, ddof=1)
+    varipool = (numbsamp - 1.) / numbsamp * variwith + varibtwn / numbsamp
+    rhat = np.sqrt(np.divide(varipool, variwith, out=np.full_like(varipool, np.inf), where=variwith > 0.))
+
+    listtimeatcr = []
+    for values in listvalues:
+        centered = values - np.mean(values, axis=0)
+        numbfft = 1 << (2 * numbsamp - 1).bit_length()
+        fourier = np.fft.rfft(centered, n=numbfft, axis=0)
+        covariance = np.fft.irfft(fourier * np.conjugate(fourier), n=numbfft, axis=0)[:numbsamp]
+        covariance /= np.arange(numbsamp, 0, -1)[:, None]
+        correlation = covariance / covariance[0]
+        numbpairs = (numbsamp - 1) // 2
+        pair_sums = correlation[1:1 + 2 * numbpairs:2] + correlation[2:2 + 2 * numbpairs:2]
+        negative = pair_sums <= 0.
+        first_negative = np.where(np.any(negative, axis=0), np.argmax(negative, axis=0), pair_sums.shape[0])
+        timeatcr = np.ones(values.shape[1])
+        for indxvarb, indxstop in enumerate(first_negative):
+            timeatcr[indxvarb] += 2. * np.sum(pair_sums[:indxstop, indxvarb])
+        listtimeatcr.append(np.maximum(timeatcr, 1.))
+    timeatcr = np.mean(listtimeatcr, axis=0)
+    effsamp = numbchain * numbsamp / timeatcr
+
+    maxmrhatcalc = float(np.max(rhat))
+    minmesscalc = float(np.min(effsamp))
+    boolconv = maxmrhatcalc <= maxmrhat and minmesscalc >= minmess
+    return boolconv, maxmrhatcalc, minmesscalc
+
+
 def _retr_chain_convergence(listvarb, maxmrhat=1.01, minmess=200.):
     """Evaluate split-chain R-hat and effective sample size for varying columns."""
     values = np.asarray(listvarb, dtype=float)
@@ -310,39 +367,10 @@ def _retr_chain_convergence(listvarb, maxmrhat=1.01, minmess=200.):
     numbsamp = values.shape[0]
     if numbsamp < 4:
         return False, np.inf, 0.
-
-    boolvary = np.std(values, axis=0) > 0.
-    if not np.any(boolvary):
-        return False, np.inf, 0.
-    values = values[:, boolvary]
-
     numbsamphalf = numbsamp // 2
-    chains = np.stack((values[:numbsamphalf], values[-numbsamphalf:]), axis=1)
-    variwith = np.mean(np.var(chains, axis=0, ddof=1), axis=0)
-    varibtwn = numbsamphalf * np.var(np.mean(chains, axis=0), axis=0, ddof=1)
-    varipool = (numbsamphalf - 1.) / numbsamphalf * variwith + varibtwn / numbsamphalf
-    rhat = np.sqrt(np.divide(varipool, variwith, out=np.full_like(varipool, np.inf), where=variwith > 0.))
-
-    centered = values - np.mean(values, axis=0)
-    numbfft = 1 << (2 * numbsamp - 1).bit_length()
-    fourier = np.fft.rfft(centered, n=numbfft, axis=0)
-    covariance = np.fft.irfft(fourier * np.conjugate(fourier), n=numbfft, axis=0)[:numbsamp]
-    covariance /= np.arange(numbsamp, 0, -1)[:, None]
-    correlation = covariance / covariance[0]
-    numbpairs = (numbsamp - 1) // 2
-    pair_sums = correlation[1:1 + 2 * numbpairs:2] + correlation[2:2 + 2 * numbpairs:2]
-    negative = pair_sums <= 0.
-    first_negative = np.where(np.any(negative, axis=0), np.argmax(negative, axis=0), pair_sums.shape[0])
-    timeatcr = np.ones(values.shape[1])
-    for indxvarb, indxstop in enumerate(first_negative):
-        timeatcr[indxvarb] += 2. * np.sum(pair_sums[:indxstop, indxvarb])
-    timeatcr = np.maximum(timeatcr, 1.)
-    effsamp = numbsamp / timeatcr
-
-    maxmrhatcalc = float(np.max(rhat))
-    minmesscalc = float(np.min(effsamp))
-    boolconv = maxmrhatcalc <= maxmrhat and minmesscalc >= minmess
-    return boolconv, maxmrhatcalc, minmesscalc
+    return _retr_multichain_convergence(
+        (values[:numbsamphalf], values[-numbsamphalf:]), maxmrhat=maxmrhat, minmess=minmess
+    )
 
 
 def _retr_adapted_proposal_scale(scale, accepted, count, target=0.44):
@@ -11551,6 +11579,23 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                 gdatinit.boolconv = all(worker.boolconv for worker in listgdatmodi)
                 gdatinit.maxmconvrhatcalc = max(worker.maxmconvrhat for worker in listgdatmodi)
                 gdatinit.numbsampconveffccalc = min(worker.numbsampconveffc for worker in listgdatmodi)
+                # workers can stop at slightly different sweep/sample counts when checking convergence
+                # across processes, so truncate every per-worker array to the common minimum length
+                for worker in listgdatmodi:
+                    for strgvarb in getattr(worker, 'liststrgvarbarrysamp', []):
+                        name = 'list' + strgpdfn + strgvarb
+                        if hasattr(worker, name):
+                            setattr(worker, name, getattr(worker, name)[:numbsampactl])
+                    for strgvarb in getattr(worker, 'liststrgvarblistsamp', []):
+                        name = 'list' + strgpdfn + strgvarb
+                        if hasattr(worker, name):
+                            setattr(worker, name, getattr(worker, name)[:numbsampactl])
+                    for strgvarb in getattr(gdatinit, 'liststrgvarbarryswep', []):
+                        name = 'list' + strgpdfn + strgvarb
+                        if hasattr(worker, name):
+                            setattr(worker, name, getattr(worker, name)[:numbswepactl])
+                    worker.numbsampactl = numbsampactl
+                    worker.cntrswep = numbswepactl
             
             # erase
             gdatdictcopy = deepcopy(gdatinit.__dict__)
@@ -16865,8 +16910,6 @@ def init( \
         gdat.strgproc = os.uname()[1]
         if gdat.numbproc is None:
             gdat.numbproc = 1
-        if gdat.boolcheckconv and gdat.numbproc != 1:
-            raise ValueError('Dynamic convergence checking currently requires numbproc=1.')
     
         ## number of burned sweeps
         if gdat.numbburn is None:
@@ -17681,7 +17724,12 @@ def init( \
             pass
         
         # process lock for simultaneous plotting
-        lock = mp.Manager().Lock()
+        manager = mp.Manager()
+        lock = manager.Lock()
+        # shared state for cross-worker dynamic convergence checking (numbproc > 1)
+        convshare = None
+        if getattr(gdat, 'boolcheckconv', False) and gdat.numbproc > 1:
+            convshare = {'chains': manager.dict(), 'boolstop': manager.Value('i', 0)}
 
         if gdat.typeexpr.startswith('HST_WFC3') and gdat.typedata == 'simu':
             if not hasattr(gdat, 'true'):
@@ -17910,7 +17958,7 @@ def init( \
                 narr_task('Starting prior sampling.', gdat=gdat, phase='before', major=True)
             
                 ## perform sampling
-                worksamp(gdat, lock, strgpdfn='prio')
+                worksamp(gdat, lock, strgpdfn='prio', convshare=convshare)
                 
                 ## post process the samples
                 proc_finl(gdat=gdat, strgpdfn='prio')
@@ -17921,7 +17969,7 @@ def init( \
             narr_task('Starting posterior sampling.', gdat=gdat, phase='before', major=True)
             
             # run the sampler
-            worksamp(gdat, lock)
+            worksamp(gdat, lock, convshare=convshare)
             narr_task('Completed posterior sampling.', gdat=gdat, phase='after', major=True)
         
         except (AttributeError, KeyError, IndexError, TypeError) as excp:
@@ -18425,10 +18473,10 @@ class logg(object):
         pass
 
 
-def worktrac(pathoutpcnfg, lock, strgpdfn, indxprocwork):
+def worktrac(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
 	
     try:
-        return work(pathoutpcnfg, lock, strgpdfn, indxprocwork)
+        return work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=convshare)
     except:
         raise Exception("".join(traceback.format_exception(*sys.exc_info())))
 
@@ -18544,7 +18592,7 @@ def opti_hess(gdat, gdatmodi):
     gdatmodi.stdp = gdatmodi.stdpmatr[gdat.indxstdp, gdat.indxstdp]
     
 
-def worksamp(gdat, lock, strgpdfn='post'): 
+def worksamp(gdat, lock, strgpdfn='post', convshare=None): 
     narr_task('Preparing sampler workers.', gdat=gdat, phase='before', major=True)
 
     if not hasattr(gdat, 'pathplotcnfg') or gdat.pathplotcnfg is None:
@@ -18557,7 +18605,7 @@ def worksamp(gdat, lock, strgpdfn='post'):
     
     if gdat.numbproc == 1:
         narr_task('Running a single sampler worker.', gdat=gdat, phase='during', major=True)
-        worktrac(gdat.pathoutpcnfg, lock, strgpdfn, 0)
+        worktrac(gdat.pathoutpcnfg, lock, strgpdfn, 0, convshare=convshare)
     else:
         if gdat.typeverb > 0:
             print('Forking the sampler...')
@@ -18567,7 +18615,7 @@ def worksamp(gdat, lock, strgpdfn='post'):
         pool = mp.Pool(gdat.numbproc)
         
         # spawn the processes
-        workpart = functools.partial(worktrac, gdat.pathoutpcnfg, lock, strgpdfn)
+        workpart = functools.partial(worktrac, gdat.pathoutpcnfg, lock, strgpdfn, convshare=convshare)
         pool.map(workpart, gdat.indxproc)
 
         pool.close()
@@ -18579,7 +18627,7 @@ def worksamp(gdat, lock, strgpdfn='post'):
     narr_task('Sampler workers completed and state written.', gdat=gdat, phase='after', major=True)
 
 
-def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
+def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
     
     print('Worker #%d' % indxprocwork)
     
@@ -19176,9 +19224,8 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
                 listindxelemfull = workdict['list' + gdat.strgpdfn + 'indxelemfull']
                 indxparapersist = _retr_persistent_element_parameter_indices(gmod, listindxelemfull)
                 if gmod.numbpopl == 0:
-                    listparameter = workdict[
-                        'list' + gdat.strgpdfn + 'paragenrscalbase'
-                    ][:gdatmodi.numbsampactl]
+                    listpara = workdict['list' + gdat.strgpdfn + 'paragenrscalfull'][:gdatmodi.numbsampactl]
+                    listparameter = listpara[:, gmod.indxpara.genrbase]
                 elif indxparapersist.size > 0:
                     listpara = workdict['list' + gdat.strgpdfn + 'paragenrscalfull'][:gdatmodi.numbsampactl]
                     listparameter = listpara[:, indxparapersist]
@@ -19187,17 +19234,39 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
                     listparameter = listcntpmodl.reshape(gdatmodi.numbsampactl, -1)
                 listconv = np.column_stack((listlpost.reshape(gdatmodi.numbsampactl, -1),
                                             listnumbelem.reshape(gdatmodi.numbsampactl, -1), listparameter))
-                boolconv, maxmrhat, minmess = _retr_chain_convergence(
-                    listconv, maxmrhat=gdat.maxmconvrhat, minmess=gdat.numbsampconveffc)
-                gdatmodi.maxmconvrhat = maxmrhat
-                gdatmodi.numbsampconveffc = minmess
-                gdatmodi.numbconvpass = gdatmodi.numbconvpass + 1 if boolconv else 0
-                if gdat.typeverb > 0:
-                    print('Convergence check at %d samples: R-hat %.4f, minimum ESS %.1f, pass %d/%d.' %
-                          (gdatmodi.numbsampactl, maxmrhat, minmess, gdatmodi.numbconvpass, gdat.numbconvpass))
-                if gdatmodi.numbconvpass >= gdat.numbconvpass:
-                    gdatmodi.boolconv = True
-                    gdatmodi.boolstopconv = True
+                if convshare is None:
+                    boolconv, maxmrhat, minmess = _retr_chain_convergence(
+                        listconv, maxmrhat=gdat.maxmconvrhat, minmess=gdat.numbsampconveffc)
+                    boolcheck = True
+                else:
+                    # publish this worker's chain and check convergence across all workers once every worker has reported in
+                    boolcheck = False
+                    boolconv, maxmrhat, minmess = False, np.inf, 0.
+                    try:
+                        convshare['chains'][indxprocwork] = listconv
+                        listchains = [convshare['chains'][k] for k in range(gdat.numbproc) if k in convshare['chains']]
+                        if len(listchains) == gdat.numbproc:
+                            boolconv, maxmrhat, minmess = _retr_multichain_convergence(
+                                listchains, maxmrhat=gdat.maxmconvrhat, minmess=gdat.numbsampconveffc)
+                            boolcheck = True
+                    except Exception as excp:
+                        if gdat.typeverb > 0:
+                            print('Warning: cross-worker convergence check failed, continuing to sample. Details: %s' % str(excp))
+                if boolcheck:
+                    gdatmodi.maxmconvrhat = maxmrhat
+                    gdatmodi.numbsampconveffc = minmess
+                    gdatmodi.numbconvpass = gdatmodi.numbconvpass + 1 if boolconv else 0
+                    if gdat.typeverb > 0:
+                        print('Convergence check at %d samples: R-hat %.4f, minimum ESS %.1f, pass %d/%d.' %
+                              (gdatmodi.numbsampactl, maxmrhat, minmess, gdatmodi.numbconvpass, gdat.numbconvpass))
+                    if gdatmodi.numbconvpass >= gdat.numbconvpass:
+                        gdatmodi.boolconv = True
+                        gdatmodi.boolstopconv = True
+                        if convshare is not None:
+                            try:
+                                convshare['boolstop'].value = 1
+                            except Exception:
+                                pass
 
         # plot the current sample
         if thismakefram:
@@ -19367,6 +19436,14 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork):
         gdatmodi.cntrswep += 1
         if gdatmodi.boolstopconv:
             break
+        if convshare is not None and gdatmodi.cntrswep % 20 == 0:
+            try:
+                if convshare['boolstop'].value:
+                    gdatmodi.boolconv = True
+                    gdatmodi.boolstopconv = True
+                    break
+            except Exception:
+                pass
         
     for strgvarb in gdat.liststrgvarbarry + gdat.liststrgvarblistsamp:
         valu = workdict['list' + gdat.strgpdfn + strgvarb]
