@@ -72,11 +72,6 @@ try:
 except ImportError:
     chalcedon = None
 
-try:
-    import aspendos
-except ImportError:
-    aspendos = None
-
 
 def retr_spec(gdat, flux, sind=None, curv=None, expc=None, sindcolr=None,
               elin=None, edisintp=None, sigm=None, gamm=None,
@@ -164,59 +159,14 @@ def _remove_empty_directories(pathroot):
     return listpathremo
 
 
-def _ensure_chalcedon_compat():
+def _retr_chalcedon():
+    """Return the Chalcedon lensing module, importing it on first use."""
     global chalcedon
     if chalcedon is None:
         import chalcedon as chalcedon_mod
         chalcedon = chalcedon_mod
-    if getattr(chalcedon, '_pcat_retr_defl_compat', False):
-        return chalcedon
-
-    retr_defl_orig = chalcedon.retr_defl
-
-    def _retr_defl_compat(xposgrid, yposgrid, indxpixlelem, *args, **kwargs):
-        xposgrid = np.asarray(xposgrid)
-        yposgrid = np.asarray(yposgrid)
-        indxpixlelem = np.atleast_1d(indxpixlelem).astype(int)
-        if len(args) == 1 and isinstance(args[0], dict) and not kwargs:
-            return retr_defl_orig(xposgrid, yposgrid, indxpixlelem, args[0])
-
-        if len(args) >= 3:
-            xposlens, yposlens, defllens = args[:3]
-            ellphost = kwargs.get('ellp', 0.)
-            asca = kwargs.get('asca', None)
-
-            # Host-only legacy calls map cleanly onto the dict-based API.
-            if asca is None:
-                dictchalinpt = {
-                    'xposhost': xposlens,
-                    'yposhost': yposlens,
-                    'beinhost': defllens,
-                    'ellphost': ellphost,
-                }
-                return retr_defl_orig(xposgrid, yposgrid, indxpixlelem, dictchalinpt)['defltotl']
-
-            # Sparse compatibility path for legacy subhalo-only calls.
-            dictchalinpt = {
-                'xposhost': 0.,
-                'yposhost': 0.,
-                'beinhost': 0.,
-                'ellphost': 0.,
-                'xpossubh': np.atleast_1d(xposlens),
-                'ypossubh': np.atleast_1d(yposlens),
-                'ascasubh': np.atleast_1d(asca),
-            }
-            return retr_defl_orig(xposgrid, yposgrid, indxpixlelem, dictchalinpt)['defltotl']
-
-        return retr_defl_orig(xposgrid, yposgrid, indxpixlelem, *args, **kwargs)
-
-    chalcedon.retr_defl = _retr_defl_compat
-    chalcedon._pcat_retr_defl_compat = True
     return chalcedon
 
-
-if chalcedon is not None:
-    chalcedon = _ensure_chalcedon_compat()
 
 class _PCATMCMCCompat(object):
 
@@ -2559,10 +2509,7 @@ def retr_unit(xpos, ypos):
 
 def retr_psec(gdat, conv):
 
-    # temp
-    conv = conv.reshape((gdat.numbsidecart, gdat.numbsidecart))
-    psec = (abs(scipy.fftpack.fft2(conv))**2)[:gdat.numbsidecarthalf, :gdat.numbsidecarthalf] * 1e-3
-    psec = psec.flatten()
+    psec = _retr_chalcedon().retr_psecconv(conv.reshape((gdat.numbsidecart, gdat.numbsidecart))).flatten()
 
     return psec
    
@@ -2752,21 +2699,15 @@ def retr_condcatl(gdat):
 
 def retr_conv(gdat, defl):
     
-    defl = defl.reshape((gdat.numbsidecart, gdat.numbsidecart, 2))
-    # temp
-    conv = abs(np.gradient(defl[:, :, 0], gdat.sizepixl, axis=0) + np.gradient(defl[:, :, 1], gdat.sizepixl, axis=1)) / 2.
-    conv = conv.flatten()
+    conv = _retr_chalcedon().retr_convfromdefl(defl.reshape((gdat.numbsidecart, gdat.numbsidecart, 2)), gdat.sizepixl).flatten()
     
     return conv
 
 
 def retr_invm(gdat, defl):
     
-    # temp
-    defl = defl.reshape((gdat.numbsidecart, gdat.numbsidecart, 2))
-    invm = (1. - np.gradient(defl[:, :, 0], gdat.sizepixl, axis=0)) * (1. - np.gradient(defl[:, :, 1], gdat.sizepixl, axis=1)) - \
-                                                np.gradient(defl[:, :, 0], gdat.sizepixl, axis=1) * np.gradient(defl[:, :, 1], gdat.sizepixl, axis=0)
-    invm = invm.flatten()
+    invm = _retr_chalcedon().retr_invmfromdefl(defl.reshape((gdat.numbsidecart, gdat.numbsidecart, 2)), gdat.sizepixl).flatten()
+    
     return invm
 
 
@@ -3082,7 +3023,7 @@ def plot_lens(gdat):
         
         figr, axis = plt.subplots(figsize=(gdat.plotsize, gdat.plotsize))
         fracacutasca = np.logspace(-1., 2., 20)
-        mcut = aspendos.retr_mcutfrommscl(fracacutasca)
+        mcut = chalcedon.retr_mcutfrommscl(fracacutasca)
         axis.lognp.log(fracacutasca, mcut)
         axis.set_xlabel(r'$\tau_n$')
         axis.set_ylabel(r'$M_{c,n} / M_{0,n}$')
@@ -9562,7 +9503,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     #    setattr(gmodstat, 'deflhost', deflhost)
     
     if gmod.boollens:
-        chalcedon_mod = _ensure_chalcedon_compat()
+        chalcedon_mod = _retr_chalcedon()
         defltemp = getattr(gmodstat, 'defl', np.zeros((getattr(gdat, 'numbpixl', 0), 2)))
         setattr(gmodstat, 'defl', defltemp)
         ratimassbeinsqrd = getattr(gmod, 'ratimassbeinsqrd', 1.)
@@ -10163,7 +10104,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                         gmodstat.dictelem[l]['deflprof'][:, k] = chalcedon_mod.retr_deflcutf(gdat.bctrpara.anglfull, gmodstat.dictelem[l]['defs'][k], asca, acut)
          
                         ### truncated mass 
-                        gmodstat.dictelem[l]['mcut'][k] = aspendos_mod.retr_mcut(gdat, gmodstat.dictelem[l]['defs'][k], asca, acut, gmod.adislens, gmod.mdencrit)
+                        gmodstat.dictelem[l]['mcut'][k] = chalcedon_mod.retr_mcut(gmodstat.dictelem[l]['defs'][k], asca, acut, gmod.adislens, gmod.mdencrit)
 
                         #### relevance, the dot product with the source flux gradient
                         # temp -- weigh the energy and PSF bins
@@ -10978,12 +10919,8 @@ def eval_modl(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                     listindxpixlelem[l], listindxpixlelemconc[l] = retr_indxpixlelemconc(gdat, strgmodl, gmodstat.dictelem, l)
                     
     if gmod.boollens:
-        chalcedon_mod = _ensure_chalcedon_compat()
-        aspendos_mod = globals().get('aspendos')
-        if aspendos_mod is None:
-            import aspendos as aspendos_mod
+        chalcedon_mod = _retr_chalcedon()
         chalcedon = chalcedon_mod
-        aspendos = aspendos_mod
         if not hasattr(gdat, 'typesers'):
             gdat.typesers = 'vauc'
         if 'xposgrid' not in gdat.__dict__ or 'yposgrid' not in gdat.__dict__:
@@ -11056,6 +10993,7 @@ def eval_modl(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                 'yposhost': gmodstat.yposhost[e],
                 'beinhost': gmodstat.beinhost[e],
                 'ellphost': gmodstat.ellphost[e],
+                'anglhost': gmodstat.anglhost[e],
             }
             deflhost[e] = chalcedon_mod.retr_defl(xposgrid, yposgrid, indxpixlmiss, dictchalinpt)['defltotl']
              

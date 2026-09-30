@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import chalcedon
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
@@ -50,18 +51,15 @@ def _deflect(
     einstein_radius: float,
     subhalo: tuple[float, float, float] | None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    radius = np.hypot(x_grid, y_grid) + 1.0e-4  # [arcsec]
-    alpha_x = einstein_radius * x_grid / radius  # [arcsec]
-    alpha_y = einstein_radius * y_grid / radius  # [arcsec]
+    """Return the deflection of a singular isothermal sphere plus an optional cored point-mass subhalo."""
+    deflection = chalcedon.retr_deflsie(x_grid.ravel(), y_grid.ravel(), 0.0, 0.0, einstein_radius).reshape(x_grid.shape + (2,))
     if subhalo is not None:
         x_subhalo, y_subhalo, subhalo_einstein_radius = subhalo
-        delta_x = x_grid - x_subhalo  # [arcsec]
-        delta_y = y_grid - y_subhalo  # [arcsec]
         core_radius = 0.03  # [arcsec]
-        radius_squared = delta_x**2 + delta_y**2 + core_radius**2  # [arcsec^2]
-        alpha_x += subhalo_einstein_radius**2 * delta_x / radius_squared  # [arcsec]
-        alpha_y += subhalo_einstein_radius**2 * delta_y / radius_squared  # [arcsec]
-    return alpha_x, alpha_y
+        deflection = deflection + chalcedon.retr_deflplum(
+            x_grid, y_grid, x_subhalo, y_subhalo, subhalo_einstein_radius, core_radius
+        )
+    return deflection[..., 0], deflection[..., 1]
 
 
 def render_lens(
