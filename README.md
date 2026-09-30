@@ -20,7 +20,8 @@ Primary use cases include
 - transdimensional inference over source populations
 - crowded-field detection and membership uncertainty
 - strong-lens and substructure forward modeling
-- spectral-line decomposition
+- spectral-line decomposition with configurable intrinsic profiles and instrument line-spread functions
+- transdimensional flare catalogs with Gaussian, exponential, FRED, and Davenport profiles
 - fixed-dimensional physical models with custom likelihoods
 
 Daylan, Portillo, and Finkbeiner (2017) introduced the core method for gamma-ray

@@ -60,9 +60,9 @@ The chain shown has 19 (+1/&minus;2) lines. Six lines appear in every sampled ca
 
 ## Variable number of stellar flares
 
-The data are simulated: a quiescent star observed at a TESS-like 2 minute cadence for 1 day, with 3 to 6 injected fast-rise, exponential-decay (FRED) flares (`nicomedia.retr_lcurmodl_flarsing`) at random peak times, amplitudes, and rise/decay time scales, and Poisson counts drawn around the expected count rate. PCAT reuses its 1D spectral-line machinery for this time series: time plays the role of the energy axis, and each flare is one Voigt-profile burst on top of a fixed, flat quiescent baseline (30,000 sweeps, about 80 s on one core).
+The data are simulated: a quiescent star observed at a TESS-like 2 minute cadence for 1 day, with 3 to 6 injected fast-rise, exponential-decay (FRED) flares (`nicomedia.retr_lcurmodl_flarsing`) at random peak times, amplitudes, and rise/decay time scales, and Poisson counts drawn around the expected count rate. PCAT reuses its one-dimensional element machinery for this time series. Time plays the role of the energy axis, and each flare is a native FRED component with a peak amplitude and independent rise and decay time scales on top of a fixed, flat quiescent baseline.
 
-The injected FRED shape is asymmetric (fast rise, slow decay), but PCAT's Voigt profile is symmetric, so a single component only approximates one flare. All 6 injected flares are recovered at their correct times and roughly the correct integrated counts, but the posterior favors 8 to 9 components overall: extra low-amplitude Voigt components absorb the asymmetric residual structure visible around each flare's decay, illustrating the mismatch between the approximating template and the injected shape.
+The inference model therefore represents the injected asymmetry directly. The catalog posterior jointly constrains the number of flares, their peak times and excess counts, and their separate rise and decay scales.
 
 ![Simulated light curve and PCAT model](variable_number_stellar_flares/visuals/variable_number_stellar_flares_light_curve_fit.png)
 

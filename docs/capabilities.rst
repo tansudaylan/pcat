@@ -23,8 +23,9 @@ Maintained workflows include:
   without first accumulating them into image pixels. The current public
   ``gaussian_mixture_catalog`` example remains a binned Poisson image workflow
   until the unbinned dispatcher is completed.
-* **Spectral and time-series likelihoods.** Variable-count Voigt profiles and
-  Keplerian radial-velocity models in the maintained spectral and RV examples.
+* **Spectral and time-series likelihoods.** Variable-count spectral lines with
+  eight intrinsic profile choices, instrument line-spread convolution, four
+  flare profiles, and Keplerian radial-velocity models.
 * **Transdimensional catalog products.** Every transdimensional likelihood
   produces samples of catalogs. By default, final processing condenses those
   samples into a catalog before optional association with a reference catalog
@@ -150,7 +151,11 @@ Spectral and time-series catalogs
 
 Spectral-line elements use the same transdimensional catalog machinery along a
 spectral axis. PCAT infers the number of lines together with line locations,
-amplitudes, and profile parameters. The maintained ``lghtlinevoig``
+amplitudes, and profile parameters. Gaussian, Lorentzian, Voigt, pseudo-Voigt,
+sinc-squared, skew-Gaussian, top-hat, and configured energy-dispersion profiles
+are available. A Gaussian line-spread function at constant resolving power or
+a measured tabulated kernel can convolve the intrinsic profiles while
+preserving line flux. The maintained ``lghtlinevoig``
 configuration models Voigt-profile emission lines in simulated spectral data
 and in the public JWST MIRI spectrum of NGC 7027. The observed-spectrum example
 uses measured flux uncertainties and a stated error floor to construct the
@@ -166,10 +171,11 @@ This example compares catalogs containing different numbers of lines. Its
 short modes are pipeline checks, while scientific analyses require adequate
 sampling, convergence assessment, and problem-specific prior validation.
 
-The same one-dimensional machinery supports binned time-series catalogs. The
-``variable_number_stellar_flares`` example fits symmetric Voigt components to a
-clearly labeled simulation of asymmetric fast-rise, exponential-decay flares.
-The model mismatch is deliberate and documented in its outputs. The
+The same one-dimensional machinery supports binned time-series catalogs.
+Gaussian, instantaneous-rise exponential-decay, fast-rise exponential-decay
+(FRED), and Davenport empirical flare templates have profile-specific sampled
+parameters. The ``variable_number_stellar_flares`` example fits native FRED
+components with independent rise and decay times to simulated FRED flares. The
 ``variable_number_exoplanets_radial_velocity`` example instead uses dedicated
 Keplerian elements, a radial-velocity likelihood, analytically marginalized
 instrument offsets, and numerically marginalized stellar jitter for a simulated

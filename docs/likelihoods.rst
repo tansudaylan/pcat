@@ -136,24 +136,38 @@ The ``spectype`` setting selects an analytic spectral shape:
 
 * ``"powr"`` for a power law.
 * ``"gaus"`` for a Gaussian profile.
+* ``"lore"`` for a Lorentzian profile.
 * ``"voig"`` for a Voigt profile.
+* ``"pvoi"`` for a pseudo-Voigt profile with mixing fraction ``frac``.
+* ``"sinc"`` for a sinc-squared profile.
+* ``"skew"`` for a skew-Gaussian profile with shape parameter ``skew``.
+* ``"toph"`` for a top-hat profile.
 * ``"edis"`` for an energy-dispersion profile using the configured
   ``edisintp`` response.
 * ``"colr"``, ``"curv"``, or ``"expc"`` for color-index, curved, or
   exponential-cutoff continua.
 
-``lghtlinevoig`` elements use integrated line flux ``flux``, line center
-``elin``, Gaussian width ``sigm``, and Lorentz width ``gamm``. Set parameter
-bounds with ``limtparaelem`` and proposal scales with ``stdvpropelemfire``.
-The current public configuration does not expose a general instrument-specific
-line-spread-function convolution; the profile parameters or configured energy
-dispersion must represent the spectral response used in a run.
+Line elements use integrated flux ``flux`` and line center ``elin``. Gaussian,
+sinc-squared, skew-Gaussian, and top-hat profiles add ``sigm``. Lorentzian
+profiles add ``gamm``. Voigt profiles use both widths. Pseudo-Voigt profiles
+also use ``frac``. Set parameter bounds with ``limtparaelem`` and proposal
+scales with ``stdvpropelemfire``.
+
+Set ``lsftype="gaus"`` and ``lsfresolvingpower`` to convolve each line at a
+constant instrument resolving power. Set ``lsftype="tabu"`` and pass an
+odd-length, nonnegative ``lsfkernel`` for a measured line-spread function.
+Both paths preserve sampled line flux. The default ``lsftype="none"`` leaves
+the intrinsic profiles unchanged.
 
 The same one-dimensional machinery can model time-binned data by treating time
-as the axis. The maintained stellar-flare example uses ``lghtlinevoig`` as a
-convenient flare profile and labels its asymmetric injected flare shapes as
-simulated. Radial-velocity models use Keplerian ``lghtlinekepl`` elements and
-their dedicated likelihood in :mod:`pcat.radial_velocity`.
+as the axis. ``flargauss`` uses peak amplitude ``flux``, peak time ``elin``,
+and full width at half maximum ``fwhm``. ``flarexpd`` adds a one-sided decay
+time ``scalfall``. ``flarfred`` uses independent ``scalrise`` and ``scalfall``
+for a fast-rise, exponential-decay profile. ``flardav`` uses ``fwhm`` for the
+empirical Davenport flare template. The maintained stellar-flare example fits
+native ``flarfred`` elements. Radial-velocity models use Keplerian
+``lghtlinekepl`` elements and their dedicated likelihood in
+:mod:`pcat.radial_velocity`.
 
 User-supplied likelihood
 ------------------------

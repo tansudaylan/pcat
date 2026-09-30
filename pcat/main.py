@@ -65,6 +65,8 @@ from tdpy.paths import make_directory, make_symlink, open_narr
 from tdpy.util import summgene
 
 from .plotting import plot_grid as plot_grid_native
+from .spectral import apply_gaussian_resolving_power, apply_line_spread_function, evaluate_line_profile, spectral_profile_parameters
+from .time_series import evaluate_flare_profile, flare_profile_parameters
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _REPO_ROOT not in sys.path:
@@ -77,21 +79,17 @@ except ImportError:
 
 
 def retr_spec(gdat, flux, sind=None, curv=None, expc=None, sindcolr=None,
-              elin=None, edisintp=None, sigm=None, gamm=None,
+              elin=None, edisintp=None, sigm=None, gamm=None, frac=None, skew=None,
               spectype='powr', plot=False):
     flux = np.asarray(flux)
     if gdat.numbener == 1:
         return flux[None, :]
 
     meanener = getattr(gdat.bctrpara, 'enerplot', gdat.bctrpara.ener) if plot else gdat.bctrpara.ener
-    if spectype == 'gaus':
-        return flux[None, :] * np.exp(-0.5 * ((meanener[:, None] - elin[None, :]) / sigm[None, :])**2) / (sigm[None, :] * np.sqrt(2. * np.pi))
-    if spectype == 'voig':
-        args = ((meanener[:, None] - elin[None, :]) + 1j * gamm[None, :]) / (np.sqrt(2.) * sigm[None, :])
-        return flux[None, :] * np.real(sp.special.wofz(args)) / (sigm[None, :] * np.sqrt(2. * np.pi))
-    if spectype == 'edis':
-        edis = edisintp(elin)[None, :]
-        return flux[None, :] * np.exp(-0.5 * ((meanener[:, None] - elin[None, :]) / edis)**2) / (edis * np.sqrt(2. * np.pi))
+    if spectype in ('gaus', 'lore', 'voig', 'pvoi', 'sinc', 'skew', 'toph', 'edis'):
+        width = edisintp(elin) if spectype == 'edis' else sigm
+        return evaluate_line_profile(meanener, spectype, flux, elin, gaussian_width=width,
+                                     lorentz_width=gamm, mixing_fraction=frac, skewness=skew)
     if spectype == 'colr':
         spec = np.zeros((meanener.size, flux.size))
         indxener = np.arange(meanener.size) if plot else gdat.indxener
@@ -118,12 +116,25 @@ def retr_elem_spec(gdat, typeelem, spectype, dictelem):
         return keplerian_radial_velocity(gdat.timervel[:, None], dictelem['elin'][None, :], dictelem['flux'][None, :],
                                          dictelem['ecce'][None, :], dictelem['argp'][None, :], dictelem['phas'][None, :],
                                          getattr(gdat, 'timervelrefr', 0.))
-    if typeelem == 'lghtlinevoig':
-        return retr_spec(gdat, dictelem['flux'], elin=dictelem['elin'], sigm=dictelem['sigm'],
-                         gamm=dictelem['gamm'], spectype=spectype)
+    if spectype in ('flargauss', 'flarexpd', 'flarfred', 'flardav'):
+        return evaluate_flare_profile(
+            gdat.bctrpara.ener, spectype, dictelem['flux'], dictelem['elin'],
+            rise_time=dictelem.get('scalrise'), decay_time=dictelem.get('scalfall'),
+            fwhm=dictelem.get('fwhm'))
     if typeelem.startswith('lghtline'):
-        return retr_spec(gdat, dictelem['flux'], elin=dictelem['elin'], edisintp=gdat.edisintp,
-                         spectype=spectype)
+        spec = retr_spec(
+            gdat, dictelem['flux'], elin=dictelem['elin'], edisintp=getattr(gdat, 'edisintp', None),
+            sigm=dictelem.get('sigm'), gamm=dictelem.get('gamm'), frac=dictelem.get('frac'),
+            skew=dictelem.get('skew'), spectype=spectype)
+        lsftype = getattr(gdat, 'lsftype', 'none')
+        if lsftype == 'gaus':
+            return apply_gaussian_resolving_power(
+                gdat.bctrpara.ener, spec, dictelem['elin'], gdat.lsfresolvingpower)
+        if lsftype == 'tabu':
+            return apply_line_spread_function(spec, gdat.lsfkernel)
+        if lsftype != 'none':
+            raise ValueError("lsftype must be 'none', 'gaus', or 'tabu'")
+        return spec
     sindcolr = [dictelem['sindcolr%04d' % i] for i in gdat.indxenerinde]
     return retr_spec(gdat, dictelem['flux'], sind=dictelem['sind'], curv=dictelem['curv'],
                      expc=dictelem['expc'], sindcolr=sindcolr, spectype=spectype)
@@ -6602,29 +6613,39 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
         gmod.numbparagenrelempopl = gmod.maxmpara.numbelem * gmod.numbparagenrelemsing
         gmod.numbparagenrelem = int(np.sum(gmod.numbparagenrelempopl))
     if gdat.typeexpr == 'fire' and gmod.numbpopl > 0 and all(len(names) == 0 for names in gmod.namepara.genrelem):
-        widthenerbin = np.median(np.diff(gdat.blimpara.enerfull))  # [m^-1]
-        if gmod.typeelem[0] == 'lghtlinekepl':
-            # Keplerian RV signals on a time axis: flux is the semi-amplitude K [m/s] and elin the period P [day]
-            names = ['flux', 'elin', 'phas', 'ecce', 'argp']
-            scales = ['logt', 'logt', 'self', 'self', 'self']
-            bounds = {
-                'flux': (0.3, 300.),
-                'elin': (1.2, 2. * (gdat.blimpara.enerfull[-1] - gdat.blimpara.enerfull[0])),
-                'phas': (0., 2. * np.pi),
-                'ecce': (0., 0.8),
-                'argp': (0., 2. * np.pi),
-            }
-        else:
-            names = ['flux', 'elin', 'sigm', 'gamm']
-            scales = ['logt'] * len(names)
-            bounds = {
-                'flux': (1e-3, 1e1),
-                'elin': (gdat.blimpara.enerfull[0], gdat.blimpara.enerfull[-1]),
-                'sigm': (0.35 * widthenerbin, 0.75 * widthenerbin),
-                'gamm': (0.05 * widthenerbin, 0.25 * widthenerbin),
-            }
+        widthenerbin = np.median(np.diff(gdat.blimpara.enerfull))  # [configured axis unit]
+        rangeener = gdat.blimpara.enerfull[-1] - gdat.blimpara.enerfull[0]  # [configured axis unit]
+        bounds = {
+            'flux': (1e-3, 1e1),
+            'elin': (gdat.blimpara.enerfull[0], gdat.blimpara.enerfull[-1]),
+            'sigm': (0.25 * widthenerbin, 0.25 * rangeener),
+            'gamm': (0.05 * widthenerbin, 0.25 * rangeener),
+            'frac': (0., 1.),
+            'skew': (-10., 10.),
+            'fwhm': (0.25 * widthenerbin, 0.25 * rangeener),
+            'scalrise': (0.25 * widthenerbin, 0.25 * rangeener),
+            'scalfall': (0.25 * widthenerbin, 0.5 * rangeener),
+            'phas': (0., 2. * np.pi),
+            'ecce': (0., 0.8),
+            'argp': (0., 2. * np.pi),
+        }
+        profiles = list(getattr(gmod, 'spectype', getattr(gdat, 'spectype', ['edis'] * gmod.numbpopl)))
+        if len(profiles) == 1 and gmod.numbpopl > 1:
+            profiles *= gmod.numbpopl
+        namespopl = []
+        for l in gmod.indxpopl:
+            if gmod.typeelem[l] == 'lghtlinekepl':
+                namespopl.append(['flux', 'elin', 'phas', 'ecce', 'argp'])
+                bounds['flux'] = (0.3, 300.)  # [m/s]
+                bounds['elin'] = (1.2, 2. * rangeener)  # [day]
+            elif profiles[l].startswith('flar'):
+                namespopl.append(list(flare_profile_parameters(profiles[l])))
+            else:
+                namespopl.append(list(spectral_profile_parameters(profiles[l])))
         bounds.update(getattr(gdat, 'limtparaelem', None) or {})
-        for name, scal in zip(names, scales):
+        scales = {name: ('self' if name in ('frac', 'skew', 'phas', 'ecce', 'argp') else 'logt')
+                  for names in namespopl for name in names}
+        for name, scal in scales.items():
             minm, maxm = bounds[name]
             setattr(gmod.minmpara, name, minm)
             setattr(gmod.maxmpara, name, maxm)
@@ -6636,17 +6657,18 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
                 bins = np.geomspace(minm, maxm, numbbinsplot + 1) if scal == 'logt' else np.linspace(minm, maxm, numbbinsplot + 1)
                 setattr(gdat.blimpara, name, bins)
                 setattr(gdat.bctrpara, name, 0.5 * (bins[:-1] + bins[1:]))
-            for l in gmod.indxpopl:
-                setattr(gmod.minmpara, name + 'pop%d' % l, minm)
-                setattr(gmod.maxmpara, name + 'pop%d' % l, maxm)
-                setattr(gmod.scalpara, name + 'pop%d' % l, scal)
-        gmod.namepara.genrelem = [list(names) for _ in gmod.indxpopl]
-        gmod.namepara.elem = [list(names) for _ in gmod.indxpopl]
+            for l, names in enumerate(namespopl):
+                if name in names:
+                    setattr(gmod.minmpara, name + 'pop%d' % l, minm)
+                    setattr(gmod.maxmpara, name + 'pop%d' % l, maxm)
+                    setattr(gmod.scalpara, name + 'pop%d' % l, scal)
+        gmod.namepara.genrelem = [list(names) for names in namespopl]
+        gmod.namepara.elem = [list(names) for names in namespopl]
         gmod.namepara.derielemodim = [[] for _ in gmod.indxpopl]
-        gmod.scalpara.genrelem = [list(scales) for _ in gmod.indxpopl]
-        gmod.indxparagenrelemsing = [np.arange(len(names), dtype=int) for _ in gmod.indxpopl]
+        gmod.scalpara.genrelem = [[scales[name] for name in names] for names in namespopl]
+        gmod.indxparagenrelemsing = [np.arange(len(names), dtype=int) for names in namespopl]
         gmod.indxparaderielemsing = [np.array([], dtype=int) for _ in gmod.indxpopl]
-        gmod.numbparagenrelemsing = np.full(gmod.numbpopl, len(names), dtype=int)
+        gmod.numbparagenrelemsing = np.array([len(names) for names in namespopl], dtype=int)
         gmod.numbparaderielemsing = np.zeros(gmod.numbpopl, dtype=int)
         gmod.numbparagenrelemcuml = np.zeros(gmod.numbpopl, dtype=int)
         if gmod.numbpopl > 1:

@@ -8,12 +8,9 @@ times, amplitudes, and rise/decay time scales drawn from simple illustrative dis
 fit to any specific stellar sample). Photon counts are then drawn from a Poisson distribution
 around the expected count rate, matching PCAT's own likelihood.
 
-PCAT fits a transdimensional catalog of Voigt-profile bursts on top of a fixed, flat quiescent
-baseline by reusing its 1D spectral-line machinery (typeexpr='fire'): time plays the role of the
-energy axis, and each flare is one Voigt element. This is a modeling approximation: the Voigt
-profile is symmetric, whereas the injected FRED flares have a fast rise and a slower, longer
-decay, so recovered flare parameters describe an effective symmetric burst duration rather than
-separate rise and decay time scales.
+PCAT fits a transdimensional catalog of FRED-profile bursts on top of a fixed, flat quiescent
+baseline by reusing its 1D element machinery (typeexpr='fire'). Time plays the role of the energy
+axis, and each flare has a peak amplitude plus independent rise and decay time scales.
 """
 
 from tdpy.verbosity import print
@@ -99,13 +96,13 @@ def run_pcat(edges, template, numbswep):
         typeexpo="file",
         strgexpo="expo.fits",
         binsenerfull=edges,
-        spectype=["voig"],
+        spectype=["flarfred"],
         spatdisttype=["line"],
         typeelem=["lghtlinevoig"],
-        dictfitt={"typeelem": ["lghtlinevoig"], "spectype": ["voig"], "sbrtbacknorm": [template],
+        dictfitt={"typeelem": ["lghtlinevoig"], "spectype": ["flarfred"], "sbrtbacknorm": [template],
                   "listnamediff": ["back0000"]},
-        # burst integrated counts [counts day] and effective Gaussian/Lorentzian widths [day]
-        limtparaelem={"flux": (10.0, 5.0e4), "sigm": (1.0e-3, 3.0e-2), "gamm": (5.0e-4, 5.0e-2)},
+        # peak excess counts [counts per bin] and rise/fall time scales [day]
+        limtparaelem={"flux": (10.0, 1.0e4), "scalrise": (1.0e-3, 2.0e-2), "scalfall": (2.0e-3, 8.0e-2)},
         maxmgangdata=100.0 / (3600.0 * 180.0 / np.pi),  # [rad], unused for non-spatial data
         anlytype="spec",
         fittminmnumbelempop0=0,
@@ -179,18 +176,18 @@ def plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, typefileplot, c
 
 
 def plot_flare_catalog_samples(catalog, posterior, typefileplot, colrfore):
-    """Posterior samples of flare time and integrated counts, with the injected flares marked."""
+    """Posterior samples of flare time and peak excess counts, with the injected flares marked."""
     listelin = np.concatenate([np.asarray(sample[0]["elin"]) for sample in posterior.listpostdictelem])  # [day]
     listflux = np.concatenate([np.asarray(sample[0]["flux"]) for sample in posterior.listpostdictelem])  # [counts day]
     figure, axis = plt.subplots(figsize=(7.0, 3.4))
     axis.scatter((listelin - TIME_OFFSET_DAYS) * 24.0, listflux, s=4, alpha=0.25, color="C0", lw=0,
                 label=f"Posterior flare samples ({len(posterior.listpostdictelem)} catalogs)")
-    trueflux = catalog["amplflar"] * BASELINE_COUNT_RATE * np.sqrt(2.0 * np.pi) * 0.5 * (catalog["scalrise"] + catalog["scalfall"])
+    trueflux = catalog["amplflar"] * BASELINE_COUNT_RATE
     axis.scatter((catalog["timeflar"] - TIME_OFFSET_DAYS) * 24.0, trueflux, marker="*", s=120, color="C3", zorder=5,
                 label="Injected flares (approximate)")
     axis.set_yscale("log")
     axis.set_xlabel("Time [hour]")
-    axis.set_ylabel("Burst integrated counts [counts day]")
+    axis.set_ylabel("Peak excess [counts per bin]")
     axis.legend(loc="upper left", fontsize=8)
     save(figure, "variable_number_stellar_flares_catalog_samples", typefileplot)
 

@@ -115,8 +115,8 @@ Publication and instrument examples
 
 ``variable_number_stellar_flares``
    Simulated one-day, TESS-like light curve with fast-rise, exponential-decay
-   flares. PCAT fits a variable catalog of symmetric Voigt bursts, making the
-   profile mismatch and its effect on inferred component count explicit.
+   flares. PCAT fits a variable catalog of native FRED bursts with independent
+   peak amplitude, peak time, rise time, and decay time.
 
    .. code-block:: bash
 

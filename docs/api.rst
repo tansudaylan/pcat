@@ -149,6 +149,27 @@ Plotting
 Instrument response
 -------------------
 
+.. py:function:: pcat.spectral.evaluate_line_profile(axis, profile, flux, center, gaussian_width=None, lorentz_width=None, mixing_fraction=None, skewness=None)
+
+   Evaluate integrated-flux-normalized Gaussian, Lorentzian, Voigt,
+   pseudo-Voigt, sinc-squared, skew-Gaussian, top-hat, or configured
+   energy-dispersion line profiles.
+
+.. py:function:: pcat.spectral.apply_gaussian_resolving_power(axis, spectrum, centers, resolving_power)
+
+   Convolve each line column with a Gaussian line-spread function at constant
+   resolving power while preserving sampled flux.
+
+.. py:function:: pcat.spectral.apply_line_spread_function(spectrum, kernel)
+
+   Convolve one or more spectra with an odd-length tabulated kernel while
+   preserving each column's sampled flux.
+
+.. py:function:: pcat.time_series.evaluate_flare_profile(time, profile, amplitude, peak_time, rise_time=None, decay_time=None, fwhm=None)
+
+   Evaluate peak-normalized Gaussian, one-sided exponential-decay, FRED, or
+   Davenport empirical flare profiles.
+
 .. py:function:: pcat.psf_poly_fit(gdat, psfnusam, factusam)
 
    Fit a piecewise-cubic subpixel model to an oversampled one-dimensional
