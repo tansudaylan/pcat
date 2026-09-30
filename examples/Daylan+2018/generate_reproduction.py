@@ -43,9 +43,10 @@ def run_reproduction(one_subhalo: bool = False, smoke: bool = False,
     """Generate PCAT image, model, residual, and catalog figures."""
     from pcat.demo import run_pipeline_demo
 
+    configuration = build_configuration(one_subhalo, smoke, typefileplot)
     run_pipeline_demo(
-        OUTPUT_ROOT,
-        **build_configuration(one_subhalo, smoke, typefileplot),
+        OUTPUT_ROOT / str(configuration["strgcnfg"]),
+        **configuration,
     )
 
 
