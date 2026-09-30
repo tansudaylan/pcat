@@ -2,7 +2,11 @@ import numpy as np
 import pytest
 from types import SimpleNamespace
 
-from pcat.diagnostics import autocorrelation_time, gelman_rubin
+from pcat.diagnostics import (
+    autocorrelation_time,
+    binomial_wilson_interval,
+    gelman_rubin,
+)
 from pcat.main import (
     _PCATMCMCCompat,
     _configure_proposal_types,
@@ -24,6 +28,20 @@ def test_gmrb_rejects_separated_constant_chains():
 
     assert np.isinf(_PCATMCMCCompat.gmrb_test(chains))
     assert np.isinf(gelman_rubin(chains))
+
+
+def test_binomial_wilson_interval_has_finite_boundary_uncertainty():
+    empty_lower, empty_upper = binomial_wilson_interval(0, 40)
+    full_lower, full_upper = binomial_wilson_interval(40, 40)
+    half_lower, half_upper = binomial_wilson_interval(20, 40)
+
+    assert type(half_lower) is float
+    assert type(half_upper) is float
+    assert empty_lower == 0.0
+    assert empty_upper > 0.0
+    assert full_lower < 1.0
+    assert full_upper == 1.0
+    assert np.isclose(half_lower, 1.0 - half_upper)
 
 
 def test_autocorrelation_distinguishes_independent_draws_and_random_walk():

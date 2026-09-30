@@ -24,7 +24,7 @@ def test_voigt_profile_configuration_calls_pcat_pipeline(monkeypatch):
         calls.append(configuration)
         return {"configuration": configuration["strgcnfg"]}
 
-    monkeypatch.setattr(example.pcat.main, "sample", fake_sample)
+    monkeypatch.setattr(example.sampling, "sample", fake_sample)
 
     result = example.run_voigt_profile_detection("nomi")
 

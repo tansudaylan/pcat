@@ -41,6 +41,7 @@ Functionality overview
      - Positions, values, confidence, and significance
      - Completeness and purity versus matching criteria
      - ``catalog_association_completeness_purity``
+
 Inference and proposal engine
 -----------------------------
 
@@ -48,7 +49,7 @@ PCAT supports fixed-dimensional parameters and populations of exchangeable
 elements. Within-model proposals update parameters already in the state. Birth
 and death proposals change the catalog size, while supported element models can
 also use split and merge proposals. Multiple independent workers can sample a
-configuration, and :func:`pcat.main.sample_parallel` can execute related
+configuration, and :func:`pcat.sampling.sample_parallel` can execute related
 configurations for controlled comparisons.
 
 Parameters are sampled in unit-prior coordinates and transformed to their

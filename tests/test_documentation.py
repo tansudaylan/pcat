@@ -122,6 +122,10 @@ def test_rubin_dp1_notebook_preserves_real_data_scope():
     assert "Local fallback data are intentionally not substituted" in source
     assert "SIMBAD is curated but incomplete" in source
     assert "gaussian_lens_log_likelihood" in source
+    assert "make_image_sequence_animation(" in source
+    assert "[cutout['data'] for cutout in cutouts]" in source
+    assert "rubin_dp1_confirmed_lens_cutouts.gif" in source
+    assert "display(Image(filename=str(cutout_animation_path)))" in source
 
 
 def test_simulated_rubin_cluster_notebook_contains_rendered_visuals():

@@ -4,7 +4,11 @@ Public API
 Sampling
 --------
 
-.. py:function:: pcat.main.sample(**configuration)
+New integrations should use ``pcat.sampling``. The implementation currently
+remains in ``pcat.main`` for backward compatibility while the sampler engine is
+decomposed into smaller modules.
+
+.. py:function:: pcat.sampling.sample(**configuration)
 
    Dispatch an image, catalog, or fixed-dimensional PCAT configuration, execute
    sampling and final processing, and return the final global state object.
@@ -43,13 +47,18 @@ Sampling
    See :doc:`capabilities` for a complete example and the image and spectral
    model families.
 
-.. py:function:: pcat.main.init(configuration)
+.. py:function:: pcat.sampling.init(configuration)
 
-   Lower-level initialization and execution engine. New image-analysis code
-   should normally call :func:`pcat.main.sample`, which performs experiment
+   Lower-level initialization and execution engine. Most analyses should call
+   :func:`pcat.sampling.sample`, which performs experiment
    dispatch before invoking this function.
 
-.. py:function:: pcat.main.sample_parallel(dictargsvari, listnamecnfgextn, dictpcatinpt=None, **options)
+.. py:function:: pcat.sampling.init_image(**configuration)
+
+   Initialize image-analysis configuration and construct the populated state
+   passed to :func:`pcat.sampling.init`.
+
+.. py:function:: pcat.sampling.sample_parallel(dictargsvari, listnamecnfgextn, dictpcatinpt=None, **options)
 
    Execute a family of related configurations, optionally in separate
    processes. ``dictpcatinpt`` contains shared settings and ``dictargsvari``
@@ -86,7 +95,7 @@ Example analyses
 .. py:function:: pcat.demo.run_pipeline_demo(output_root, **configuration)
 
    Apply the reduced sampling and plotting settings used by the simulated image
-   analyses, set ``pathbase``, and call :func:`pcat.main.sample`.
+   analyses, set ``pathbase``, and call :func:`pcat.sampling.sample`.
 
 .. py:function:: pcat.demo.run_example_script(relative_path, *arguments)
 
@@ -145,7 +154,7 @@ Persistence
 .. py:function:: pcat.main.proc_finl(gdat=None, strgcnfg=None, strgpdfn="post", listnamevarbproc=None, forcplot=False)
 
    Aggregate worker states and create final posterior products. Normal calls to
-   :func:`pcat.main.sample` invoke this automatically.
+   :func:`pcat.sampling.sample` invoke this automatically.
 
 .. py:function:: pcat.main.proc_anim(strgcnfg, pathbase=None)
 

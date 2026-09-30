@@ -31,6 +31,14 @@ point-source, strong-lens, and spectral-line analyses. The synchronized panels
 show how one inference and visualization pipeline spans distinct data models.
 These controlled simulations are not measurements of observed systems.
 
+## Package organization
+
+New sampling integrations should use `pcat.sampling` for the public entry
+points. `pcat.main` remains the implementation and backward-compatible access
+path while its tightly coupled engine is decomposed. Fixed-dimensional sampling,
+diagnostics, plotting, catalog association, paths, and PSF utilities live in
+their respective modules under `pcat/`.
+
 ## Catalog inference
 
 PCAT compares configurations with different numbers of sources, samples source
@@ -106,7 +114,7 @@ python examples/roman_strong_lens_perturber_catalog/roman_strong_lens_perturber_
 
 For the fixed seed, the approximate catalog classifier recovers 38% of injected perturbers above a posterior threshold of 0.5, with a 68% Wilson interval of 31% to 45%. It produces no false positives among the 50 null lenses, with an upper interval bound of 2%, and localizes 84% of injected perturbers to the correct candidate position. The mean one-perturber posterior probability is 0.37 for injected systems and $4.6\times10^{-5}$ for null systems. These values characterize this clearly labeled simulation and are not forecasts from real Roman observations.
 
-Full transdimensional runs initialize a model configuration, define a likelihood and data product, and call `pcat.main.init(...)` with a populated configuration dictionary.
+Full transdimensional runs initialize a model configuration, define a likelihood and data product, and call `pcat.sampling.init(...)` with a populated configuration dictionary.
 
 ## Rubin-like cluster lens
 

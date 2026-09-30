@@ -1,11 +1,13 @@
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageDraw
 
 from pcat.plotting import (
     DEFAULT_POSTERIOR_COLLAGE,
     EXAMPLES_ROOT,
     POSTERIOR_ANIMATION_PANELS,
+    make_image_sequence_animation,
     make_posterior_animation_collage,
 )
 
@@ -39,6 +41,26 @@ def test_make_collage_combines_posterior_sequences(tmp_path):
         assert animation.n_frames == 4
         assert animation.size == (300, 450)
         assert animation.info["duration"] == 100
+
+
+def test_make_image_sequence_animation_includes_every_cutout(tmp_path):
+    images = [
+        np.full((12, 10), value, dtype=float)
+        for value in (1.0, 2.0, 3.0)
+    ]
+    output_path = tmp_path / "rubin_cutouts.gif"
+
+    make_image_sequence_animation(
+        images,
+        ["lens A i-band", "lens B r-band", "lens C z-band"],
+        output_path,
+        duration_ms=120,
+        image_size=64,
+    )
+
+    with Image.open(output_path) as animation:
+        assert animation.n_frames == len(images)
+        assert animation.info["duration"] == 120
 
 
 def test_readme_embeds_multiframe_collage():

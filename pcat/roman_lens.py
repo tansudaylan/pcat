@@ -5,9 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage import gaussian_filter
+
+from .diagnostics import binomial_wilson_interval
 
 
 @dataclass(frozen=True)
@@ -347,109 +348,4 @@ def summarize_population(
     }
 
 
-def binomial_wilson_interval(
-    successes: int, trials: int, z_score: float = 1.0
-) -> tuple[float, float]:
-    """Return a Wilson binomial interval, including finite boundary errors."""
-    if trials <= 0 or not 0 <= successes <= trials:
-        raise ValueError("Require 0 <= successes <= trials and trials > 0.")
-    fraction = successes / trials
-    z_squared = z_score**2
-    denominator = 1.0 + z_squared / trials
-    center = (fraction + z_squared / (2.0 * trials)) / denominator
-    half_width = z_score * np.sqrt(
-        fraction * (1.0 - fraction) / trials + z_squared / (4.0 * trials**2)
-    ) / denominator
-    return float(center - half_width), float(center + half_width)
-
-
-def plot_detection_diagnostic(
-    records: list[dict[str, float | int | bool]],
-    output_path: Path,
-    examples: dict[str, np.ndarray] | None = None,
-) -> Path:
-    """Plot representative inference stages and population detection results."""
-    output_path = Path(output_path)
-    if output_path.suffix not in (".png", ".pdf"):
-        raise ValueError("Output format must be 'png' or 'pdf'.")
-
-    truth = np.array([record["has_subhalo"] for record in records], dtype=bool)
-    signal_to_noise = np.array(
-        [record["injected_signal_to_noise"] for record in records], dtype=float
-    )
-    probability = np.array([record["posterior_one"] for record in records], dtype=float)
-    summary = summarize_population(records)
-
-    if examples:
-        example_prefix = sorted(key.removesuffix("_data") for key in examples if key.endswith("_data"))[0]
-        data = examples[f"{example_prefix}_data"]
-        macro = examples[f"{example_prefix}_macro"]
-        residual = examples[f"{example_prefix}_residual"]
-        figure, axes = plt.subplots(2, 2, figsize=(7.2, 6.4), facecolor="white")
-        image_axes = axes.flat[:3]
-        image_minimum = min(np.percentile(data, 1.0), np.percentile(macro, 1.0))
-        image_maximum = max(np.percentile(data, 99.5), np.percentile(macro, 99.5))
-        residual_limit = np.max(np.abs(residual))
-        panels = (
-            (data, "Simulated detector input", "viridis", image_minimum, image_maximum),
-            (macro, "Macro-lens model", "viridis", image_minimum, image_maximum),
-            (residual, "Data - macro model", "RdBu_r", -residual_limit, residual_limit),
-        )
-        for image_axis, (image, title, color_map, minimum, maximum) in zip(image_axes, panels):
-            image_artist = image_axis.imshow(
-                image, origin="lower", cmap=color_map, vmin=minimum, vmax=maximum
-            )
-            image_axis.set_title(title)
-            image_axis.set_xlabel("Detector x [pixel]")
-            image_axis.set_ylabel("Detector y [pixel]")
-            figure.colorbar(image_artist, ax=image_axis, label="Signal [electron pixel$^{-1}$]")
-        axis = axes[1, 1]
-    else:
-        figure, axis = plt.subplots(figsize=(6.5, 4.0), facecolor="white")
-    axis.scatter(
-        signal_to_noise[~truth],
-        probability[~truth],
-        color="0.55",
-        alpha=0.65,
-        s=24,
-        label="No perturber",
-    )
-    axis.scatter(
-        signal_to_noise[truth],
-        probability[truth],
-        color="#A51417",
-        alpha=0.75,
-        s=28,
-        label="Injected perturber",
-    )
-    axis.axhline(0.5, color="black", linestyle="--", linewidth=1.0, label="Detection threshold")
-    axis.set_xlabel(r"Injected perturbation signal-to-noise [$\sigma$]")
-    axis.set_ylabel(r"Posterior probability $P(N_{\rm sub}=1\mid d)$")
-    axis.set_title("Catalog inference")
-    axis.set_ylim(-0.03, 1.03)
-    axis.grid(False)
-    axis.legend(frameon=True, fancybox=True, framealpha=1.0, loc="upper left")
-    axis.text(
-        0.98,
-        0.04,
-        "TPR %.0f%% [%.0f, %.0f]\nFPR %.0f%% [%.0f, %.0f]\nWilson intervals ($z=1$)"
-        % (
-            100.0 * summary["true_positive_rate"],
-            100.0 * summary["true_positive_rate_lower"],
-            100.0 * summary["true_positive_rate_upper"],
-            100.0 * summary["false_positive_rate"],
-            100.0 * summary["false_positive_rate_lower"],
-            100.0 * summary["false_positive_rate_upper"],
-        ),
-        transform=axis.transAxes,
-        ha="right",
-        va="bottom",
-    )
-    figure.suptitle("Simulated Roman strong-lens catalog inference")
-    figure.tight_layout()
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Writing to {output_path}...")
-    figure.savefig(output_path, dpi=300, bbox_inches="tight")
-    plt.close(figure)
-    return output_path
+from .plotting import plot_detection_diagnostic

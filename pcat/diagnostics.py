@@ -5,6 +5,20 @@ from scipy.special import logsumexp
 from scipy.stats import multivariate_normal, norm
 
 
+def binomial_wilson_interval(successes, trials, z_score=1.0):
+    """Return the Wilson interval for a binomial proportion."""
+    if trials <= 0 or not 0 <= successes <= trials or z_score <= 0.0:
+        raise ValueError("Require valid binomial counts and a positive z_score.")
+    fraction = successes / trials
+    z_squared = z_score**2
+    denominator = 1.0 + z_squared / trials
+    center = (fraction + z_squared / (2.0 * trials)) / denominator
+    half_width = z_score * np.sqrt(
+        fraction * (1.0 - fraction) / trials + z_squared / (4.0 * trials**2)
+    ) / denominator
+    return float(center - half_width), float(center + half_width)
+
+
 def gelman_rubin(chains):
     """Return the potential scale reduction factor across parallel chains."""
     values = np.asarray(chains, dtype=float)

@@ -133,9 +133,9 @@ def build_configuration(smoke: bool = False, typefileplot: str = "png") -> dict[
 
 def run_reproduction(smoke: bool = False, typefileplot: str = "png") -> object:
     """Run PCAT and write its chain and figures under the example directory."""
-    import pcat
+    from pcat.sampling import sample
 
-    return pcat.main.sample(**build_configuration(smoke, typefileplot))
+    return sample(**build_configuration(smoke, typefileplot))
 
 
 def main() -> int:

@@ -4,11 +4,8 @@
 import argparse
 from pathlib import Path
 
-from pcat.roman_lens import (
-    plot_detection_diagnostic,
-    simulate_population,
-    summarize_population,
-)
+from pcat.plotting import plot_detection_diagnostic
+from pcat.roman_lens import simulate_population, summarize_population
 
 
 def run_example(output_path: Path, number_lenses: int = 100) -> dict[str, float | int]:

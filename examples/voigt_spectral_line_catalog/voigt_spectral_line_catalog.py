@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-import pcat
+from pcat import sampling
 
 
 def build_configurations():
@@ -72,7 +72,7 @@ def run_voigt_profile_detection(configuration="nomi", smoke=False):
             booldiag=False,
             typeverb=0,
         )
-    return pcat.main.sample(**common)
+    return sampling.sample(**common)
 
 
 def main():

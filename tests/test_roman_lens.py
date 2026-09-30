@@ -5,7 +5,6 @@ from types import SimpleNamespace
 
 from pcat.roman_lens import (
     RomanLensConfig,
-    binomial_wilson_interval,
     gaussian_lens_log_likelihood,
     infer_catalog_probability,
     poisson_lens_log_likelihood,
@@ -148,17 +147,3 @@ def test_population_rejects_invalid_detection_threshold():
 def test_population_requires_injected_and_null_cohorts():
     with pytest.raises(ValueError, match="injected and null"):
         simulate_population(number_lenses=1)
-
-
-def test_binomial_wilson_interval_has_finite_boundary_uncertainty():
-    empty_lower, empty_upper = binomial_wilson_interval(0, 40)
-    full_lower, full_upper = binomial_wilson_interval(40, 40)
-    half_lower, half_upper = binomial_wilson_interval(20, 40)
-
-    assert type(half_lower) is float
-    assert type(half_upper) is float
-    assert empty_lower == 0.0
-    assert empty_upper > 0.0
-    assert full_lower < 1.0
-    assert full_upper == 1.0
-    assert np.isclose(half_lower, 1.0 - half_upper)

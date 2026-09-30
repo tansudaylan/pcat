@@ -141,7 +141,7 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
     module = load_example_module("pcat_voigt_example", script_path)
     captured = {}
     monkeypatch.setattr(
-        module.pcat.main,
+        module.sampling,
         "sample",
         lambda **configuration: captured.update(configuration),
     )
