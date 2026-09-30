@@ -1,1 +1,0 @@
-/Users/tdaylan/Documents/work/git/pcat/examples/jwst_miri_ngc7027_line_catalog/data/outp/jwst_miri_ngc7027_line_catalog/stat.txt

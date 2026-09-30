@@ -1,1 +1,0 @@
-/Users/tdaylan/Documents/work/git/pcat/examples/sampler_comparison_emcee_dynesty/data/outp/sampler_comparison_emcee_dynesty/stat.txt
