@@ -167,10 +167,22 @@ plot_grid(
 )
 ```
 
-## Fixed-dimensional evidence
+`plot_population_grid` compares several labeled sample populations. It draws a
+corner plot, one-dimensional histograms, and pair-wise scatter plots, and it
+accepts log-scaled parameters, categorical parameters, and reference draws:
 
-`pcat.diagnostics.estimate_evidence` estimates the marginal likelihood for a
-fixed-dimensional PCAT run with normalized bounded (`self`) or Gaussian (`gaus`)
+```python
+from pcat import plot_population_grid
+
+plot_population_grid(
+        [["Mass", "M$_\\odot$"], ["Radius", "R$_\\odot$"]],
+        listpara=[samples_detected, samples_all],
+        listlablpopl=["Detected", "All"],
+        pathbase="/path/to/visuals/",
+        boolplottria=True,
+)
+```
+
 priors. It fits a proposal to posterior draws and evaluates the likelihood on
 independent draws from a mixture of that proposal and the prior:
 

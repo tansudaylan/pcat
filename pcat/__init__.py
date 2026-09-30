@@ -19,4 +19,5 @@ from .associate import associate_catalogs
 from .diagnostics import binomial_wilson_interval, posterior_convergence
 from .paths import get_data_path, get_repository_path, get_visuals_path
 from .plotting import plot_grid
+from .population_grid import plot_population_grid
 from .psf import psf_poly_fit

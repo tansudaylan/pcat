@@ -35,6 +35,7 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `voigt_spectral_line_catalog/`: nominal and high-signal Voigt-profile line detection in simulated spectra
 - `proposal_profiling/`: execution time, prior-support fraction, and acceptance of each proposal type on the simulated Voigt spectrum
 - `sampler_comparison_emcee_dynesty/`: PCAT, emcee, and dynesty on one simulated sinusoid posterior
+- `population_grid/`: corner, histogram, and pair plots of two simulated sample populations
 - `fermi_lat_pg1553_event_filter/`: a Fermi Large Area Telescope event-filter configuration for PG 1553+113
 
 ## Proposal profiling
