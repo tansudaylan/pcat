@@ -41,8 +41,9 @@ def retr_llik_rvelmarg(resi, stdv, matrdesi, listjitt):
     """
     # inverse variances for each jitter value, shape (numbjitt, numbdata) [s^2/m^2]
     weig = 1. / (stdv[None, :]**2 + listjitt[:, None]**2)
-    matrfish = np.einsum('jn,np,nq->jpq', weig, matrdesi, matrdesi)
-    vectproj = np.einsum('jn,np,n->jp', weig, matrdesi, resi)
+    # matrix products are much faster than the equivalent einsum for many data points
+    matrfish = np.stack([matrdesi.T @ (weigjitt[:, None] * matrdesi) for weigjitt in weig])
+    vectproj = (weig * resi[None, :]) @ matrdesi
     chsqfull = np.sum(weig * resi[None, :]**2, axis=1)
     # chi-squared after projecting out the best-fitting linear nuisances
     chsqredu = chsqfull - np.einsum('jp,jp->j', vectproj, np.linalg.solve(matrfish, vectproj[:, :, None])[:, :, 0])

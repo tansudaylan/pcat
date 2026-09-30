@@ -267,6 +267,17 @@ class PlanetLikelihood:
         return retr_llik_rvelmarg(self.velocity - model, self.stdv, self.matrdesi, self.listjitt)
 
 
+PCAT_PLANET_CALLS = [0]
+
+
+def pcat_planet_log_likelihood(gdat, strgmodl, cntpmodl):
+    """PCAT's RV likelihood callback, counting evaluations."""
+    from pcat.radial_velocity import retr_llik_rvel
+
+    PCAT_PLANET_CALLS[0] += 1
+    return retr_llik_rvel(gdat, strgmodl, cntpmodl)
+
+
 def run_pcat_planets(time_obs, velocity, stdv, numbswep):
     """One transdimensional PCAT run over 0 to MAXM_NUMB_PLAN planets with a uniform count prior."""
     from pcat import sampling
@@ -278,7 +289,8 @@ def run_pcat_planets(time_obs, velocity, stdv, numbswep):
                                  maxmnumbplan=MAXM_NUMB_PLAN, factpriodoff=0.0, probjump=0.2, numbswep=numbswep,
                                  numbsamp=numbswep // 50, inittype="rand", typeseed=0,
                                  stdvpropelemfire=[1e-2, 1e-4, 3e-2, 3e-2, 3e-2], boolmakeplot=False,
-                                 boolmakeplotinit=False, typeverb=0)
+                                 boolmakeplotinit=False, typeverb=0, retr_llik=pcat_planet_log_likelihood)
+    PCAT_PLANET_CALLS[0] = 0
     start = time.perf_counter()
     sampling.sample(**dictpcat)
     elapsed = time.perf_counter() - start
@@ -287,8 +299,7 @@ def run_pcat_planets(time_obs, velocity, stdv, numbswep):
     numbelem = np.asarray(posterior.listpostnumbelem).astype(int).ravel()
     listperi = [np.asarray(sample[0]["elin"]) for sample, n in zip(posterior.listpostdictelem, numbelem) if n == 2]
     return {"prob": np.bincount(numbelem, minlength=MAXM_NUMB_PLAN + 1) / numbelem.size, "elapsed": elapsed,
-            # every sweep proposes one state and evaluates its likelihood once
-            "calls": numbswep, "peri": np.sort(np.array(listperi), 1)}
+            "calls": PCAT_PLANET_CALLS[0], "peri": np.sort(np.array(listperi), 1)}
 
 
 def run_dynesty_planets(time_obs, velocity, stdv, timerefr, nlive, seed=5):

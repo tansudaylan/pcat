@@ -384,7 +384,8 @@ def _retr_chain_convergence(listvarb, maxmrhat=1.01, minmess=200.):
 def _retr_adapted_proposal_scale(scale, accepted, count, target=0.44):
     """Return a Robbins-Monro proposal-scale update during burn-in."""
     gain = min(0.05, 1. / np.sqrt(max(int(count), 1)))
-    return float(scale) * np.exp(gain * (float(accepted) - target))
+    # steps wider than the unit interval only reflect back, so unconstrained parameters stop growing there
+    return min(float(scale) * np.exp(gain * (float(accepted) - target)), 1.)
 
 
 def _retr_posterior_summary_channels(gdatfinl, gdatmodi, strgpdfn):
@@ -19125,8 +19126,8 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
             if gdat.booldiag:
                 if not gdatmodi.this.indxproptype > 2 and gdatmodi.this.ljcb != 0.:
                     raise Exception('log Jacobian can only be be nonzero when a split or merge is proposed.')
-                if not gdatmodi.this.indxproptype > 2 and gdatmodi.this.ltrp != 0.:
-                    raise Exception('log ratio proposal probability can only be be nonzero when a split or merge is proposed.')
+                if gdatmodi.this.indxproptype in (0, 5) and gdatmodi.this.ltrp != 0.:
+                    raise Exception('log ratio proposal probability can only be be nonzero when a birth, death, split, or merge is proposed.')
            
             # evaluate the acceptance probability
             gdatmodi.this.deltlpostotl = gdatmodi.next.lpostotl - gdatmodi.this.lpostotl
@@ -19404,8 +19405,9 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
                     print(gdatmodi.this.paragenrscalfull[gmod.indxpara.numbelem[l]].astype(int))
             print('Current number of parameters:')
             print(numbpara)
-            print('gdatmodi.this.numbdoff')
-            print(gdatmodi.this.numbdoff)
+            # the degrees of freedom are only computed by the built-in likelihood path
+            if hasattr(gdatmodi.this, 'numbdoff'):
+                print('Degrees of freedom: %d' % gdatmodi.this.numbdoff)
             for attr, valu in gdatmodi.__dict__.items():
                 if isinstance(valu, np.ndarray):
                     if 8 * valu.size * gdat.numbsamptotl > 1e9:
