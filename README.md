@@ -8,21 +8,26 @@ The primary mark is circular and uses Harvard Crimson, black, and white. Five re
 
 ## Purpose
 
-PCAT is a Bayesian framework for inferring catalogs and physical models from
-Poisson-distributed images, photon events, and spectra. Its transdimensional
-sampler infers the number of sources together with their properties. The same
-sampling, persistence, and visualization pipeline also supports fixed-dimensional
-models with user-defined likelihoods.
+PCAT is a Bayesian inference framework for Poisson-distributed images, photon
+events, spectra, and other data. It supports fixed-dimensional inference and
+transdimensional inference over a metamodel. A model has a specified parameter
+dimension; a metamodel combines candidate models that may have different
+dimensions. During transdimensional inference PCAT samples both the selected
+model and its parameters. Catalogs are one application, and their populations
+can be inferred jointly with fixed-dimensional parameters such as background
+normalizations and population hyperparameters.
 
 Primary use cases include
 
 - probabilistic source catalogs from images and photon-count data
-- transdimensional inference over source populations
+- fixed-dimensional inference for physical parameters
+- transdimensional inference over metamodels, including variable-size source,
+  flare, and planet populations
 - crowded-field detection and membership uncertainty
 - strong-lens and substructure forward modeling
 - spectral-line decomposition with configurable intrinsic profiles and instrument line-spread functions
 - transdimensional flare catalogs with Gaussian, exponential, FRED, and Davenport profiles
-- fixed-dimensional physical models with custom likelihoods
+- construction of custom likelihoods for supported inference workflows
 
 [Daylan, Portillo, and Finkbeiner (2017)](https://doi.org/10.3847/1538-4357/aa679e)
 introduced the core method for gamma-ray point-source populations. The maintained examples extend the framework to
@@ -63,23 +68,38 @@ candidate animation contains all 24 sweeps.
 
 PCAT is the sole posterior sampler in this software ecosystem. New sampling integrations should use `pcat.sampling` for the public entry
 points. `pcat.main` remains the implementation and backward-compatible access
-path while its tightly coupled engine is decomposed. Fixed-dimensional sampling,
-diagnostics, plotting, catalog association, paths, and PSF utilities live in
-their respective modules under `pcat/`.
+path while its tightly coupled engine is decomposed. Fixed-dimensional
+inference, diagnostics, plotting, catalog association, paths, and PSF utilities
+live in their respective modules under `pcat/`.
 
 ## Inference methods
 
-### Transdimensional catalog inference
+### Fixed-dimensional inference
 
-PCAT compares configurations with different numbers of sources, samples source
-and population parameters jointly, quantifies detection and membership
-probabilities, and evaluates posterior predictions against the input data.
+In fixed-dimensional inference the parameter count and selected model stay
+constant throughout a chain. PCAT updates the model parameters and any
+fixed-dimensional nuisance or population parameters with its native proposals,
+priors, persistence, convergence tools, and final processing. Use
+`pcat.fixed.sample_posterior` for a compact interface that returns samples keyed
+by parameter name, or `pcat.fixed.sample_fixed` to configure the native pipeline
+directly.
 
-### Fixed-dimensional models with custom likelihoods
+### Transdimensional metamodel inference
 
-Fixed-dimensional models with custom likelihoods use the same proposal,
-acceptance, persistence, convergence, and final-processing pipeline as
-transdimensional catalog models:
+A metamodel is a collection of candidate models whose parameter dimensions may
+differ. PCAT samples the model index and the parameters together, including
+shared parameters that remain in every candidate. For example, a source-catalog
+metamodel can vary the number of sources while also sampling background
+normalizations and population hyperparameters. Catalog inference is one
+transdimensional application of this more general approach.
+
+### Building a custom likelihood
+
+The likelihood is independent of the distinction between a model and a
+metamodel. To use a custom likelihood for fixed-dimensional inference, define a
+callback with signature ``retr_llik(gdat, strgmodl, values)`` that returns the
+log likelihood only. Configure priors separately, then pass the callback to
+`sample_fixed`:
 
 ```python
 from pcat import sample_fixed
@@ -102,18 +122,19 @@ result = sample_fixed(
 
 ``"self"`` parameters have uniform priors between their minima and maxima;
 ``"gaus"`` parameters use the specified means and standard deviations. PCAT
-proposes in unit-prior coordinates and applies its existing inverse-CDF
-transforms. Generic runs set birth/death and split/merge probabilities to zero,
-so only the native type-0 within-model proposal is active. The returned object
-is the normal persisted ``gdatfinlpost`` state.
+proposes in unit-prior coordinates and applies its inverse-CDF transforms.
+Generic fixed-dimensional runs set birth/death and split/merge probabilities to
+zero, so only the native type-0 within-model proposal is active. The returned
+object is the persisted ``gdatfinlpost`` state.
 
 ### Proposal types and mixing moves
 
-PCAT is the only sampler in this software ecosystem. For quick fits of a
-likelihood ``retr_llik(para, gdat)``, ``pcat.fixed.sample_posterior`` returns a
-dictionary of posterior samples keyed by parameter name, optionally with
-derived variables, trace plots, and a saved posterior summary. It runs several
-independent PCAT chains and discards their burn-in.
+PCAT is the only sampler in this software ecosystem. The
+``pcat.fixed.sample_posterior`` interface is useful for quick fixed-dimensional
+fits with a likelihood ``retr_llik(para, gdat)``. It returns a dictionary of
+posterior samples keyed by parameter name, optionally with derived variables,
+trace plots, and a saved posterior summary. It runs several independent PCAT
+chains and discards their burn-in.
 
 By default, type-0 moves perturb one parameter at a time. Set
 ``probpropblock`` above zero to mix in correlated block moves using
