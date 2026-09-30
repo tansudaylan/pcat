@@ -2,6 +2,10 @@
 
 <img src="https://raw.githubusercontent.com/tansudaylan/pcat/master/docs/_static/pcat_banner.png" alt="PCAT, the Probabilistic Cataloger" width="480">
 
+The primary mark is circular and uses Harvard Crimson, black, and white. Five related alternatives explore nested spaces, catalog birth/death, a dimension ladder, a model orbit, and reversible catalog branching.
+
+![Current circular PCAT mark and five logo concepts](docs/_static/pcat_logo_concepts.png)
+
 ## Purpose
 
 PCAT is a Bayesian framework for inferring catalogs and physical models from
