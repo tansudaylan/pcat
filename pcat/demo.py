@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tdpy.verbosity import print
+
 import os
 import runpy
 import sys

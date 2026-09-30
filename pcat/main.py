@@ -1,4 +1,6 @@
 # plotting
+
+from tdpy.verbosity import print
 import matplotlib as mpl
 mpl.use('agg')
 import matplotlib.pyplot as plt
@@ -2878,7 +2880,8 @@ def retr_spatmean(gdat, inpt, boolcntp=False):
                 if gdat.enerdiff:
                     cntp *= gdat.deltener[:nener, None, None]
         spatmean = np.mean(np.sum(cntp, 2), axis=1) / gdat.apix
-        spatstdv = np.sqrt(np.sum(cntp, axis=(1, 2))) / gdat.numbdata / gdat.apix
+        # Poisson spread of the counts; data interpreted by a custom likelihood can be negative
+        spatstdv = np.sqrt(np.maximum(np.sum(cntp, axis=(1, 2)), 0.)) / gdat.numbdata / gdat.apix
         if gdat.boolcorrexpo:
             spatmean /= gdat.expototlmean
             spatstdv /= gdat.expototlmean

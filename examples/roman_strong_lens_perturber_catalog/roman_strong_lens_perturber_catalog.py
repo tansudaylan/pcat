@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Run PCAT's seeded Roman strong-lens population benchmark."""
 
+from tdpy.verbosity import print
+
 import argparse
 from pathlib import Path
 

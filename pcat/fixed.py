@@ -1,5 +1,7 @@
 """Fixed-dimensional posterior sampling through PCAT's native pipeline."""
 
+from tdpy.verbosity import print
+
 from contextlib import nullcontext
 from pathlib import Path
 from tempfile import TemporaryDirectory

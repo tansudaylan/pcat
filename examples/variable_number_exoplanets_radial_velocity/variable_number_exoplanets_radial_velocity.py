@@ -12,6 +12,8 @@ with the matching Hastings correction. Instrument offsets are marginalized analy
 jitter numerically, so each catalog is scored by its marginal likelihood.
 """
 
+from tdpy.verbosity import print
+
 import argparse
 from pathlib import Path
 

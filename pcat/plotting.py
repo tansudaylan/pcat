@@ -1,5 +1,7 @@
 """Native plotting functions for PCAT posterior products."""
 
+from tdpy.verbosity import print
+
 from dataclasses import dataclass
 from pathlib import Path
 

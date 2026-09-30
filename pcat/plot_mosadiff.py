@@ -4,6 +4,8 @@ This script is retained only as historical code and is not part of the supported
 PCAT API surface.
 """
 
+from tdpy.verbosity import print
+
 import os
 import sys
 

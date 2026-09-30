@@ -1,3 +1,4 @@
+from tdpy.verbosity import print
 import os as oper
 import sys as syst
 import astropy as astr

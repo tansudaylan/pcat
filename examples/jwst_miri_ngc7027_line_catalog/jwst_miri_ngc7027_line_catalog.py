@@ -12,6 +12,8 @@ counts N = F k with k = C / sigma_eff^2 per bin, where C is the continuum and
 sigma_eff includes a fractional floor for calibration and fringe residuals.
 """
 
+from tdpy.verbosity import print
+
 import argparse
 import shutil
 from pathlib import Path

@@ -16,6 +16,8 @@ decay, so recovered flare parameters describe an effective symmetric burst durat
 separate rise and decay time scales.
 """
 
+from tdpy.verbosity import print
+
 import argparse
 import shutil
 from pathlib import Path

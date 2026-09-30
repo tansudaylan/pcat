@@ -10,6 +10,8 @@ stellar jitter added in quadrature to the reported uncertainties is marginalized
 log-uniform grid.
 """
 
+from tdpy.verbosity import print
+
 import os
 import shutil
 

@@ -5,6 +5,8 @@ The clouds are Gaussian draws around fixed centers, a stylized picture of a
 probabilistic catalog in which each source is an ensemble of samples.
 """
 
+from tdpy.verbosity import print
+
 from pathlib import Path
 
 import matplotlib as mpl

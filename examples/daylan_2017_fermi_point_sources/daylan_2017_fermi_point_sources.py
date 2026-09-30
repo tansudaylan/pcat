@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from tdpy.verbosity import print
+
 import argparse
 import shutil
 import sys

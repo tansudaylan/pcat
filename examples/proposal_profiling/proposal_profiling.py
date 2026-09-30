@@ -9,6 +9,8 @@ phases (proposal, likelihood, model evaluation, prior, etc.); this script
 summarizes both.
 """
 
+from tdpy.verbosity import print
+
 import argparse
 import shutil
 import sys

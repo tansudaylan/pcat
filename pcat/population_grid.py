@@ -3,6 +3,8 @@
 Moved from ``tdpy.util.plot_grid``; ``pcat.plot_grid`` remains the compact posterior corner plot.
 """
 
+from tdpy.verbosity import print
+
 import os
 
 import matplotlib

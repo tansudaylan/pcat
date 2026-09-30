@@ -8,6 +8,8 @@ clock time, number of likelihood evaluations, and effective sample size (ESS),
 then plots the marginal posteriors and the sampling efficiency.
 """
 
+from tdpy.verbosity import print
+
 import argparse
 import shutil
 import time
