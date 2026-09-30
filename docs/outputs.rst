@@ -72,6 +72,10 @@ posterior summaries and diagnostics. ``post/anim`` contains GIFs assembled from
 frame plots. When proposal metadata is present, it also contains
 ``proposal_activity.gif`` with cumulative attempts and acceptances and
 ``proposal_sequence.gif`` with proposal labels on saved chain-state frames.
+With ``boolmakeanimprop=True``, ``post/fram`` also contains one
+``proposal_candidates_swep#########.png`` per sweep of worker zero and
+``post/anim/proposal_candidates.gif`` contains all of those attempted states,
+including rejected candidates. Candidate frames are not posterior samples.
 Empty optional directories are removed at successful completion.
 
 Condensed catalogs and association

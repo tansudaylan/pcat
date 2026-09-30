@@ -13122,6 +13122,101 @@ def _write_proposal_activity_animation(indxproptype, boolpropaccp, lablproptype,
     return True
 
 
+def _proposal_model_array(gdat, state):
+    """Return a display-ready model prediction for a proposal state."""
+    if state is None or not hasattr(state, 'cntpmodl'):
+        return None
+    values = np.asarray(state.cntpmodl, dtype=float)
+    if values.ndim == 3:
+        values = values[0, :, 0]
+    values = np.squeeze(values)
+    if values.ndim == 1:
+        numbside = int(getattr(gdat, 'numbsidecart', 0) or 0)
+        if numbside > 1 and values.size == numbside ** 2:
+            values = values.reshape((numbside, numbside))
+    return values
+
+
+def _draw_proposal_model(axis, values, data_limit, title, valid=True):
+    """Draw one current or proposed prediction using a stable data-derived scale."""
+    axis.set_title(title, fontsize=9)
+    axis.grid(False)
+    if not valid or values is None or not np.any(np.isfinite(values)):
+        axis.text(0.5, 0.5, 'Outside prior support', ha='center', va='center', transform=axis.transAxes)
+        axis.set_xticks([])
+        axis.set_yticks([])
+        return
+    if values.ndim == 2:
+        axis.imshow(values, origin='lower', cmap='viridis', vmin=0., vmax=data_limit, interpolation='nearest')
+        axis.set_xlabel('Pixel x')
+        axis.set_ylabel('Pixel y')
+    else:
+        axis.plot(np.ravel(values), color='#A51C30', lw=1.2)
+        axis.set_ylim(0., data_limit)
+        axis.set_xlabel('Data bin')
+        axis.set_ylabel('Predicted counts')
+
+
+def _write_proposal_candidate_frame(gdat, gdatmodi, accepted, pathout):
+    """Plot the current and proposed states for one sweep, including rejected candidates."""
+    current = gdatmodi.this
+    candidate = gdatmodi.next
+    valid = bool(getattr(current, 'boolpropfilt', False))
+    data = np.asarray(getattr(gdat, 'cntpdata', np.ones(1)), dtype=float)
+    finite_data = data[np.isfinite(data)]
+    data_limit = max(1., 1.2 * np.percentile(finite_data, 99.5)) if finite_data.size else 1.
+    current_model = _proposal_model_array(gdat, current)
+    candidate_model = _proposal_model_array(gdat, candidate) if valid else None
+
+    figure = plt.figure(figsize=(9.0, 5.2), facecolor='white')
+    grid = figure.add_gridspec(2, 2, height_ratios=(3., 1.35), hspace=0.38, wspace=0.28)
+    _draw_proposal_model(figure.add_subplot(grid[0, 0]), current_model, data_limit, 'Current state')
+    _draw_proposal_model(figure.add_subplot(grid[0, 1]), candidate_model, data_limit, 'Proposed candidate', valid)
+
+    axis = figure.add_subplot(grid[1, :])
+    current_unit = np.asarray(getattr(current, 'paragenrunitfull', []), dtype=float).reshape(-1)
+    candidate_unit = np.asarray(getattr(candidate, 'paragenrunitfull', []), dtype=float).reshape(-1)
+    if current_unit.size:
+        axis.plot(np.arange(current_unit.size), current_unit, 'o-', ms=2.5, lw=0.8, color='black', label='Current')
+    if candidate_unit.size:
+        axis.plot(np.arange(candidate_unit.size), candidate_unit, 'o-', ms=2.5, lw=0.8,
+                  color='#A51C30', alpha=0.8, label='Candidate')
+    axis.set(xlabel='Generative parameter index', ylabel='Unit-prior coordinate', ylim=(-0.05, 1.05))
+    axis.grid(False)
+    axis.legend(loc='upper right', frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
+
+    proposal_index = int(np.asarray(getattr(current, 'indxproptype', 0)).reshape(-1)[0])
+    labels = list(getattr(gdat, 'lablproptype', []))
+    proposal_label = labels[proposal_index] if 0 <= proposal_index < len(labels) else 'Proposal %d' % proposal_index
+    acceptance_probability = float(np.asarray(getattr(current, 'accpprob', [0.])).reshape(-1)[0])
+    status = 'ACCEPTED' if accepted else 'REJECTED'
+    color = '#1B7837' if accepted else '#A51C30'
+    figure.suptitle(
+        'Sweep %d | %s | %s | acceptance probability %.3f' %
+        (int(gdatmodi.cntrswep) + 1, proposal_label, status, acceptance_probability),
+        color=color,
+        fontsize=11,
+        fontweight='bold',
+    )
+    current_log_posterior = float(getattr(current, 'lpostotl', np.nan))
+    candidate_log_posterior = float(getattr(candidate, 'lpostotl', np.nan)) if valid else np.nan
+    figure.text(
+        0.5,
+        0.01,
+        r'$\log \pi$: %.3g $\rightarrow$ %.3g   |   $\log q_r/q_f$: %.3g   |   $\log|J|$: %.3g' %
+        (current_log_posterior, candidate_log_posterior, float(np.asarray(getattr(current, 'ltrp', [0.])).reshape(-1)[0]),
+         float(np.asarray(getattr(current, 'ljcb', [0.])).reshape(-1)[0])),
+        ha='center',
+        fontsize=9,
+    )
+    pathout = os.fspath(pathout)
+    make_directory(os.path.dirname(pathout))
+    print('Writing to %s...' % pathout)
+    figure.savefig(pathout, dpi=160, facecolor='white')
+    plt.close(figure)
+    return pathout
+
+
 def proc_anim(strgcnfg, pathbase=None):
 
     if pathbase is None:
@@ -13160,7 +13255,7 @@ def proc_anim(strgcnfg, pathbase=None):
             listsequence = [
                 (key, sorted(listfram))
                 for key, listfram in dictpathfram.items()
-                if len(listfram) > 1
+                if len(listfram) > 1 and key[1] != 'proposal_candidates'
             ]
             if listsequence:
                 proposal_sequence = max(
@@ -16658,6 +16753,12 @@ def init( \
         gdat.boolmakeplotinit = True
     if not hasattr(gdat, 'boolmakeplotfram'):
         gdat.boolmakeplotfram = True
+    if not hasattr(gdat, 'makeanim'):
+        gdat.makeanim = False
+    if not hasattr(gdat, 'boolmakeanimprop'):
+        gdat.boolmakeanimprop = False
+    if gdat.boolmakeanimprop:
+        gdat.makeanim = True
     if not hasattr(gdat, 'boolmakeplotfinlprio'):
         gdat.boolmakeplotfinlprio = True
     if not hasattr(gdat, 'boolmakeplotfinlpost'):
@@ -18336,6 +18437,7 @@ def _sample_generic(**kwargs):
         'boolmakeplotfinlprio',
         'boolmakeplotfinlpost',
         'makeanim',
+        'boolmakeanimprop',
     ):
         kwargs.setdefault(name, False)
     gdat = init(kwargs)
@@ -19335,6 +19437,15 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
     
         # accept or reject the proposal
         booltemp = gdatmodi.this.accpprob[0] >= np.random.rand()
+
+        if gdat.boolmakeanimprop and gdatmodi.indxprocwork == 0:
+            pathproposal = os.path.join(
+                gdat.pathplotcnfg,
+                gdat.strgpdfn,
+                'fram',
+                'proposal_candidates_swep%09d.png' % gdatmodi.cntrswep,
+            )
+            _write_proposal_candidate_frame(gdat, gdatmodi, booltemp, pathproposal)
 
         if gdat.booladaptstdp and gdatmodi.boolburn and gdatmodi.this.indxproptype == 0:
             for indxstdp in gdatmodi.this.indxstdpprop:

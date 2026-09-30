@@ -39,6 +39,24 @@ and stellar flares. The publication-inspired examples use explicitly simulated
 data; the animation illustrates sampler behavior and does not reproduce the
 papers' numerical posterior values.
 
+## Every proposed state
+
+The posterior animation above visualizes retained chain states. Set
+`boolmakeanimprop=True` to additionally render every proposed candidate before
+the Metropolis-Hastings decision, whether accepted or rejected. The candidate
+animation compares current and proposed predictions and unit-prior coordinates,
+and labels the proposal type, acceptance probability, decision, proposal-density
+ratio, and Jacobian. Rejected candidates are proposal diagnostics rather than
+posterior samples.
+
+![Every PCAT proposal candidate, including rejected states](examples/proposal_state_animation/visuals/post/anim/proposal_candidates.gif)
+
+The matching retained-state sequence from the same short simulated Voigt-line
+run is shown below. It contains frames only at `numbswepplot` cadence, while the
+candidate animation contains all 24 sweeps.
+
+![Retained PCAT chain states at plotting cadence](examples/proposal_state_animation/visuals/post/anim/proposal_sequence.gif)
+
 ## Package organization
 
 PCAT is the sole posterior sampler in this software ecosystem. New sampling integrations should use `pcat.sampling` for the public entry

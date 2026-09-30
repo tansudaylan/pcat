@@ -303,3 +303,16 @@ def test_documented_posterior_collage_matches_generator():
     assert "Posterior samples from twelve maintained examples" in examples
     for domain in ("strong lenses", "stellar flares", "spectral\nlines"):
         assert domain in examples
+
+
+def test_documentation_distinguishes_posterior_and_candidate_animations():
+    sampling = (DOCS_ROOT / "sampling.rst").read_text()
+    outputs = (DOCS_ROOT / "outputs.rst").read_text()
+    readme = (REPOSITORY_ROOT / "README.md").read_text()
+
+    for source in (sampling, outputs, readme):
+        assert "boolmakeanimprop" in source
+        assert "proposal_candidates.gif" in source
+    assert "Candidate frames are proposal diagnostics, not posterior samples" in sampling
+    assert "including rejected candidates" in outputs
+    assert "examples/proposal_state_animation/visuals/post/anim/proposal_candidates.gif" in readme

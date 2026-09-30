@@ -92,7 +92,7 @@ def display_example_visuals(relative_directory: str, *patterns: str) -> None:
     listrootvisual.update(example_root.glob("*/visuals"))
     listrootvisual.update(example_root.glob("pcat_runs/*/visuals"))
     for pathvisual in sorted(listrootvisual):
-        for name in ("proposal_activity.gif", "proposal_sequence.gif"):
+        for name in ("proposal_activity.gif", "proposal_sequence.gif", "proposal_candidates.gif"):
             figure_path = pathvisual / "post" / "anim" / name
             if not figure_path.is_file() or figure_path in listpathdisplay:
                 continue

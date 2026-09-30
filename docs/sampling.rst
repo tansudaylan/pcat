@@ -182,7 +182,23 @@ which shows cumulative proposal attempts and acceptances, and
 ``proposal_sequence.gif``, which labels each saved state frame with its sweep,
 proposal type, and acceptance result. The sequence animation uses saved frame
 intervals rather than every sweep. A rejected proposal remains represented by
-the retained chain state; the rejected candidate image is not separately saved.
+the retained chain state.
+
+Set ``boolmakeanimprop=True`` to additionally write one candidate frame for
+every sweep of worker zero. PCAT renders the frame after evaluating the
+candidate and acceptance probability but before an accepted candidate replaces
+the current state. ``proposal_candidates.gif`` therefore shows accepted and
+rejected candidates, including moves outside prior support. Each frame compares
+current and candidate predictions and unit-prior coordinates and reports the
+proposal type, acceptance probability, decision, log posterior values,
+proposal-density ratio, and Jacobian.
+
+Candidate frames are proposal diagnostics, not posterior samples. The option is
+off by default because it performs plotting and writes one PNG per sweep. Its
+runtime and storage scale linearly with ``numbswep``. Use short runs for proposal
+inspection, then disable it for production inference. The
+``proposal_state_animation`` example produces both retained-state and
+every-candidate animations from the same simulated Voigt-line run.
 
 The proposal-profiling example includes a visual comparison of acceptance and
 cost above and writes proposal activity with its run. See :doc:`outputs` for

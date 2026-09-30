@@ -25,6 +25,7 @@ from pcat.main import (
     _retr_true_parameter_value,
     _set_element_amplitude_indices,
     _write_proposal_activity_animation,
+    _write_proposal_candidate_frame,
 )
 
 
@@ -249,6 +250,36 @@ def test_proposal_animation_uses_recorded_types_and_acceptance(tmp_path):
     with Image.open(output_path) as animation:
         assert animation.n_frames == 5
         assert animation.size[0] > 800
+
+
+def test_rejected_proposal_candidate_frame_shows_both_states(tmp_path):
+    current = SimpleNamespace(
+        boolpropfilt=True,
+        cntpmodl=np.array([[[1.], [2.], [3.], [4.]]]),
+        paragenrunitfull=np.array([0.2, 0.7]),
+        indxproptype=np.array([1]),
+        accpprob=np.array([0.25]),
+        lpostotl=-10.0,
+        ltrp=np.array([0.3]),
+        ljcb=np.array([0.0]),
+    )
+    candidate = SimpleNamespace(
+        cntpmodl=np.array([[[1.5], [2.5], [3.5], [4.5]]]),
+        paragenrunitfull=np.array([0.25, 0.9]),
+        lpostotl=-11.0,
+    )
+    state = SimpleNamespace(
+        cntpdata=np.array([[[1.], [2.], [3.], [4.]]]),
+        numbsidecart=2,
+        lablproptype=["Within-model proposal", "Birth proposal"],
+    )
+    worker = SimpleNamespace(this=current, next=candidate, cntrswep=3)
+    output_path = tmp_path / "proposal_candidates_swep000000003.png"
+
+    assert _write_proposal_candidate_frame(state, worker, False, output_path) == str(output_path)
+    with Image.open(output_path) as image:
+        assert image.width > image.height
+        assert image.width > 1000
 
 
 def test_element_parameter_labels_are_descriptive():

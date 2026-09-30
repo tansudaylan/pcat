@@ -28,7 +28,10 @@ decomposed into smaller modules.
        probabilities. The listed image configurations disable split/merge where
        that proposal is unsupported.
    * ``boolmakeplotinit``, ``boolmakeplotfram``, ``boolmakeplotfinlpost``, and
-     ``makeanim`` for visual-output controls.
+       ``makeanim`` for visual-output controls. Set ``boolmakeanimprop=True`` to
+       render every proposed candidate before its accept/reject decision and
+       assemble ``proposal_candidates.gif``. This expensive diagnostic is
+       disabled by default.
 
    ``typeexpr="gener"`` registers ``parameter_names`` as ordinary base
    parameters. ``prior_types`` accepts ``"self"`` for bounded uniform priors

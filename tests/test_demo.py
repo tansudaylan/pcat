@@ -97,15 +97,18 @@ def test_notebook_visuals_display_saved_figures(tmp_path, monkeypatch):
     animation_path.parent.mkdir(parents=True)
     frames = [Image.new("RGB", (8, 8), color) for color in ("red", "blue")]
     frames[0].save(animation_path, save_all=True, append_images=frames[1:])
+    candidate_path = animation_path.with_name("proposal_candidates.gif")
+    frames[0].save(candidate_path, save_all=True, append_images=frames[1:])
     shown = []
     monkeypatch.setattr(demo, "__file__", str(tmp_path / "pcat" / "demo.py"))
     monkeypatch.setattr(IPython.display, "display", shown.append)
 
     demo.display_example_visuals("mock", "visuals/*.png")
 
-    assert len(shown) == 2
+    assert len(shown) == 3
     assert shown[0].filename == str(figure_path)
     assert shown[1].filename == str(animation_path)
+    assert shown[2].filename == str(candidate_path)
     with pytest.raises(FileNotFoundError, match="missing"):
         demo.display_example_visuals("mock", "visuals/missing*.png")
 

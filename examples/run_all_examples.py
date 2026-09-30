@@ -111,6 +111,14 @@ PIPELINE_EXAMPLES = [
         False,
         True,
     ),
+    (
+        ROOT / "proposal_state_animation" / "proposal_state_animation.py",
+        (),
+        ROOT / "proposal_state_animation",
+        "proposal_state_animation",
+        False,
+        True,
+    ),
 ]
 
 UTILITY_EXAMPLES = [

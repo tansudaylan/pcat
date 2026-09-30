@@ -185,6 +185,15 @@ Analysis utilities
 
       python examples/proposal_profiling/proposal_profiling.py --numbswep 20000
 
+``proposal_state_animation``
+   Short simulated Voigt-line run producing two complementary animations. The
+   retained-state sequence follows the configured plotting cadence, while the
+   candidate sequence shows every attempted move before acceptance or rejection.
+
+   .. code-block:: bash
+
+      python examples/proposal_state_animation/proposal_state_animation.py --numbswep 24
+
 ``population_grid``
    Seeded simulated populations used to demonstrate PCAT's marginal and pairwise
    posterior plotting. These arrays are illustrative rather than observations.
