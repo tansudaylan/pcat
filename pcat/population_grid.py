@@ -614,7 +614,8 @@ def plot_population_grid(
     if listpara[0].ndim == 1:
         raise Exception('listpara should be a list of Nsamp by Nparam array')
 
-    # temp: number of parameters should be able to be different for different populations
+    # Limitation: this plotting routine assumes all populations share the same number of parameters (numbpara),
+    # taken from the first population; per-population parameter counts are not supported.
     numbpara = listpara[0].shape[1]
     indxpara = np.arange(numbpara)
     
