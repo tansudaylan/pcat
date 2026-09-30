@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from pcat.diagnostics import posterior_convergence
 from pcat.fixed import sample_allesfitter_pcat, sample_fixed_chains
@@ -15,6 +16,33 @@ def gaussian_log_likelihood(gdat, strgmodl, values):
 
 def scalar_log_likelihood(gdat, strgmodl, values):
     return -0.5 * values[0] ** 2
+
+
+def test_tempered_burn_history_is_persisted_and_finishes_before_sampling(tmp_path):
+    result = sample(
+        typeexpr="gener",
+        retr_llik=scalar_log_likelihood,
+        parameter_names=("x",),
+        prior_types=("self",),
+        prior_minima=(-4.0,),
+        prior_maxima=(4.0,),
+        initial_values=(3.0,),
+        proposal_scales=(0.2,),
+        pathbase=tmp_path,
+        strgcnfg="tempered_burn",
+        numbswep=12,
+        numbburn=4,
+        numbsamp=8,
+        boolburntmpr=True,
+        factburntmpr=0.75,
+        boolmakeplot=False,
+        makeanim=False,
+        typeverb=0,
+    )
+
+    inverse_temperature = np.asarray(result.listpostfacttmpr).reshape(-1)
+    assert inverse_temperature[:3] == pytest.approx([(1. / 3.) ** 4, (2. / 3.) ** 4, 1.0])
+    assert np.all(inverse_temperature[3:] == 1.0)
 
 
 def constant_legacy_likelihood(values, state):

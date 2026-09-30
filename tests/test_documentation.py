@@ -328,3 +328,24 @@ def test_readme_lists_daylan_applications_first_without_reproduction_language():
         "### [Daylan et al. 2018 Strong-lens subhalo catalogs](examples/daylan+2018_strong_lens_subhalos/)",
     ]
     assert "reproduc" not in applications.lower()
+
+
+def test_burn_in_options_and_comparison_are_documented():
+    readme = (REPOSITORY_ROOT / "README.md").read_text()
+    sampling = (DOCS_ROOT / "sampling.rst").read_text()
+    outputs = (DOCS_ROOT / "outputs.rst").read_text()
+    examples = (DOCS_ROOT / "examples.rst").read_text()
+
+    for source in (readme, sampling):
+        for option in ("numbburn", "booladaptstdp", "boolburntmpr", "factburntmpr"):
+            assert option in source
+        assert "gradient descent" in source.lower()
+    assert "listpostfacttmpr" in sampling
+    assert "listpostfacttmpr" in outputs
+    assert "burn_in_strategies" in examples
+    for name in (
+        "burn_in_posterior_comparison.png",
+        "burn_in_performance_comparison.png",
+        "burn_in_temperature_schedule.png",
+    ):
+        assert name in readme

@@ -138,6 +138,10 @@ UTILITY_EXAMPLES = [
         ROOT / "sampler_comparison_emcee_dynesty" / "sampler_comparison_emcee_dynesty.py",
         ROOT / "sampler_comparison_emcee_dynesty" / "visuals" / "sampler_comparison_efficiency.png",
     ),
+    (
+        ROOT / "burn_in_strategies" / "burn_in_strategies.py",
+        ROOT / "burn_in_strategies" / "visuals" / "burn_in_performance_comparison.png",
+    ),
 ]
 
 

@@ -194,6 +194,17 @@ Analysis utilities
 
       python examples/proposal_state_animation/proposal_state_animation.py --numbswep 24
 
+``burn_in_strategies``
+   Seeded comparison of fixed proposal scales, adaptive proposal scales, and
+   likelihood-tempered plus adaptive burn-in on correlated-Gaussian and
+   equal-weight bimodal posterior targets. The figures report retained samples,
+   acceptance, effective sample rate, target-summary error, runtime, and the
+   recorded inverse-temperature schedule.
+
+   .. code-block:: bash
+
+      python examples/burn_in_strategies/burn_in_strategies.py --numbswep 1200
+
 ``population_grid``
    Seeded simulated populations used to demonstrate PCAT's marginal and pairwise
    posterior plotting. These arrays are illustrative rather than observations.

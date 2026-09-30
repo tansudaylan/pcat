@@ -109,6 +109,9 @@ not persistent.
 
 The final state stores per-sweep proposal IDs, accept/reject flags, and
 acceptance probabilities, together with acceptance fractions by proposal type.
+It also stores the per-sweep inverse likelihood temperature in
+``listpostfacttmpr``. This value is one for ordinary sampling and after tempered
+burn-in reaches the posterior target.
 Interpret these alongside chain movement and convergence rather than optimizing
 acceptance fraction alone. See :doc:`sampling` for the move-specific acceptance
 terms, tunable settings, burn-in, and stopping rules.

@@ -13,6 +13,7 @@ from pcat.main import (
     _PCATMCMCCompat,
     _configure_proposal_types,
     _retr_adapted_proposal_scale,
+    _retr_burn_inverse_temperature,
     _retr_chain_convergence,
     _retr_multichain_convergence,
     _retr_persistent_element_parameter_indices,
@@ -23,6 +24,7 @@ from pcat.main import (
     _retr_proposal_type_labels,
     _retr_representative_atcr,
     _retr_true_parameter_value,
+    _retr_tempered_log_target_difference,
     _set_element_amplitude_indices,
     _write_proposal_activity_animation,
     _write_proposal_candidate_frame,
@@ -34,6 +36,25 @@ def test_gmrb_rejects_separated_constant_chains():
 
     assert np.isinf(_PCATMCMCCompat.gmrb_test(chains))
     assert np.isinf(gelman_rubin(chains))
+
+
+def test_tempered_burn_schedule_reaches_unit_temperature_before_sampling():
+    schedule = [
+        _retr_burn_inverse_temperature(sweep, 4, tempered_fraction=0.75, enabled=True)
+        for sweep in range(6)
+    ]
+
+    assert schedule == pytest.approx([(1. / 3.) ** 4, (2. / 3.) ** 4, 1., 1., 1., 1.])
+    assert _retr_burn_inverse_temperature(0, 4, enabled=False) == 1.
+
+
+def test_tempered_target_scales_likelihood_but_not_prior():
+    current = SimpleNamespace(lpritotl=-2.0, lliktotl=-10.0)
+    candidate = SimpleNamespace(lpritotl=-3.0, lliktotl=-6.0)
+
+    assert _retr_tempered_log_target_difference(current, candidate, 1.0) == pytest.approx(3.0)
+    assert _retr_tempered_log_target_difference(current, candidate, 0.25) == pytest.approx(0.0)
+    assert _retr_tempered_log_target_difference(current, candidate, 0.25, target="prio") == pytest.approx(-1.0)
 
 
 def test_binomial_wilson_interval_has_finite_boundary_uncertainty():

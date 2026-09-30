@@ -23,7 +23,9 @@ decomposed into smaller modules.
      filesystem-safe run under its common ``pcat_runs`` directory.
    * ``typeelem`` for the element types in each population.
    * ``numbswep`` and ``numbsamp`` for sampler sweeps and retained posterior
-     samples.
+       samples. ``numbburn`` sets discarded initial sweeps,
+       ``booladaptstdp`` enables burn-in-only proposal adaptation, and
+       ``boolburntmpr`` with ``factburntmpr`` enables likelihood-tempered burn-in.
    * ``probtran`` and ``probspmr`` for transdimensional and split/merge proposal
        probabilities. The listed image configurations disable split/merge where
        that proposal is unsupported.

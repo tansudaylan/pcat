@@ -154,6 +154,29 @@ The sampler uses a target acceptance of 0.44 for one-dimensional updates and
 burn-in length and proposal settings with scientific results, and check that
 posterior summaries are stable to a longer run or a different seed.
 
+Set ``boolburntmpr=True`` to temper the likelihood during the first
+``factburntmpr`` fraction of burn-in. The default fraction is 0.75. At tempered
+sweep ``s`` out of ``N`` tempered sweeps, PCAT uses
+
+.. math::
+
+  \beta_s = \left(\frac{s + 1}{N}\right)^4
+
+and evaluates the target as ``log_prior + beta_s * log_likelihood``. The prior
+is not tempered. ``beta_s`` is stored for every sweep in
+``listpostfacttmpr`` and equals one before retained sampling begins. Tempering
+can help a chain cross likelihood barriers during burn-in, but it can reduce
+local effective sample size and does not guarantee discovery of every mode.
+
+``typeopti="hess"`` is a separate experimental option. It estimates local
+finite-difference curvature to initialize proposal scales; it does not perform
+gradient descent or optimize the initial state. PCAT currently provides no
+gradient-descent burn-in mode.
+
+The :doc:`examples` page links ``burn_in_strategies``, which compares fixed,
+adaptive, and tempered plus adaptive burn-in on correlated and bimodal
+simulated targets.
+
 Automatic convergence monitoring
 --------------------------------
 

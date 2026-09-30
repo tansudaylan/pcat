@@ -41,6 +41,7 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `variable_number_stellar_flares/`: transdimensional catalog of a variable number of stellar flares in a simulated photometric time series
 - `proposal_profiling/`: execution time, prior-support fraction, and acceptance of each proposal type on the simulated Voigt spectrum
 - `proposal_state_animation/`: retained chain states and every attempted proposal from the same simulated Voigt-line run
+- `burn_in_strategies/`: fixed, adaptive, and likelihood-tempered burn-in on correlated and bimodal simulated targets
 - `sampler_comparison_emcee_dynesty/`: PCAT, emcee, and dynesty on one simulated sinusoid posterior
 - `population_grid/`: corner, histogram, and pair plots of two simulated sample populations
 - `fermi_lat_pg1553_event_filter/`: a Fermi Large Area Telescope event-filter configuration for PG 1553+113

@@ -388,6 +388,30 @@ def _retr_adapted_proposal_scale(scale, accepted, count, target=0.44):
     return min(float(scale) * np.exp(gain * (float(accepted) - target)), 1.)
 
 
+def _retr_burn_inverse_temperature(sweep, burn_count, tempered_fraction=0.75, enabled=False):
+    """Return the likelihood inverse temperature for one burn-in sweep."""
+    if not enabled or burn_count <= 0:
+        return 1.
+    if not 0. < tempered_fraction <= 1.:
+        raise ValueError('factburntmpr must be in (0, 1].')
+    tempered_count = max(1, int(np.ceil(tempered_fraction * burn_count)))
+    if sweep >= tempered_count:
+        return 1.
+    return float((sweep + 1.) / tempered_count) ** 4
+
+
+def _retr_tempered_log_target_difference(current, candidate, inverse_temperature, target='post'):
+    """Return a posterior difference with an untempered prior and tempered likelihood."""
+    if target == 'prio':
+        return float(candidate.lpritotl - current.lpritotl)
+    if target != 'post':
+        raise ValueError('Unknown target distribution %s.' % target)
+    return float(
+        candidate.lpritotl - current.lpritotl
+        + inverse_temperature * (candidate.lliktotl - current.lliktotl)
+    )
+
+
 def _retr_posterior_summary_channels(gdatfinl, gdatmodi, strgpdfn):
     """Return registered channels plus saved histogram chains needing summaries."""
     channels = list(getattr(gdatmodi, 'liststrgchan', []))
@@ -16528,6 +16552,8 @@ def init( \
          # sampling
          ## Boolean flag to make burn-in tempered
          boolburntmpr=False, \
+         ## fraction of burn-in over which the likelihood temperature rises to one
+         factburntmpr=0.75, \
          ## number of sweeps
          numbswep=100000, \
          ## number of samples
@@ -17245,8 +17271,9 @@ def init( \
                 print(gdat.numbburn)
     
         # burn-in
-        gdat.factburntmpr = 0.75
-        gdat.numbburntmpr = gdat.factburntmpr * gdat.numbburn
+        if not 0. < gdat.factburntmpr <= 1.:
+            raise ValueError('factburntmpr must be in (0, 1].')
+        gdat.numbburntmpr = int(np.ceil(gdat.factburntmpr * gdat.numbburn))
         
         if gdat.boolsqzeprop:
             gdat.stdp[:]= 1e-100
@@ -18026,7 +18053,7 @@ def init( \
     
         # list of variables for which the posterior is collected at each proposal
         try:
-            gdat.liststrgvarbarryswep = ['memoresi', 'accpprob', 'boolpropfilt', 'boolpropaccp', 'indxproptype', 'amplpert']
+            gdat.liststrgvarbarryswep = ['memoresi', 'accpprob', 'boolpropfilt', 'boolpropaccp', 'indxproptype', 'amplpert', 'facttmpr']
             for namechro in gdat.listnamechro:
                 gdat.liststrgvarbarryswep += ['chro' + namechro]
             gdat.liststrgvarbarryswep += ['ltrp']
@@ -19082,6 +19109,7 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
     gdatmodi.this.accpprob = np.zeros(1)
     gdatmodi.this.memoresi = np.zeros(1)
     gdatmodi.this.amplpert = np.zeros(1)
+    gdatmodi.this.facttmpr = 1.
     
     # make sure the first sample derived variables are generated on gdatmodi
     proc_samp(gdat, gdatmodi, 'this', 'fitt')
@@ -19251,14 +19279,12 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
             print(gdatmodi.this.lpostotl)
             print('Proposing...')
         
-        if gdat.boolburntmpr and gdatmodi.cntrswep < gdat.numbburntmpr:
-            gdatmodi.this.facttmpr = ((gdatmodi.cntrswep + 1.) / gdat.numbburntmpr)**4
-            gdatmodi.this.tmprfactstdv = 1. / gdatmodi.this.facttmpr
-            #gdatmodi.this.tmprlposelem = -1000. * (1. - gdatmodi.this.facttmpr) * np.concatenate(gdatmodi.this.indxparagenrelemfull['full']).size
-            gdatmodi.this.tmprlposelem = 0.
-        else:
-            gdatmodi.this.tmprfactstdv = 1.
-            gdatmodi.this.tmprlposelem = 0. 
+        gdatmodi.this.facttmpr = _retr_burn_inverse_temperature(
+            gdatmodi.cntrswep,
+            gdat.numbburn,
+            tempered_fraction=gdat.factburntmpr,
+            enabled=gdat.boolburntmpr,
+        )
         
         # Performance note: re-allocates one small array per population every sweep; could be cached across sweeps if profiling shows it matters.
         for l in gmod.indxpopl:
@@ -19400,7 +19426,13 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
            
             # evaluate the acceptance probability
             gdatmodi.this.deltlpostotl = gdatmodi.next.lpostotl - gdatmodi.this.lpostotl
-            gdatmodi.this.accplprb = gdatmodi.this.deltlpostotl + gdatmodi.this.tmprlposelem - gdatmodi.this.lpau + gdatmodi.this.ltrp + gdatmodi.this.ljcb
+            deltlpostotltemp = _retr_tempered_log_target_difference(
+                gdatmodi.this,
+                gdatmodi.next,
+                gdatmodi.this.facttmpr,
+                target=gdat.strgpdfn,
+            )
+            gdatmodi.this.accplprb = deltlpostotltemp - gdatmodi.this.lpau + gdatmodi.this.ltrp + gdatmodi.this.ljcb
             gdatmodi.this.accpprob[0] = np.exp(np.minimum(gdatmodi.this.accplprb, 0.))
             if not np.isfinite(gdatmodi.this.accpprob[0]):
                 gdatmodi.this.accpprob[0] = 0.
@@ -19421,8 +19453,6 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
                 
                 print('gdatmodi.this.deltlpostotl')
                 print(gdatmodi.this.deltlpostotl)
-                print('gdatmodi.this.tmprlposelem')
-                print(gdatmodi.this.tmprlposelem)
                 print('gdatmodi.this.lpau')
                 print(gdatmodi.this.lpau)
                 print('gdatmodi.this.ltrp')

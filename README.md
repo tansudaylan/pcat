@@ -160,6 +160,43 @@ stop and their retained samples are truncated to a common length before
 final aggregation. This feature is opt-in; the default ``boolcheckconv=False``
 leaves existing fixed-``numbswep`` behavior unchanged.
 
+### Burn-in strategies
+
+`numbburn` sets the initial sweeps excluded from posterior products. PCAT offers
+two complementary burn-in controls through the same sampler pipeline:
+
+- `booladaptstdp=True` applies Robbins-Monro proposal-scale adaptation during
+	burn-in and freezes the scales afterward.
+- `boolburntmpr=True` tempers the likelihood during the first
+	`factburntmpr` fraction of burn-in. The inverse likelihood temperature rises
+	quartically from near zero to one while the prior remains untempered.
+
+The maintained comparison runs fixed scales, adaptive scales, and tempered plus
+adaptive burn-in on a seeded correlated Gaussian and an equal-weight bimodal
+target:
+
+```bash
+python examples/burn_in_strategies/burn_in_strategies.py --numbswep 1200
+```
+
+![PCAT burn-in posterior comparison](examples/burn_in_strategies/visuals/burn_in_posterior_comparison.png)
+
+![PCAT burn-in performance comparison](examples/burn_in_strategies/visuals/burn_in_performance_comparison.png)
+
+![PCAT burn-in inverse-temperature schedule](examples/burn_in_strategies/visuals/burn_in_temperature_schedule.png)
+
+For the intentionally underscaled correlated-Gaussian proposals, tempered plus
+adaptive burn-in raises the effective sample size from 4.5 to 11.4 and reduces
+the retained-mean error from 0.97 to 0.24. For the bimodal target initialized in
+one mode, fixed and adaptive runs remain trapped, while tempering reduces the
+positive-mode weight error from 0.50 to 0.009. Its local effective sample size
+is lower, illustrating that mode discovery and local mixing are distinct.
+These values describe short controlled simulations, not universal rankings.
+
+`typeopti="hess"` is an experimental finite-difference Hessian initializer for
+proposal scales. It is not gradient descent and does not optimize the starting
+state. PCAT currently has no gradient-descent burn-in mode.
+
 ## Applications
 
 ### [Daylan et al. 2017 Fermi-LAT point-source populations](examples/daylan+2017_fermi_point_sources/)
