@@ -6,6 +6,20 @@ import pytest
 from pcat.diagnostics import posterior_convergence
 from pcat.fixed import sample_allesfitter_pcat, sample_fixed_chains
 from pcat.main import readfile, sample
+from pcat.time_series import log_likelihood_transit_times
+
+
+def test_transit_timing_likelihood_uses_uncertainty_weighted_residuals():
+    observed_days = np.array([1.0, 3.0])  # [day]
+    predicted_days = np.array([2.0, 1.0])  # [day]
+    uncertainties_days = np.array([1.0, 2.0])  # [day]
+
+    assert log_likelihood_transit_times(observed_days, predicted_days, uncertainties_days) == -1.0
+    assert log_likelihood_transit_times([1.0], [np.nan], [1.0]) == -np.inf
+    with pytest.raises(ValueError, match="positive"):
+        log_likelihood_transit_times([1.0], [1.0], [0.0])
+    with pytest.raises(ValueError, match="matching"):
+        log_likelihood_transit_times([1.0], [1.0, 2.0], [1.0])
 
 
 def gaussian_log_likelihood(gdat, strgmodl, values):

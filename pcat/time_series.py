@@ -5,6 +5,21 @@ from __future__ import annotations
 import numpy as np
 
 
+def log_likelihood_transit_times(observed_times, predicted_times, timing_errors):
+    """Return the Gaussian transit-time log likelihood up to a constant."""
+
+    observed = np.asarray(observed_times, dtype=float)
+    predicted = np.asarray(predicted_times, dtype=float)
+    errors = np.asarray(timing_errors, dtype=float)
+    if observed.ndim != 1 or observed.shape != predicted.shape or observed.shape != errors.shape:
+        raise ValueError("observed, predicted, and timing errors must be matching one-dimensional arrays")
+    if not np.isfinite(observed).all() or not np.isfinite(errors).all() or np.any(errors <= 0):
+        raise ValueError("observed times must be finite and timing errors must be finite and positive")
+    if not np.isfinite(predicted).all():
+        return -np.inf
+    return float(-0.5 * np.sum(((observed - predicted) / errors) ** 2))
+
+
 FLARE_PROFILE_PARAMETERS = {
     "flargauss": ("flux", "elin", "fwhm"),
     "flarexpd": ("flux", "elin", "scalfall"),
@@ -76,4 +91,5 @@ __all__ = [
     "FLARE_PROFILE_PARAMETERS",
     "evaluate_flare_profile",
     "flare_profile_parameters",
+    "log_likelihood_transit_times",
 ]

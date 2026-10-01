@@ -169,6 +169,20 @@ native ``flarfred`` elements. Radial-velocity models use Keplerian
 ``lghtlinekepl`` elements and their dedicated likelihood in
 :mod:`pcat.radial_velocity`.
 
+Transit-timing likelihood
+-------------------------
+
+For transit-time data, use ``pcat.time_series.log_likelihood_transit_times``
+inside a fixed-dimensional PCAT likelihood callback. Pass observed transit
+times, predicted transit times from Ephesos, and positive timing errors in the
+same units. The function returns the uncertainty-weighted Gaussian log
+likelihood up to a parameter-independent normalization constant; it returns
+negative infinity for nonfinite model times. Ephesos supplies linear,
+sinusoidal-residual, and optional N-body time predictions. PCAT handles the
+parameter priors and posterior sampling through ``sample_fixed`` or
+``sample_fixed_chains``. The predictor must align observed transit epochs with
+model epochs before evaluating this likelihood.
+
 User-supplied likelihood
 ------------------------
 
