@@ -59,6 +59,19 @@ def autocorrelation_time(samples, typeverb=0, atcrtype='maxm', verbtype=None):
     return correlations.reshape(parameter_shape + (lag_count,)), times.reshape(parameter_shape)
 
 
+def catalog_count_transitions(chains):
+    """Count within-chain catalog-size transitions; input is samples by chains."""
+
+    counts = np.asarray(chains)
+    if counts.ndim != 2 or counts.shape[0] < 2 or counts.shape[1] < 1:
+        raise ValueError("Catalog counts must have sample and chain axes")
+    if not np.isfinite(counts).all() or np.any(counts < 0) or np.any(counts != np.floor(counts)):
+        raise ValueError("Catalog counts must be finite nonnegative integers")
+    transitions = np.zeros((int(counts.max()) + 1,) * 2, dtype=int)
+    np.add.at(transitions, (counts[:-1].astype(int), counts[1:].astype(int)), 1)
+    return transitions
+
+
 def posterior_convergence(state, max_rhat=1.05, min_effective_sample_size=200.0):
     """Return convergence metrics and whether every parameter passes."""
     rhat = np.asarray(state.gmrbparagenrscalbase, dtype=float)

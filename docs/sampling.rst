@@ -213,6 +213,22 @@ available. Inspect the values saved in ``gdatfinlpost`` and the convergence
 plots. Automatic stopping does not establish that the likelihood, model, or
 priors are scientifically adequate.
 
+With posterior plotting enabled, completed runs write separate figures under
+``visuals/post/convergence/``. Fixed-parameter figures show per-worker traces,
+autocorrelation, approximate effective sample size, and cross-worker R-hat.
+For transdimensional populations, the figures show catalog-size traces,
+autocorrelation, occupancy, within-worker size transitions, and mixing metrics.
+Early-versus-late distributions compare each sampled one-dimensional element
+feature without assigning identities to elements across birth or death moves.
+The approximate effective sample size uses a bounded autocorrelation window;
+short runs can yield unstable estimates. A single worker has no cross-worker
+R-hat, which is shown as unavailable rather than assigned a value.
+
+To create the figures from a saved posterior without rerunning inference, call
+``pcat.plotting.plot_posterior_convergence(state, output_directory)`` after
+loading ``gdatfinlpost`` with ``pcat.main.readfile``. The figures support
+inspection and do not replace checks for multiple modes or model mismatch.
+
 Animations and saved diagnostics
 --------------------------------
 

@@ -33,6 +33,7 @@ import multiprocessing as mp
 
 from collections import deque
 from copy import deepcopy
+from pathlib import Path
 
 # utilities
 import os, time, sys, glob, fnmatch, inspect, traceback, functools, shutil, re
@@ -18500,11 +18501,26 @@ def _sample_generic(**kwargs):
 def sample(**kwargs):
     typeexpr = kwargs.get('typeexpr')
     if typeexpr == 'gener':
-        return _sample_generic(**kwargs)
-    if isinstance(typeexpr, str) and (typeexpr in ['chan', 'ferm', 'fire', 'gmix', 'sdss'] or typeexpr.startswith('HST_WFC3')):
+        result = _sample_generic(**kwargs)
+    elif isinstance(typeexpr, str) and (typeexpr in ['chan', 'ferm', 'fire', 'gmix', 'sdss'] or typeexpr.startswith('HST_WFC3')):
         gdat = init_image(**kwargs)
-        return init(gdat.__dict__)
-    return init(kwargs)
+        result = init(gdat.__dict__)
+    else:
+        result = init(kwargs)
+    if (getattr(result, 'boolmakeplot', False)
+            and getattr(result, 'boolmakeplotfinlpost', False)
+            and hasattr(result, 'listpostparagenrscalbase')):
+        from .plotting import plot_posterior_convergence
+
+        output_root = retr_pathplotcnfg(
+            kwargs.get('pathbase') or result.pathbase,
+            kwargs.get('strgcnfg') or result.strgcnfg,
+        )
+        plot_posterior_convergence(
+            result, Path(output_root) / 'post' / 'convergence',
+            typefileplot=getattr(result, 'typefileplot', 'png'),
+        )
+    return result
 
 
 def retr_dictpcatinpt():

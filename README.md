@@ -195,6 +195,22 @@ stop and their retained samples are truncated to a common length before
 final aggregation. This feature is opt-in; the default ``boolcheckconv=False``
 leaves existing fixed-``numbswep`` behavior unchanged.
 
+Plot-enabled runs also save a convergence figure suite under
+``visuals/post/convergence/``. Fixed parameters have worker traces,
+autocorrelation, approximate effective sample sizes, and cross-worker R-hat.
+Variable-size catalogs have element-count traces, occupancy, within-worker
+transitions, count mixing, and early/late distributions of sampled element
+features. Single-worker runs cannot report cross-worker R-hat. Existing saved
+posteriors can be plotted with ``pcat.plotting.plot_posterior_convergence``.
+
+The variable-planet radial-velocity example produces the following fixed-parameter
+and planet-count traces from its short demonstration chain. These show how to
+inspect mixing; the run is too short to establish convergence.
+
+![Fixed-parameter posterior trace from simulated radial velocities](examples/variable_number_exoplanets_radial_velocity/visuals/fixed_parameter_trace.png)
+
+![Variable planet-count posterior trace from simulated radial velocities](examples/variable_number_exoplanets_radial_velocity/visuals/element_count_trace.png)
+
 ### Burn-in strategies
 
 `numbburn` sets the initial sweeps excluded from posterior products. PCAT offers

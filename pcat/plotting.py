@@ -10,6 +10,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from tdpy.util import save_figure
 
+from .diagnostics import autocorrelation_time, catalog_count_transitions, gelman_rubin
+
 
 EXAMPLES_ROOT = Path(__file__).resolve().parents[1] / "examples"
 DEFAULT_POSTERIOR_COLLAGE = EXAMPLES_ROOT / "pcat_posterior_samples.gif"
@@ -191,6 +193,180 @@ def histogram_frame_limits(reference_count: float, maximum_model_count: float) -
     maximum = max(1.0, float(np.max(np.atleast_1d(reference_count))),
                   float(np.max(np.atleast_1d(maximum_model_count))))
     return 0.5, 1.1 * maximum
+
+
+def plot_posterior_convergence(state, output_directory: Path, typefileplot: str = "png") -> dict[str, Path]:
+    """Plot fixed-parameter mixing and transdimensional catalog-size diagnostics."""
+
+    if typefileplot not in ("png", "pdf"):
+        raise ValueError("typefileplot must be 'png' or 'pdf'")
+    fixed = np.asarray(state.listpostparagenrscalbase, dtype=float)
+    if fixed.ndim == 1:
+        fixed = fixed[:, None]
+    if fixed.ndim != 2 or fixed.shape[0] < 2:
+        raise ValueError("Fixed-parameter draws must be a sample-by-parameter array")
+    output_directory = Path(output_directory)
+    output_directory.mkdir(parents=True, exist_ok=True)
+    paths = {}
+    chain_count = int(getattr(state, "numbproc", 1))
+    sample_count = int(getattr(state, "numbsamp", fixed.shape[0]))
+    if chain_count > 1 and chain_count * sample_count != fixed.shape[0]:
+        raise ValueError("The number of posterior draws must match the independent chains")
+
+    def split_chains(values):
+        if chain_count == 1:
+            return values[:, None, :]
+        return values.reshape(sample_count, chain_count, values.shape[1])
+
+    def save(figure, name):
+        path = output_directory / f"{name}.{typefileplot}"
+        print(f"Writing to {path}...")
+        figure.savefig(path, dpi=300 if typefileplot == "png" else None,
+                       bbox_inches="tight", facecolor="white")
+        plt.close(figure)
+        paths[name] = path
+
+    def series_and_mixing(values, prefix, names):
+        if values.shape[1] == 0:
+            return None
+        labels = list(names) if names is not None else [f"Parameter {index + 1}" for index in range(values.shape[1])]
+        if len(labels) != values.shape[1]:
+            raise ValueError("Convergence labels must match the number of series")
+        chains = split_chains(values)
+        figure, axes = plt.subplots(len(labels), 1, figsize=(9, max(3.0, 1.8 * len(labels))),
+                                   sharex=True, squeeze=False, facecolor="white")
+        for index, axis in enumerate(axes[:, 0]):
+            for chain_index in range(chain_count):
+                axis.plot(chains[:, chain_index, index], lw=0.65, alpha=0.7,
+                          label=f"Chain {chain_index + 1}" if index == 0 else None)
+            axis.set_ylabel(labels[index], fontsize=10)
+            axis.grid(False)
+        if chain_count > 1:
+            axes[0, 0].legend(framealpha=1, facecolor="white", edgecolor="black")
+        axes[-1, 0].set_xlabel("Posterior sample index", fontsize=10)
+        save(figure, f"{prefix}_trace")
+
+        window = chains[-min(2000, sample_count):]
+        correlation, times = autocorrelation_time(window)
+        figure, axis = plt.subplots(figsize=(8, 4), facecolor="white")
+        for index, label in enumerate(labels):
+            for chain_index in range(chain_count):
+                axis.plot(np.arange(correlation.shape[-1]), correlation[chain_index, index],
+                          label=label if chain_index == 0 else None, alpha=0.75)
+        axis.axhline(0, color="black", lw=0.7)
+        axis.set(xlabel="Lag [posterior samples]", ylabel="Autocorrelation")
+        axis.set_xlim(0, max(1, correlation.shape[-1] - 1))
+        axis.grid(False)
+        axis.legend(loc="upper right", framealpha=1, facecolor="white", edgecolor="black")
+        save(figure, f"{prefix}_autocorrelation")
+        time_per_parameter = np.max(np.where(np.isfinite(times), times, np.inf), axis=0)
+        effective = values.shape[0] / np.maximum(time_per_parameter, 1)
+        rhat = np.array([gelman_rubin(chains[:, :, index]) for index in range(values.shape[1])]) \
+            if chain_count > 1 else np.full(values.shape[1], np.nan)
+        return labels, effective, rhat
+
+    if fixed.shape[1]:
+        parameter_names = getattr(state, "convergence_parameter_names", None)
+        if parameter_names is None:
+            parameter_names = getattr(getattr(getattr(state, "fitt", None), "namepara", None), "genrbase", None)
+        names, effective, rhat = series_and_mixing(fixed, "fixed_parameter", parameter_names)
+        figure, axes = plt.subplots(2, 1, figsize=(8, max(4.4, len(names) * 0.48 + 2)),
+                                   sharex=True, facecolor="white")
+        axes[0].bar(np.arange(len(names)), effective, color="#19796D")
+        axes[0].set_ylabel("Approximate ESS [samples]")
+        axes[1].plot(np.arange(len(names)), rhat, marker="o", color="#A64135")
+        axes[1].axhline(1.05, color="black", ls="--", lw=0.8)
+        axes[1].set_ylabel(r"Multi-chain $\hat R$")
+        if not np.isfinite(rhat).any():
+            axes[1].text(0.5, 0.5, "Multiple chains required", ha="center", va="center",
+                         transform=axes[1].transAxes)
+        axes[1].set_xticks(np.arange(len(names)), names, rotation=35, ha="right")
+        for axis in axes:
+            axis.grid(False)
+        save(figure, "fixed_parameter_mixing")
+
+    count = np.asarray(getattr(state, "listpostnumbelem", np.empty((fixed.shape[0], 0))))
+    if count.ndim == 1:
+        count = count[:, None]
+    if count.ndim != 2 or count.shape[0] != fixed.shape[0]:
+        raise ValueError("Element counts must be a matching sample-by-population array")
+    if count.shape[1]:
+        if not np.isfinite(count).all() or np.any(count < 0) or np.any(count != np.floor(count)):
+            raise ValueError("Element counts must be finite nonnegative integers")
+        count = count.astype(int)
+        names, effective, rhat = series_and_mixing(count, "element_count", [f"Population {index + 1}"
+                                    for index in range(count.shape[1])])
+        figure, axes = plt.subplots(2, 1, figsize=(8, max(4.4, count.shape[1] * 0.48 + 2)),
+                                   sharex=True, facecolor="white")
+        axes[0].bar(np.arange(len(names)), effective, color="#19796D")
+        axes[0].set_ylabel("Approximate ESS [samples]")
+        axes[1].plot(np.arange(len(names)), rhat, marker="o", color="#A64135")
+        axes[1].axhline(1.05, color="black", ls="--", lw=0.8)
+        if chain_count == 1:
+            axes[1].text(0.5, 0.5, "Multiple chains required", transform=axes[1].transAxes,
+                         ha="center", va="center")
+        axes[1].set_ylabel(r"Multi-chain $\hat R$")
+        axes[1].set_xticks(np.arange(len(names)), names)
+        for axis in axes:
+            axis.grid(False)
+        save(figure, "element_count_mixing")
+        figure, axis = plt.subplots(figsize=(8, 4), facecolor="white")
+        for index, label in enumerate(names):
+            bins = np.arange(count[:, index].max() + 2)
+            axis.step(bins[:-1], np.bincount(count[:, index], minlength=len(bins) - 1) / len(count),
+                      where="mid", label=label)
+        axis.set(xlabel="Number of elements", ylabel="Posterior occupancy", ylim=(0, 1))
+        axis.grid(False)
+        axis.legend(loc="upper right", framealpha=1, facecolor="white", edgecolor="black")
+        save(figure, "element_count_occupancy")
+
+        figure, axes = plt.subplots(1, count.shape[1], figsize=(5 * count.shape[1], 4),
+                                   squeeze=False, facecolor="white")
+        count_chains = split_chains(count)
+        for index, axis in enumerate(axes[0]):
+            transitions = catalog_count_transitions(count_chains[:, :, index])
+            axis.imshow(transitions, origin="lower", cmap="Greens", interpolation="nearest")
+            axis.set(xlabel="Next catalog size", ylabel="Current catalog size", title=names[index])
+            axis.grid(False)
+        save(figure, "element_count_transitions")
+
+        catalogs = getattr(state, "listpostdictelem", None)
+        if catalogs is not None and len(catalogs) == len(count):
+            for population in range(count.shape[1]):
+                features = sorted({feature for sample in catalogs if len(sample) > population
+                                   for feature in sample[population]})
+                for feature in features:
+                    halves = []
+                    for subset in (catalogs[:len(catalogs) // 2], catalogs[len(catalogs) // 2:]):
+                        series = []
+                        for sample in subset:
+                            if len(sample) <= population or feature not in sample[population]:
+                                continue
+                            try:
+                                values = np.asarray(sample[population][feature], dtype=float)
+                            except (TypeError, ValueError):
+                                continue
+                            if values.ndim == 1:
+                                series.extend(values[np.isfinite(values)])
+                        halves.append(np.asarray(series))
+                    if not all(values.size for values in halves):
+                        continue
+                    combined = np.concatenate(halves)
+                    if not np.all(np.isfinite(combined)):
+                        continue
+                    figure, axis = plt.subplots(figsize=(7, 4), facecolor="white")
+                    bins = np.histogram_bin_edges(combined, bins=30)
+                    for values, label, color in zip(halves, ("First half", "Second half"),
+                                                     ("#19796D", "#A64135")):
+                        axis.hist(values, bins=bins, histtype="step", density=True,
+                                  linewidth=1.8, color=color, label=label)
+                    axis.set(xlabel=f"{feature} [model units]", ylabel="Density",
+                             title=f"Population {population + 1} element distribution")
+                    axis.grid(False)
+                    axis.legend(framealpha=1, facecolor="white", edgecolor="black")
+                    save(figure, f"element_parameter_pop{population}_{feature}_stability")
+
+    return paths
 
 
 POSTERIOR_ANIMATION_PANELS = (

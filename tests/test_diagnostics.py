@@ -1,5 +1,7 @@
 import numpy as np
 import pytest
+import importlib
+from pathlib import Path
 from types import SimpleNamespace
 
 from PIL import Image
@@ -7,6 +9,7 @@ from PIL import Image
 from pcat.diagnostics import (
     autocorrelation_time,
     binomial_wilson_interval,
+    catalog_count_transitions,
     gelman_rubin,
 )
 from pcat.main import (
@@ -29,6 +32,104 @@ from pcat.main import (
     _write_proposal_activity_animation,
     _write_proposal_candidate_frame,
 )
+from pcat.plotting import plot_posterior_convergence
+
+
+def test_posterior_convergence_plots_fixed_and_transdimensional_chains(tmp_path):
+    rng = np.random.default_rng(31)
+    state = SimpleNamespace(
+        listpostparagenrscalbase=rng.normal(size=(240, 2)),
+        listpostnumbelem=rng.integers(0, 4, size=(240, 1)),
+        numbproc=2,
+        numbsamp=120,
+    )
+
+    paths = plot_posterior_convergence(state, tmp_path, typefileplot="png")
+
+    assert set(paths) == {
+        "fixed_parameter_trace", "fixed_parameter_autocorrelation",
+        "fixed_parameter_mixing", "element_count_trace", "element_count_autocorrelation",
+        "element_count_occupancy", "element_count_transitions", "element_count_mixing",
+    }
+    for path in paths.values():
+        print(f"Reading from {path}...")
+        with Image.open(path) as image:
+            assert image.width > 200 and image.height > 200
+
+
+def test_catalog_transitions_do_not_cross_independent_chains():
+    counts = np.array([[0, 4], [0, 4], [0, 4]])
+    transitions = catalog_count_transitions(counts)
+    assert transitions.sum() == 4
+    assert transitions[0, 0] == transitions[4, 4] == 2
+    assert transitions[0, 4] == transitions[4, 0] == 0
+
+
+def test_catalog_count_rhat_uses_sample_major_worker_order(monkeypatch, tmp_path):
+    plotting = importlib.import_module("pcat.plotting")
+    compared = []
+    original = plotting.gelman_rubin
+
+    def record_chains(chains):
+        compared.append(np.asarray(chains).copy())
+        return original(chains)
+
+    monkeypatch.setattr(plotting, "gelman_rubin", record_chains)
+    state = SimpleNamespace(
+        listpostparagenrscalbase=np.arange(8, dtype=float)[:, None],
+        listpostnumbelem=np.array([[0], [4], [1], [3], [0], [4], [1], [3]]),
+        numbproc=2, numbsamp=4,
+    )
+    figures = plot_posterior_convergence(state, tmp_path)
+
+    np.testing.assert_array_equal(compared[-1], [[0, 4], [1, 3], [0, 4], [1, 3]])
+    assert figures["element_count_mixing"].is_file()
+
+
+def test_element_distribution_compares_early_and_late_posterior(tmp_path):
+    state = SimpleNamespace(
+        listpostparagenrscalbase=np.arange(20, dtype=float)[:, None],
+        listpostnumbelem=np.ones((20, 1), dtype=int),
+        listpostdictelem=[[{"flux": np.array([1.0 + sample / 10])}] for sample in range(20)],
+        numbproc=1,
+        numbsamp=20,
+    )
+    figures = plot_posterior_convergence(state, tmp_path)
+    assert figures["element_parameter_pop0_flux_stability"].is_file()
+
+
+def test_completed_plot_enabled_sample_writes_convergence_suite(monkeypatch, tmp_path):
+    sampler = importlib.import_module("pcat.main")
+    plots = importlib.import_module("pcat.plotting")
+    state = SimpleNamespace(boolmakeplot=True, boolmakeplotfinlpost=True,
+                            listpostparagenrscalbase=np.ones((4, 1)), typefileplot="png")
+    calls = []
+    monkeypatch.setattr(sampler, "init_image", lambda **kwargs: SimpleNamespace(**kwargs))
+    monkeypatch.setattr(sampler, "init", lambda config: state)
+    monkeypatch.setattr(plots, "plot_posterior_convergence",
+                        lambda result, path, typefileplot: calls.append((result, path, typefileplot)))
+
+    assert sampler.sample(typeexpr="gmix", pathbase=str(tmp_path), strgcnfg="test") is state
+    assert calls == [(state, Path(sampler.retr_pathplotcnfg(str(tmp_path), "test"))
+                      / "post" / "convergence", "png")]
+
+    state.boolmakeplotfinlpost = False
+    sampler.sample(typeexpr="gmix", pathbase=str(tmp_path), strgcnfg="test")
+    assert len(calls) == 1
+
+
+def test_real_fixed_sample_writes_convergence_figures(tmp_path):
+    from pcat.fixed import sample_fixed_chains
+
+    sample_fixed_chains(
+        None, lambda values, state: -0.5 * values[0] ** 2, None,
+        ("location",), ("self",), (-2.0,), (2.0,), None, None,
+        np.array([[0.0]]), 1, 8, 2, pathbase=str(tmp_path), typeverb=0,
+        boolmakeplot=True, boolmakeplotinit=False, boolmakeplotfram=False,
+        boolmakeplotfinlpost=True, makeanim=False,
+    )
+    figures = list(tmp_path.glob("pcat_runs/*/visuals/post/convergence/fixed_parameter_*.png"))
+    assert len(figures) == 3
 
 
 def test_gmrb_rejects_separated_constant_chains():
