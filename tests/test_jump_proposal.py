@@ -52,13 +52,15 @@ def test_jump_proposal_redraws_element_without_changing_dimension(tmp_path):
     assert np.all(np.isfinite(lliktotl))
 
 
-def test_jump_proposal_defaults_to_off():
+def test_jump_proposal_is_on_for_catalogs_and_off_for_fixed_models():
     from pcat.main import _configure_proposal_types
     from types import SimpleNamespace
 
     state = SimpleNamespace(probtran=None, probspmr=None)
-    model = SimpleNamespace(numbpopl=1)
-    _configure_proposal_types(state, model)
-
-    assert state.probjump == 0.
+    _configure_proposal_types(state, SimpleNamespace(numbpopl=1))
+    assert state.probjump == 0.1
     assert 'jump' in state.nameproptype.tolist()
+
+    state = SimpleNamespace(probtran=None, probspmr=None)
+    _configure_proposal_types(state, SimpleNamespace(numbpopl=0))
+    assert state.probjump == 0.

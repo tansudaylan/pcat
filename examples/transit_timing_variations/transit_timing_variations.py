@@ -12,6 +12,7 @@ import numpy as np
 
 from ephesos import evaluate_sinusoidal_ttv
 from pcat.fixed import sample_fixed_chains
+from pcat.plotting import animation_phase_label, animation_states
 from pcat.time_series import log_likelihood_transit_times
 
 
@@ -48,30 +49,32 @@ def timing_likelihood(parameters, data):
     )
 
 
-def render_ttv_posterior_frames(data, chain):
-    """Plot the measured-minus-linear timing series and PCAT models on shared limits."""
+def render_ttv_posterior_frames(data, snapshots):
+    """Plot the measured-minus-linear timing series and PCAT models from the prior draw onward."""
     transit_epoch, observed_times, errors = data
     linear = TRUE_EPOCH + TRUE_PERIOD * transit_epoch  # [day]
     measured_minutes = (observed_times - linear) * MINUTES_PER_DAY  # [minute]
-    indices = np.linspace(0, len(chain) - 1, min(12, len(chain)), dtype=int)
-    curves = [(predict_transit_times(chain[index], transit_epoch) - linear) * MINUTES_PER_DAY
-              for index in indices]
-    maximum_minutes = 1.15 * max(np.max(np.abs(measured_minutes) + errors * MINUTES_PER_DAY),
-                                 *(np.max(np.abs(curve)) for curve in curves))  # [minute]
+    curves = [(predict_transit_times(snapshot["paragenrscalfull"][:4], transit_epoch) - linear) * MINUTES_PER_DAY
+              for snapshot in snapshots]
+    # data-based limits keep the axis fixed even when early burn-in models lie far off
+    maximum_minutes = 1.6 * np.max(np.abs(measured_minutes) + errors * MINUTES_PER_DAY)  # [minute]
     output = ROOT / "visuals"
     output.mkdir(parents=True, exist_ok=True)
+    for old_frame in output.glob("ttv_posterior_swep*.png"):
+        print(f"Removing previous frame {old_frame}...")
+        old_frame.unlink()
     paths = []
-    for index, curve in zip(indices, curves):
+    for snapshot, curve in zip(snapshots, curves):
         figure, axis = plt.subplots(figsize=(5.8, 4.3), facecolor="white")
         axis.errorbar(transit_epoch, measured_minutes, yerr=errors * MINUTES_PER_DAY,
                       fmt="o", markersize=3.5, color="#465561", label="Simulated transit times")
         axis.plot(transit_epoch, curve, color="#B34735", lw=2, label="PCAT timing model")
         axis.set(xlim=(-1, transit_epoch[-1] + 1), ylim=(-maximum_minutes, maximum_minutes),
                  xlabel="Transit epoch", ylabel="Observed - linear transit time [minute]",
-                 title="Simulated transit timing variations")
+                 title=animation_phase_label(snapshot))
         axis.grid(False)
         axis.legend(loc="upper right", framealpha=1, facecolor="white")
-        path = output / f"ttv_posterior_swep{index:09d}.png"
+        path = output / f"ttv_posterior_swep{snapshot['cntrswep']:09d}.png"
         print(f"Writing to {path}...")
         figure.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
         plt.close(figure)
@@ -82,22 +85,24 @@ def render_ttv_posterior_frames(data, chain):
 def run_example(smoke: bool = False):
     """Fit simulated transit times with PCAT and return evolving model figures."""
     data = simulate_transits()
-    chain, _ = sample_fixed_chains(
+    sample_count, burn_count = (200, 100) if smoke else (2000, 1000)
+    chain, _, state = sample_fixed_chains(
         data, timing_likelihood, None,
         ("epoch", "orbital_period", "ttv_amplitude", "ttv_phase"), ("self",) * 4,
         np.array([0.19, 2.9997, 0.0, -np.pi]),
         np.array([0.21, 3.0003, 10.0 / MINUTES_PER_DAY, np.pi]),
-        None, None, np.array([[TRUE_EPOCH, TRUE_PERIOD, 3.0 / MINUTES_PER_DAY, 0.2]]),
-        1, 20 if smoke else 80, 5 if smoke else 20,
+        None, None, None,
+        4, sample_count, burn_count,
         pathbase=str(ROOT), typeverb=0, boolmakeplot=False,
         boolmakeplotinit=False, boolmakeplotfram=False, makeanim=False,
+        numbframanim=24, return_state=True,
     )
     posterior_path = ROOT / "data" / "ttv_posterior.npz"
     posterior_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Writing to {posterior_path}...")
     np.savez_compressed(posterior_path, transit_epoch=data[0], observed_times=data[1],
                         timing_errors=data[2], chain=chain)
-    return data, chain, render_ttv_posterior_frames(data, chain.reshape(-1, 4))
+    return data, chain, render_ttv_posterior_frames(data, animation_states(state))
 
 
 def main():

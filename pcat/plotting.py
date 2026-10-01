@@ -69,14 +69,16 @@ def plot_lens_parameter_recovery(
     draws: np.ndarray,
     true_parameters: np.ndarray,
     typefileplot: str = "png",
+    labels: tuple[str, ...] = ("Einstein radius [arcsec]", "Source x [arcsec]", "Source y [arcsec]"),
 ) -> Path:
-    """Write marginal lens-parameter distributions with injected values."""
+    """Write marginal lens-parameter distributions with injected values, three panels per row."""
     if typefileplot not in ("png", "pdf"):
         raise ValueError("typefileplot must be 'png' or 'pdf'")
-    labels = ("Einstein radius [arcsec]", "Source x [arcsec]", "Source y [arcsec]")
     medians = np.median(draws, axis=0)
-    figure, axes = plt.subplots(1, 3, figsize=(11, 3.3), constrained_layout=True)
-    for index, (axis, label) in enumerate(zip(axes, labels)):
+    number_rows = int(np.ceil(len(labels) / 3))
+    figure, axes = plt.subplots(number_rows, 3, figsize=(11, 3.3 * number_rows), constrained_layout=True,
+                                squeeze=False)
+    for index, (axis, label) in enumerate(zip(axes.flat, labels)):
         axis.hist(draws[:, index], bins=22, density=True, color="#007360", alpha=0.75,
                   label="PCAT samples")
         axis.axvline(true_parameters[index], color="#A51417", linewidth=2,
@@ -84,9 +86,11 @@ def plot_lens_parameter_recovery(
         axis.axvline(medians[index], color="black", linestyle="--", linewidth=1.5,
                      label="Posterior median")
         axis.set_xlabel(label)
-        axis.set_ylabel("Density [arcsec$^{-1}$]")
+        axis.set_ylabel("Posterior density")
         axis.grid(False)
-    axes[0].legend(loc="upper left", frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
+    for axis in axes.flat[len(labels):]:
+        axis.set_visible(False)
+    axes[0, 0].legend(loc="upper left", frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
     output_path = Path(output_path).with_suffix(f".{typefileplot}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Writing to {output_path}...")
@@ -523,7 +527,12 @@ def make_image_sequence_animation(
             255.0,
         ).astype(np.uint8)
         rendered = Image.fromarray(scaled, mode="L")
-        rendered.thumbnail((image_size, image_size), Image.Resampling.LANCZOS)
+        # fit the longer side to image_size; small cutouts are enlarged with sharp detector pixels
+        factor = image_size / max(rendered.size)
+        resample = Image.Resampling.NEAREST if factor > 1.0 else Image.Resampling.LANCZOS
+        rendered = rendered.resize(
+            (max(1, round(rendered.width * factor)), max(1, round(rendered.height * factor))), resample
+        )
         canvas = Image.new("RGB", (image_size, image_size + header_height + footer_height), "white")
         draw = ImageDraw.Draw(canvas)
         draw.text((16, 16), title, fill="black", font=_animation_font(22, bold=True))
@@ -589,8 +598,11 @@ def make_posterior_animation_collage(
     for frame_index in range(frame_count):
         canvas = Image.new("RGB", canvas_size, "white")
         draw = ImageDraw.Draw(canvas)
-        draw.text((margin, margin), "PCAT posterior samples", fill="black", font=title_font)
-        counter = f"frame {frame_index + 1:02d} / {frame_count:02d}"
+        draw.text((margin, margin), "PCAT: from a prior draw to posterior samples", fill="black",
+                  font=title_font)
+        # panel frames follow PCAT's animation schedule, which spends the first third in burn-in
+        phase = "burn-in" if frame_index < frame_count / 3 else "posterior samples"
+        counter = f"{phase} | frame {frame_index + 1:02d} / {frame_count:02d}"
         counter_box = draw.textbbox((0, 0), counter, font=counter_font)
         draw.text(
             (canvas.width - margin - (counter_box[2] - counter_box[0]), margin + 6),
@@ -620,11 +632,12 @@ def make_posterior_animation_collage(
                 (x + (panel_size - panel_image.width) // 2,
                  y + (panel_size - panel_image.height) // 2),
             )
-            draw.rectangle(
-                (x, y, x + panel_size - 1, y + panel_size - 1),
-                outline="#c4cccc",
-                width=2,
-            )
+            if panel.static_image is None:
+                draw.rectangle(
+                    (x, y, x + panel_size - 1, y + panel_size - 1),
+                    outline="#c4cccc",
+                    width=2,
+                )
             draw.text(
                 (x, y + panel_size + 8),
                 panel.label,
@@ -820,6 +833,22 @@ def plot_grid(
     )
     plt.close(figure)
     return output_path
+
+
+def animation_states(state):
+    """Return the chain-0 snapshots PCAT recorded for ``numbframanim``, ordered by sweep."""
+    snapshots = list(getattr(state, "listanimstate", []) or [])
+    if len(snapshots) < 2:
+        raise ValueError("Run PCAT with numbframanim >= 2 to record animation snapshots")
+    return sorted(snapshots, key=lambda snapshot: snapshot["cntrswep"])
+
+
+def animation_phase_label(snapshot):
+    """Describe a snapshot as the initial prior draw, a burn-in state, or a posterior sample."""
+    if snapshot["cntrswep"] == 0:
+        return "Initial random draw from the prior"
+    phase = "Burn-in" if snapshot["boolburn"] else "Posterior sample"
+    return f"{phase}, sweep {snapshot['cntrswep']:,}"
 
 
 MOVE_LABELS = {"with": "Within-model", "brth": "Birth", "deth": "Death", "splt": "Split",

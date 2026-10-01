@@ -16,6 +16,11 @@ examples/daylan+2017_fermi_point_sources/visuals/*
 !examples/catalog_association_completeness_purity/visuals/*.png
 !examples/roman_strong_lens_perturber_catalog/visuals/
 !examples/roman_strong_lens_perturber_catalog/visuals/*.png
+!examples/mejiro_roman_strong_lens/visuals/
+!examples/mejiro_roman_strong_lens/visuals/*.png
+!examples/mejiro_roman_strong_lens/visuals/*.gif
+!examples/mismodeling_flare_catalog/visuals/
+!examples/mismodeling_flare_catalog/visuals/*.png
 !examples/proposal_profiling/visuals/
 !examples/proposal_profiling/visuals/*.png
 !examples/sampler_comparison_emcee_dynesty/visuals/

@@ -32,9 +32,11 @@ association, and detector point-spread functions.
 
 ## Posterior samples
 
-![PCAT posterior collage with eight changing inference views and its central logo](examples/pcat_posterior_samples.gif)
+![PCAT runs in eight changing inference views, from a random prior draw through burn-in to posterior samples](examples/pcat_posterior_samples.gif)
 
-Each synchronized frame combines eight changing views around the PCAT logo. The
+Each synchronized frame combines eight changing views. Every view starts from
+a random draw from the prior, follows burn-in for the first third of the
+animation, and shows posterior samples for the remaining two thirds. The
 panels show an unbinned Gaussian mixture of simulated events, simulated
 Fermi-LAT point sources, transdimensional Voigt-line fitting, variable-number
 rotating starspots, Roman/WFI strong-lens arcs, stellar flares, radial

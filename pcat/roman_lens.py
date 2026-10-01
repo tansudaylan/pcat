@@ -25,6 +25,8 @@ class RomanLensConfig:
     subhalo_fraction: float = 0.5
     reference_einstein_radius: float = 0.03  # [arcsec]
     number_candidates: int = 12
+    # even sub-pixel sampling integrates each pixel and never evaluates the singular lens center
+    subpixel_sampling: int = 4
 
 
 @dataclass(frozen=True)
@@ -39,9 +41,10 @@ class LensImagePipelineResult:
     parameter_path: Path
 
 
-def coordinate_grid(config: RomanLensConfig) -> tuple[np.ndarray, np.ndarray]:
-    """Return a square image grid centered on zero in arcseconds."""
-    coordinate = (np.arange(config.number_side) - (config.number_side - 1) / 2) * config.pixel_scale
+def coordinate_grid(config: RomanLensConfig, subpixel_sampling: int = 1) -> tuple[np.ndarray, np.ndarray]:
+    """Return a square grid of (sub-)pixel centers centered on zero in arcseconds."""
+    number = config.number_side * subpixel_sampling
+    coordinate = (np.arange(number) - (number - 1) / 2) * config.pixel_scale / subpixel_sampling
     return np.meshgrid(coordinate, coordinate, indexing="xy")
 
 
@@ -72,8 +75,11 @@ def render_lens(
     source_angle: float,
     subhalo: tuple[float, float, float] | None = None,
 ) -> np.ndarray:
-    """Render a PSF-convolved lensed Gaussian source in detector electrons."""
-    x_grid, y_grid = coordinate_grid(config)
+    """Render a PSF-convolved lensed Gaussian source in detector electrons, integrated over each pixel."""
+    sampling = config.subpixel_sampling
+    if sampling < 1 or (config.number_side % 2 == 1 and sampling % 2 == 1 and sampling > 1):
+        raise ValueError("subpixel_sampling must be 1 or even for an odd number of pixels per side")
+    x_grid, y_grid = coordinate_grid(config, sampling)
     alpha_x, alpha_y = _deflect(x_grid, y_grid, einstein_radius, subhalo)
     beta_x = x_grid - alpha_x - source_x  # [arcsec]
     beta_y = y_grid - alpha_y - source_y  # [arcsec]
@@ -82,6 +88,8 @@ def render_lens(
     major = cosine * beta_x + sine * beta_y  # [arcsec]
     minor = -sine * beta_x + cosine * beta_y  # [arcsec]
     profile = np.exp(-0.5 * ((major / source_size) ** 2 + (minor / (axis_ratio * source_size)) ** 2))
+    side = config.number_side
+    profile = profile.reshape(side, sampling, side, sampling).mean(axis=(1, 3))
     profile *= config.source_counts / profile.sum()
     psf_sigma = config.psf_fwhm / (2.355 * config.pixel_scale)  # [pixel]
     return gaussian_filter(profile, psf_sigma, mode="constant")
@@ -142,13 +150,22 @@ def run_lens_image_pipeline(
     numbswep: int = 400,
     numbburn: int = 150,
     numbsamp: int = 250,
+    initial_parameters: tuple[float, float, float] | None = (),
+    numbframanim: int | None = None,
 ) -> LensImagePipelineResult:
-    """Sample a Poisson lens image and write PCAT fit and posterior figures."""
+    """Sample a Poisson lens image and write PCAT fit and posterior figures.
+
+    ``initial_parameters`` defaults to the field center with half the maximum
+    Einstein radius; pass ``None`` to start from a random draw from the prior.
+    ``numbframanim`` records whole-run animation snapshots.
+    """
     from .main import sample
     from .plotting import plot_lens_image_fit, plot_lens_parameter_recovery
 
     output_root = Path(output_root)
     half_width = (config.number_side - 1) * config.pixel_scale / 2.0  # [arcsec]
+    if initial_parameters == ():
+        initial_parameters = (0.5 * half_width, 0.0, 0.0)  # [arcsec]
     posterior = sample(
         typeexpr="gener",
         retr_llik=poisson_lens_log_likelihood,
@@ -161,7 +178,7 @@ def run_lens_image_pipeline(
         prior_types=("self", "self", "self"),
         prior_minima=(0.1, -0.3 * half_width, -0.3 * half_width),  # [arcsec]
         prior_maxima=(0.9 * half_width, 0.3 * half_width, 0.3 * half_width),  # [arcsec]
-        initial_values=(0.5 * half_width, 0.0, 0.0),  # [arcsec]
+        initial_values=initial_parameters,  # [arcsec]
         proposal_scales=(0.08, 0.03, 0.03),  # [arcsec]
         propwithsing=True,
         probpropblock=0.0,
@@ -172,6 +189,7 @@ def run_lens_image_pipeline(
         numbburn=numbburn,
         numbsamp=numbsamp,
         booladaptstdp=True,
+        numbframanim=numbframanim,
         typeseed=42,
         typeverb=-1,
     )

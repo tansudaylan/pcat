@@ -309,7 +309,9 @@ def test_documented_posterior_collage_matches_generator():
     examples = (DOCS_ROOT / "examples.rst").read_text()
 
     assert len(POSTERIOR_ANIMATION_PANELS) == 9
-    assert "Eight changing inference views and the central PCAT logo are synchronized below" in examples
+    assert "Eight changing inference views are synchronized below" in examples
+    assert "logo" not in examples.split("Eight changing inference views")[1].split("..")[0]
+    assert "random draw from the prior" in examples
     for domain in (
         "lensed arcs", "stellar flares", "rotating starspots",
         "radial velocities", "transit times",

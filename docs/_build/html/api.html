@@ -99,6 +99,8 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#animations">Animations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.animation_states"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.animation_states()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.animation_phase_label"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.animation_phase_label()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.make_image_sequence_animation"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.make_image_sequence_animation()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.make_posterior_animation_collage"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.make_posterior_animation_collage()</span></code></a></li>
 </ul>
@@ -128,6 +130,12 @@
 <li class="toctree-l2"><a class="reference internal" href="#roman-lens-benchmark">Roman lens benchmark</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#pcat.roman_lens.simulate_population"><code class="docutils literal notranslate"><span class="pre">pcat.roman_lens.simulate_population()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pcat.roman_lens.summarize_population"><code class="docutils literal notranslate"><span class="pre">pcat.roman_lens.summarize_population()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#mejiro-lens-inference">mejiro lens inference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.mejiro_lens.simulate_mejiro_exposure"><code class="docutils literal notranslate"><span class="pre">pcat.mejiro_lens.simulate_mejiro_exposure()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.mejiro_lens.render_mejiro_counts"><code class="docutils literal notranslate"><span class="pre">pcat.mejiro_lens.render_mejiro_counts()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.mejiro_lens.run_mejiro_lens_inference"><code class="docutils literal notranslate"><span class="pre">pcat.mejiro_lens.run_mejiro_lens_inference()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#persistence">Persistence</a><ul>
@@ -205,6 +213,15 @@ that proposal is unsupported.</p>
 render every proposed candidate before its accept/reject decision and
 assemble <code class="docutils literal notranslate"><span class="pre">proposal_candidates.gif</span></code>. This expensive diagnostic is
 disabled by default.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">numbframanim</span></code> to record that many chain-0 states for animations, one</dt><dd><p>third spread over burn-in starting from the initial state and two
+thirds over sampling. With <code class="docutils literal notranslate"><span class="pre">inittype=&quot;rand&quot;</span></code> (the default) the first
+state is a random draw from the prior, including the catalog size. The
+final state stores them in <code class="docutils literal notranslate"><span class="pre">listanimstate</span></code>, and PCAT’s own frames are
+drawn at the same sweeps.</p>
 </dd>
 </dl>
 </li>
@@ -474,6 +491,22 @@ labels, markers, limits, and annotations. The
 <section id="animations">
 <h3>Animations<a class="headerlink" href="#animations" title="Link to this heading"></a></h3>
 <dl class="py function">
+<dt class="sig sig-object py" id="pcat.plotting.animation_states">
+<span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">animation_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.animation_states" title="Link to this definition"></a></dt>
+<dd><p>Return the snapshots recorded with <code class="docutils literal notranslate"><span class="pre">numbframanim</span></code>, ordered by sweep. Each
+is a dictionary with <code class="docutils literal notranslate"><span class="pre">cntrswep</span></code>, <code class="docutils literal notranslate"><span class="pre">boolburn</span></code>, <code class="docutils literal notranslate"><span class="pre">facttmpr</span></code>,
+<code class="docutils literal notranslate"><span class="pre">paragenrscalfull</span></code>, <code class="docutils literal notranslate"><span class="pre">lliktotl</span></code>, <code class="docutils literal notranslate"><span class="pre">lpostotl</span></code>, and, when available,
+<code class="docutils literal notranslate"><span class="pre">numbelem</span></code>, <code class="docutils literal notranslate"><span class="pre">cntpmodl</span></code>, and <code class="docutils literal notranslate"><span class="pre">dictelem</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.plotting.animation_phase_label">
+<span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">animation_phase_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">snapshot</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.animation_phase_label" title="Link to this definition"></a></dt>
+<dd><p>Describe a snapshot as the initial prior draw, a burn-in state, or a
+posterior sample, for frame titles.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="pcat.plotting.make_image_sequence_animation">
 <span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">make_image_sequence_animation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">images</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">800</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">640</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Rubin</span> <span class="pre">DP1</span> <span class="pre">lens</span> <span class="pre">cutouts'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.make_image_sequence_animation" title="Link to this definition"></a></dt>
 <dd><p>Write a GIF with one frame per two-dimensional image, a shared intensity
@@ -597,6 +630,33 @@ then evaluate the zero-versus-one-perturber catalog probability.</p>
 <dd><p>Report detection, false-positive, and localization rates with Wilson
 intervals for the simulated population. Plot the population with
 <a class="reference internal" href="#pcat.plotting.plot_detection_diagnostic" title="pcat.plotting.plot_detection_diagnostic"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_detection_diagnostic()</span></code></a>.</p>
+</dd></dl>
+
+</section>
+<section id="mejiro-lens-inference">
+<h2>mejiro lens inference<a class="headerlink" href="#mejiro-lens-inference" title="Link to this heading"></a></h2>
+<p>These functions import mejiro and lenstronomy only when called.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.mejiro_lens.simulate_mejiro_exposure">
+<span class="sig-prename descclassname"><span class="pre">pcat.mejiro_lens.</span></span><span class="sig-name descname"><span class="pre">simulate_mejiro_exposure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">strong_lens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">band</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'F129'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exposure_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">146.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fov_arcsec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supersampling_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2026</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.mejiro_lens.simulate_mejiro_exposure" title="Link to this definition"></a></dt>
+<dd><p>Render a mejiro strong lens (default <code class="docutils literal notranslate"><span class="pre">SampleGG</span></code>) with mejiro’s Roman
+instrument, add its zodiacal and thermal sky, and draw one Poisson exposure.
+Returns a plain-data specification with the observed counts and injected
+parameters.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.mejiro_lens.render_mejiro_counts">
+<span class="sig-prename descclassname"><span class="pre">pcat.mejiro_lens.</span></span><span class="sig-name descname"><span class="pre">render_mejiro_counts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">specification</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.mejiro_lens.render_mejiro_counts" title="Link to this definition"></a></dt>
+<dd><p>Return expected counts per pixel for the sampled SIE, shear, and source
+parameters listed in <code class="docutils literal notranslate"><span class="pre">pcat.mejiro_lens.PARAMETERS</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.mejiro_lens.run_mejiro_lens_inference">
+<span class="sig-prename descclassname"><span class="pre">pcat.mejiro_lens.</span></span><span class="sig-name descname"><span class="pre">run_mejiro_lens_inference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">specification</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_root</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numbswep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numbburn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numbsamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numbproc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numbframanim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.mejiro_lens.run_mejiro_lens_inference" title="Link to this definition"></a></dt>
+<dd><p>Sample the Poisson likelihood with PCAT from a prior draw, with tempered
+burn-in, adaptive scales, and differential-evolution jumps.</p>
 </dd></dl>
 
 </section>

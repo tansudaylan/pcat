@@ -50,10 +50,13 @@ def sample_fixed(**kwargs):
 def sample_fixed_chains(state, log_likelihood, log_prior, names, scales, minima, maxima,
                         means, stdvs, initial, chain_count, sample_count, burn_count,
                         pathbase=None, typeverb=0, estimate_log_evidence=False,
-                        evidence_samples=4000, seed=None, **dictpcat):
+                        evidence_samples=4000, seed=None, return_state=False, **dictpcat):
     """Return PCAT chains in legacy walker-first order, with optional evidence.
 
-    Extra keyword arguments, e.g. booladaptstdp, are passed to PCAT.
+    ``initial=None`` starts every chain from a random draw from the prior.
+    ``return_state=True`` appends the final PCAT state, which holds the
+    animation snapshots requested with ``numbframanim``. Extra keyword
+    arguments, e.g. booladaptstdp, are passed to PCAT.
     """
     if estimate_log_evidence and log_prior is not None:
         raise ValueError('Evidence needs a normalized prior; custom priors require a density and sampler.')
@@ -66,7 +69,7 @@ def sample_fixed_chains(state, log_likelihood, log_prior, names, scales, minima,
             retr_llik=_legacy_likelihood, parameter_names=tuple(names),
             prior_types=prior_types, prior_minima=minima, prior_maxima=maxima,
             prior_means=means, prior_stdvs=stdvs,
-            initial_values=np.mean(initial, axis=0),
+            initial_values=None if initial is None else np.mean(initial, axis=0),
             legacy_payload=cloudpickle.dumps((state, log_likelihood, log_prior)),
             legacy_scalpara=np.asarray(scales), legacy_mean=means, legacy_stdv=stdvs,
             numbproc=chain_count, numbswep=sample_count + burn_count,
@@ -75,14 +78,17 @@ def sample_fixed_chains(state, log_likelihood, log_prior, names, scales, minima,
         )
         chain = np.asarray(result.listpostparagenrscalbase).reshape(chain_count, sample_count, -1)
         logprob = np.asarray(result.listpostlpostotl).reshape(chain_count, sample_count)
+        outputs = (chain, logprob)
         if estimate_log_evidence:
             evidence = estimate_evidence(
                 chain.reshape(-1, len(names)), lambda values: log_likelihood(values, state),
                 prior_types, minima, maxima, means, stdvs,
                 sample_count=evidence_samples, seed=seed,
             )
-            return chain, logprob, evidence
-    return chain, logprob
+            outputs += (evidence,)
+        if return_state:
+            outputs += (result,)
+    return outputs
 
 
 def _allesfitter_likelihood(values, datadir):

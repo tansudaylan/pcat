@@ -68,9 +68,11 @@ def run_pcat(time, rvel, stdv, indxinst, numbswep):
 
     dictpcat = retr_dictpcatrvel(
         time, rvel, stdv, indxinst, str(EXAMPLE_PATH), RUN_NAME, maxmnumbplan=5,
-        numbswep=numbswep, numbsamp=max(numbswep // 50, 20),
-        numbswepplot=max(numbswep // 20, 1), inittype='rand', typeseed=0,
+        numbswep=numbswep, numbburn=numbswep // 3, numbsamp=max(numbswep // 50, 20), numbproc=4,
+        numbswepplot=max(numbswep // 20, 1), inittype='rand', typeseed=0, numbframanim=24,
         probtran=0.7, probspmr=0.4, probjump=0.2, makeanim=False,
+        # a prior draw starts far from the data, so the likelihood is annealed during burn-in
+        boolburntmpr=True, factburntmpr=0.8,
         # unit-cube proposal scales for K, P, phase, eccentricity, and argument of periastron
         stdvpropelemfire=[1e-2, 1e-4, 3e-2, 3e-2, 3e-2],
         boolmakeplot=False, boolmakeplotinit=False, typeverb=0,
@@ -130,26 +132,32 @@ def retr_listplanpost(posterior, numbdraw=300):
 
 
 def render_rv_posterior_frames(time, rvel, stdv, indxinst, timerefr, posterior):
-    """Show fixed-scale simulated RV data against evolving PCAT planet catalogs."""
-    indices = np.linspace(0, len(posterior.listpostdictelem) - 1,
-                          min(12, len(posterior.listpostdictelem)), dtype=int)
+    """Show fixed-scale simulated RV data against PCAT catalogs from the prior draw to posterior samples."""
+    from pcat.plotting import animation_phase_label, animation_states
+
+    snapshots = animation_states(posterior)
     model_time = np.linspace(time.min(), time.max(), 450)  # [day]
-    catalogs = [np.column_stack([np.asarray(posterior.listpostdictelem[index][0][name])
-                                 for name in ('elin', 'flux', 'ecce', 'argp', 'phas')]) for index in indices]
+    catalogs = [np.column_stack([np.asarray(snapshot['dictelem'][0][name])
+                                 for name in ('elin', 'flux', 'ecce', 'argp', 'phas')]) for snapshot in snapshots]
     curves = [retr_rvelplan(model_time, catalog, timerefr) for catalog in catalogs]
     measured = rvel - np.asarray(OFFSET_INSTRUMENTS)[indxinst]  # [m/s]
-    scale = 1.1 * max(np.max(np.abs(measured) + stdv), *(np.max(np.abs(curve)) for curve in curves))  # [m/s]
+    # data-based limits; early burn-in catalogs may leave the axes
+    scale = 1.25 * np.max(np.abs(measured) + stdv)  # [m/s]
     output_directory = EXAMPLE_PATH / 'visuals'
     output_directory.mkdir(parents=True, exist_ok=True)
+    for old_frame in output_directory.glob('rv_posterior_swep*.png'):
+        print(f'Removing previous frame {old_frame}...')
+        old_frame.unlink()
     paths = []
-    for index, catalog, curve in zip(indices, catalogs, curves):
+    for snapshot, catalog, curve in zip(snapshots, catalogs, curves):
+        index = snapshot['cntrswep']
         figure, axis = plt.subplots(figsize=(6.0, 4.5), facecolor='white')
         axis.errorbar(time - TIME_START, measured, yerr=stdv, fmt='.', markersize=3,
                       color='#47565E', alpha=0.65, label='Simulated RV')
         axis.plot(model_time - TIME_START, curve, color='#A51C30', lw=1.8,
                   label=f'PCAT model ({len(catalog)} planets)')
         axis.set(xlim=(0, BASELINE), ylim=(-scale, scale), xlabel='Time since start [day]',
-                 ylabel='Radial velocity [m/s]', title='Simulated two-instrument RV time series')
+                 ylabel='Radial velocity [m/s]', title=animation_phase_label(snapshot))
         axis.grid(False)
         axis.legend(loc='upper right', facecolor='white', framealpha=1)
         path = output_directory / f'rv_posterior_swep{index:09d}.png'

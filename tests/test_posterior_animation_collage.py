@@ -136,7 +136,7 @@ def test_readme_embeds_multiframe_collage():
     readme_path = EXAMPLES_ROOT.parent / "README.md"
     readme = readme_path.read_text()
     assert DEFAULT_POSTERIOR_COLLAGE.is_file()
-    assert "![PCAT posterior collage with eight changing inference views and its central logo]" in readme
+    assert "![PCAT runs in eight changing inference views, from a random prior draw through burn-in to posterior samples]" in readme
     assert str(DEFAULT_POSTERIOR_COLLAGE.relative_to(EXAMPLES_ROOT.parent)) in readme
     with Image.open(DEFAULT_POSTERIOR_COLLAGE) as animation:
         assert animation.n_frames >= 16

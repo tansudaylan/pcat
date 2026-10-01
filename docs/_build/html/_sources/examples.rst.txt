@@ -61,7 +61,9 @@ transit-timing series, the public JWST/MIRI spectrum, the proposal profiler,
 and the sampler comparison. The JWST example may retrieve public MAST data.
 Notebooks requiring authenticated services or interactive inspection are excluded.
 
-Eight changing inference views and the central PCAT logo are synchronized below.
+Eight changing inference views are synchronized below. Each starts from a
+random draw from the prior, follows burn-in for the first third of the
+animation, and shows posterior samples for the remaining two thirds.
 The panels show a genuinely unbinned Gaussian mixture, point sources in a
 simulated Daylan et al. (2017) Fermi-LAT northern Galactic cap, transdimensional
 Voigt-line fitting, a variable catalog of rotating starspots, simulated
@@ -70,7 +72,7 @@ The time-series and histogram axes remain fixed; the GIF uses one shared color
 palette.
 
 .. image:: ../examples/pcat_posterior_samples.gif
-   :alt: Eight changing PCAT inference views around the PCAT logo
+   :alt: Eight changing PCAT inference views from a prior draw to posterior samples
    :width: 760px
    :align: center
 
@@ -159,6 +161,64 @@ Publication and instrument examples
    The four panels trace one simulated detector image through the macro-lens
    model and residual, then summarize catalog posterior probabilities across
    the seeded lens population.
+
+``mejiro_roman_strong_lens``
+   mejiro (Wedig et al.) simulates the SLSim galaxy-galaxy lens ``SampleGG`` in
+   the Roman WFI F129 band with its Roman PSF width, zero point, and sky. PCAT
+   samples the SIE lens, external shear, and source position from one Poisson
+   exposure with the lenstronomy model that mejiro built. Four chains start from
+   prior draws and recover all nine injected parameters within about one
+   posterior standard deviation, with a maximum Gelman-Rubin R-hat of 1.1.
+   Requires an editable mejiro install and ``roman-technical-information``.
+
+   .. code-block:: bash
+
+      python examples/mejiro_roman_strong_lens/mejiro_roman_strong_lens.py
+
+   .. image:: ../examples/mejiro_roman_strong_lens/visuals/mejiro_roman_lens_image_fit.png
+      :alt: mejiro Roman exposure, PCAT median model, and standardized residual
+      :width: 720px
+      :align: center
+
+   .. image:: ../examples/mejiro_roman_strong_lens/visuals/mejiro_roman_lens_posterior.png
+      :alt: Posterior distributions of nine lens and source parameters with injected values
+      :width: 720px
+      :align: center
+
+   A second fit assumes a PSF 30% wider than the one mejiro used. Its
+   posteriors are as narrow as those of the correct fit, yet the Einstein
+   radius, lens ellipticity, external shear, and source position move by up to
+   3.5 posterior standard deviations from the injected values.
+
+   .. image:: ../examples/mejiro_roman_strong_lens/visuals/mejiro_roman_lens_psf_mismodeling.png
+      :alt: Posterior offsets from injected lens parameters for correct and 30 percent wider PSFs
+      :width: 720px
+      :align: center
+
+``mismodeling_flare_catalog``
+   Four flares with a fast rise and exponential decay (FRED) are injected into
+   two simulated one-day light curves, one with a constant quiescent level and
+   one with a 2% rotational modulation. Each light curve is fit with the model
+   that generated it and with a misspecified model, using identical priors and
+   samplers. The correct fits recover four flares with a posterior probability
+   of at least 0.94. Symmetric Gaussian flares need about 15 components to
+   reproduce the asymmetric decays, with a residual consistent with noise. A
+   constant quiescent level turns the modulation into about 6.5 flares. Both
+   misspecified posteriors are narrow and exclude the injected number.
+
+   .. code-block:: bash
+
+      python examples/mismodeling_flare_catalog/mismodeling_flare_catalog.py
+
+   .. image:: ../examples/mismodeling_flare_catalog/visuals/mismodeling_profile_light_curve.png
+      :alt: Flare light curve fit with FRED and Gaussian flare profiles, with residuals
+      :width: 720px
+      :align: center
+
+   .. image:: ../examples/mismodeling_flare_catalog/visuals/mismodeling_catalog_size.png
+      :alt: Posterior number of flares for correct and misspecified forward models
+      :width: 720px
+      :align: center
 
 ``fermi_lat_pg1553_event_filter``
    Fermi Large Area Telescope event-filter configuration for PG 1553+113. This

@@ -121,6 +121,10 @@ def build_configuration(smoke: bool = False, typefileplot: str = "png",
         "lablypos": r"\theta_2",
         "numbswep": number_sweeps,
         "numbsamp": number_samples,
+        "numbburn": number_sweeps // 3,
+        "numbproc": 4,
+        "inittype": "rand",
+        "numbframanim": 24,
         "numbswepplot": 1_000 if smoke else 100_000,
         "probtran": 0.7,
         "probspmr": 0.4,
@@ -153,8 +157,9 @@ def read_posterior(run: object) -> object:
 
 
 def render_source_frames(posterior: object) -> list[Path]:
-    """Overlay changing PCAT source catalogs on one fixed simulated NG-cap count map."""
+    """Overlay PCAT source catalogs, from the prior draw to posterior samples, on the simulated count map."""
     import matplotlib.pyplot as plt
+    from pcat.plotting import animation_phase_label, animation_states
 
     counts = np.asarray(posterior.cntpdata, dtype=float)[0].sum(axis=-1)
     side = int(np.sqrt(counts.size))
@@ -164,23 +169,29 @@ def render_source_frames(posterior: object) -> list[Path]:
     maximum = float(np.arcsinh(counts.max()))
     output_directory = OUTPUT_ROOT / "visuals"
     output_directory.mkdir(parents=True, exist_ok=True)
+    for old_frame in output_directory.glob("fermi_ngpc_sources_swep*.png"):
+        print(f"Removing previous frame {old_frame}...")
+        old_frame.unlink()
     paths = []
-    catalogs = posterior.listpostdictelem
-    for sample_index in np.linspace(0, len(catalogs) - 1, min(12, len(catalogs)), dtype=int):
-        sources = catalogs[sample_index][0]
+    snapshots = animation_states(posterior)
+    fluxes = np.concatenate([np.asarray(snapshot["dictelem"][0]["flux"]) for snapshot in snapshots])
+    low, high = np.log10(fluxes.min()), np.log10(fluxes.max())
+    for snapshot in snapshots:
+        sources = snapshot["dictelem"][0]
+        sizes = 20 + 120 * (np.log10(sources["flux"]) - low) / max(high - low, 1e-9)  # [point^2]
         figure, axis = plt.subplots(figsize=(5.2, 5.2), facecolor="white")
         axis.imshow(np.arcsinh(counts).T, origin="lower", cmap="Greys", vmin=0,
                     vmax=max(maximum, 1.0), extent=[-FIELD_HALF_WIDTH_DEG, FIELD_HALF_WIDTH_DEG] * 2)
-        axis.scatter(np.rad2deg(sources["xpos"]), np.rad2deg(sources["ypos"]), s=58,
+        axis.scatter(np.rad2deg(sources["xpos"]), np.rad2deg(sources["ypos"]), s=sizes,
                      facecolors="none", edgecolors="#c13d31", linewidths=1.5,
                      label=f"PCAT sources ({len(sources['xpos'])})")
         axis.set(xlim=(-FIELD_HALF_WIDTH_DEG, FIELD_HALF_WIDTH_DEG),
                  ylim=(-FIELD_HALF_WIDTH_DEG, FIELD_HALF_WIDTH_DEG),
                  xlabel="Field offset 1 [deg]", ylabel="Field offset 2 [deg]",
-                 title="Simulated Fermi-LAT northern Galactic cap (0.3-1 GeV)")
+                 title=animation_phase_label(snapshot))
         axis.legend(loc="upper right", facecolor="white", framealpha=1)
         axis.grid(False)
-        path = output_directory / f"fermi_ngpc_sources_swep{sample_index:09d}.png"
+        path = output_directory / f"fermi_ngpc_sources_swep{snapshot['cntrswep']:09d}.png"
         print(f"Writing to {path}...")
         figure.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
         plt.close(figure)
@@ -197,7 +208,7 @@ def main() -> int:
     arguments = parser.parse_args()
     if arguments.fresh:
         for path in (
-            OUTPUT_ROOT / "data" / "outp" / RUN_NAME,
+            OUTPUT_ROOT / "pcat_runs" / RUN_NAME / "data" / "outp" / RUN_NAME,
             OUTPUT_ROOT / "visuals",
         ):
             if path.exists():

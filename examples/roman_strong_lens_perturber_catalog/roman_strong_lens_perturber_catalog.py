@@ -4,13 +4,14 @@
 from tdpy.verbosity import print
 
 import argparse
+import shutil
 from tdpy.cli import add_plot_arguments
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pcat.plotting import plot_detection_diagnostic
+from pcat.plotting import animation_phase_label, animation_states, plot_detection_diagnostic
 from pcat.roman_lens import (
     RomanLensConfig, render_lens, render_lens_counts,
     run_lens_image_pipeline, simulate_population, summarize_population,
@@ -25,7 +26,7 @@ def run_example(output_path: Path, number_lenses: int = 100) -> dict[str, float 
 
 
 def render_posterior_lens_frames(smoke: bool = False) -> list[Path]:
-    """Plot PSF-convolved simulated Roman arcs from actual PCAT posterior draws."""
+    """Plot replicated Roman images, with sky background and noise, from a prior draw to posterior samples."""
     output_root = Path(__file__).resolve().parent
     config = RomanLensConfig()
     truth = np.array([0.9, 0.06, -0.04])  # [arcsec]
@@ -34,28 +35,39 @@ def render_posterior_lens_frames(smoke: bool = False) -> list[Path]:
     source_angle = 0.35  # [rad]
     expected_counts = render_lens_counts(config, truth, source_size, axis_ratio, source_angle)
     observed = np.random.default_rng(814).poisson(expected_counts)
+    cached_run = output_root / "pcat_runs" / "roman_wfi_lens_posterior"
+    if cached_run.exists():
+        print(f"Removing cached lens run {cached_run}...")
+        shutil.rmtree(cached_run)
     result = run_lens_image_pipeline(
         config, observed, source_size, axis_ratio, source_angle, truth,
         output_root, "roman_wfi_lens_posterior", "roman_wfi_lens_posterior",
-        numbswep=36 if smoke else 140, numbburn=6 if smoke else 30,
-        numbsamp=30 if smoke else 110,
+        numbswep=600 if smoke else 6000, numbburn=200 if smoke else 2000,
+        numbsamp=200 if smoke else 2000, initial_parameters=None, numbframanim=24,
     )
-    max_signal = float(np.arcsinh(np.max(observed - config.background)))
+    # one fixed noise realization, so frames differ only through the lens model
+    noise_seed = 2027
+    stretch = 3.0 * np.sqrt(config.background)  # [electron pixel^-1], arcsinh softening near the sky noise
+    upper = float(np.arcsinh(np.max(observed) / stretch))
     half_width = config.number_side * config.pixel_scale / 2  # [arcsec]
     visual_root = output_root / "visuals"
+    for old_frame in visual_root.glob("roman_wfi_lensed_posterior_swep*.png"):
+        print(f"Removing previous frame {old_frame}...")
+        old_frame.unlink()
     paths = []
-    for sample_index in np.linspace(0, len(result.draws) - 1, min(12, len(result.draws)), dtype=int):
-        signal = render_lens(
-            config, *result.draws[sample_index], source_size, axis_ratio, source_angle
-        )
+    for snapshot in animation_states(result.posterior):
+        model_counts = render_lens_counts(config, snapshot["paragenrscalfull"][:3], source_size,
+                                          axis_ratio, source_angle)
+        replicated = np.random.default_rng(noise_seed).poisson(model_counts)
         figure, axis = plt.subplots(figsize=(5.2, 5.2), facecolor="white")
-        axis.imshow(np.arcsinh(signal), origin="lower", cmap="magma", vmin=0,
-                    vmax=max(max_signal, 1.0),
-                    extent=(-half_width, half_width, -half_width, half_width))
+        image = axis.imshow(np.arcsinh(replicated / stretch), origin="lower", cmap="magma", vmin=0.0,
+                            vmax=upper, extent=(-half_width, half_width, -half_width, half_width))
+        figure.colorbar(image, ax=axis, shrink=0.8,
+                        label=r"arcsinh(counts / $3\sigma_{\rm sky}$)")
         axis.set(xlabel="Field offset 1 [arcsec]", ylabel="Field offset 2 [arcsec]",
-                 title="Simulated Roman/WFI strong-lens arcs")
+                 title=animation_phase_label(snapshot))
         axis.grid(False)
-        path = visual_root / f"roman_wfi_lensed_posterior_swep{sample_index:09d}.png"
+        path = visual_root / f"roman_wfi_lensed_posterior_swep{snapshot['cntrswep']:09d}.png"
         print(f"Writing to {path}...")
         figure.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
         plt.close(figure)

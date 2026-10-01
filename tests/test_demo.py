@@ -223,11 +223,11 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
 
     module.run_voigt_profile_detection(smoke=True)
 
-    assert captured["numbswep"] == 150_000
-    assert captured["numbsamp"] == 15_000
-    assert captured["numbsampconvmin"] == 2_000
-    assert captured["numbsampconveffc"] == pytest.approx(100.0)
-    assert captured["boolcheckconv"] is True
+    assert captured["numbswep"] == 120_000
+    assert captured["numbburn"] == 60_000
+    assert captured["numbsamp"] == 4_000
+    assert captured["boolcheckconv"] is False
+    assert captured["numbframanim"] == 24
     assert captured["numbswepplot"] == 10_000
     assert captured["makeanim"] is True
     assert captured["truenumbelempop0"] == 2

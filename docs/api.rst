@@ -34,6 +34,12 @@ decomposed into smaller modules.
        render every proposed candidate before its accept/reject decision and
        assemble ``proposal_candidates.gif``. This expensive diagnostic is
        disabled by default.
+   * ``numbframanim`` to record that many chain-0 states for animations, one
+       third spread over burn-in starting from the initial state and two
+       thirds over sampling. With ``inittype="rand"`` (the default) the first
+       state is a random draw from the prior, including the catalog size. The
+       final state stores them in ``listanimstate``, and PCAT's own frames are
+       drawn at the same sweeps.
 
    ``typeexpr="gener"`` registers ``parameter_names`` as ordinary base
    parameters. ``prior_types`` accepts ``"self"`` for bounded uniform priors
@@ -258,6 +264,18 @@ Posterior projections
 Animations
 ~~~~~~~~~~
 
+.. py:function:: pcat.plotting.animation_states(state)
+
+   Return the snapshots recorded with ``numbframanim``, ordered by sweep. Each
+   is a dictionary with ``cntrswep``, ``boolburn``, ``facttmpr``,
+   ``paragenrscalfull``, ``lliktotl``, ``lpostotl``, and, when available,
+   ``numbelem``, ``cntpmodl``, and ``dictelem``.
+
+.. py:function:: pcat.plotting.animation_phase_label(snapshot)
+
+   Describe a snapshot as the initial prior draw, a burn-in state, or a
+   posterior sample, for frame titles.
+
 .. py:function:: pcat.plotting.make_image_sequence_animation(images, labels, output_path, duration_ms=800, image_size=640, title="Rubin DP1 lens cutouts")
 
    Write a GIF with one frame per two-dimensional image, a shared intensity
@@ -352,6 +370,28 @@ Roman lens benchmark
    Report detection, false-positive, and localization rates with Wilson
    intervals for the simulated population. Plot the population with
    :func:`pcat.plotting.plot_detection_diagnostic`.
+
+mejiro lens inference
+---------------------
+
+These functions import mejiro and lenstronomy only when called.
+
+.. py:function:: pcat.mejiro_lens.simulate_mejiro_exposure(strong_lens=None, band="F129", exposure_time=146.0, fov_arcsec=5.0, supersampling_factor=3, seed=2026)
+
+   Render a mejiro strong lens (default ``SampleGG``) with mejiro's Roman
+   instrument, add its zodiacal and thermal sky, and draw one Poisson exposure.
+   Returns a plain-data specification with the observed counts and injected
+   parameters.
+
+.. py:function:: pcat.mejiro_lens.render_mejiro_counts(specification, parameters)
+
+   Return expected counts per pixel for the sampled SIE, shear, and source
+   parameters listed in ``pcat.mejiro_lens.PARAMETERS``.
+
+.. py:function:: pcat.mejiro_lens.run_mejiro_lens_inference(specification, output_root, run_name, numbswep=60000, numbburn=40000, numbsamp=2000, numbproc=4, numbframanim=None)
+
+   Sample the Poisson likelihood with PCAT from a prior draw, with tempered
+   burn-in, adaptive scales, and differential-evolution jumps.
 
 Persistence
 -----------

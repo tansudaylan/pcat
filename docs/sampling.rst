@@ -132,8 +132,13 @@ Tuning proposals
 transdimensional selections allocated to split and merge; the remaining share
 is allocated to birth and death. Split and merge directions are balanced when
 both are available, with boundary restrictions taking precedence.
-``probjump`` and ``probdemc`` both default to zero, so those optional moves must
-be enabled explicitly.
+``probjump`` defaults to ``0.1`` when a variable population is present, so
+catalog runs propose within-model, birth, death, split, merge, and jump moves
+by default. ``probdemc`` defaults to zero and must be enabled explicitly.
+``booladaptstdp`` defaults to ``True``: within-model step sizes adapt toward
+their target acceptance during burn-in only, so the retained chain is an
+ordinary Metropolis-Hastings chain. The :func:`pcat.plotting.plot_proposal_ledger`
+view reports how often each move is proposed and accepted.
 
 For an existing model configuration, proposal controls can be added before
 calling the sampler:

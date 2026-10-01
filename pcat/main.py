@@ -503,7 +503,8 @@ def _configure_proposal_types(gdat, gmod):
         gdat.probspmr = gdat.probtran / 2. if gmod.numbpopl > 0 else 0.
     gdat.probbrde = 1. - gdat.probspmr
     if getattr(gdat, 'probjump', None) is None:
-        gdat.probjump = 0.
+        # catalog models propose every move type: within, birth, death, split, merge, and jump
+        gdat.probjump = 0.1 if gmod.numbpopl > 0 else 0.
     if getattr(gdat, 'probdemc', None) is None:
         gdat.probdemc = 0.
     if getattr(gdat, 'numbdemchist', None) is None:
@@ -651,6 +652,60 @@ def retr_sbrtpnts(gdat, xpos, ypos, spec, psfnintp, indxpixlelem):
     else:
         raise ValueError('Unknown PSF evaluation type: %s' % gdat.kernevaltype)
     return spec[:, None, None] * psfntemp
+
+
+def retr_psfn(gdat, psfp, indxener, angl, typemodlpsfn, strgmodl='fitt'):
+    """Return the PSF [sr^-1] with shape (energy, angle, data-quality class).
+
+    ``psfp`` holds one parameter block per full energy bin and data-quality class,
+    with the energy index varying fastest. Fermi-LAT profiles are evaluated in
+    angles scaled by ``gdat.fermscalfact``; every profile integrates to one.
+    """
+    return PointSpreadFunction(gdat, psfp, typemodlpsfn, indxener)(angl)
+
+
+class PointSpreadFunction:
+    """Picklable PSF evaluated exactly at any angular separations [rad]."""
+
+    def __init__(self, gdat, psfp, typemodlpsfn, indxener=None):
+        self.numbpara = {'singgaus': 1, 'singking': 2, 'doubking': 5}[typemodlpsfn]
+        self.typemodlpsfn = typemodlpsfn
+        self.psfp = np.asarray(psfp, dtype=float).ravel()
+        self.numbblock = self.psfp.size // self.numbpara
+        if self.numbblock == 0:
+            raise ValueError('The %s PSF needs %d parameters per block.' % (typemodlpsfn, self.numbpara))
+        self.indxener = np.arange(gdat.numbener) if indxener is None else np.asarray(indxener)
+        self.numbdqlt = gdat.numbdqlt
+        incl = getattr(gdat, 'indxenerincl', None)
+        self.indxenerincl = np.arange(gdat.numbener) if incl is None else np.asarray(incl)
+        incl = getattr(gdat, 'indxdqltincl', None)
+        self.indxdqltincl = np.arange(gdat.numbdqlt) if incl is None else np.asarray(incl)
+        self.numbenerfull = max(int(getattr(gdat, 'numbenerfull', gdat.numbener) or gdat.numbener),
+                                int(self.indxenerincl.max()) + 1)
+        scal = getattr(gdat, 'fermscalfact', None) if gdat.typeexpr == 'ferm' else None
+        self.scal = None if scal is None else np.asarray(scal, dtype=float)  # [rad]
+
+    def __call__(self, angl):
+        from tdpy.util import retr_doubking, retr_singgaus, retr_singking
+
+        angl = np.asarray(angl, dtype=float).ravel()  # [rad]
+        psfn = np.empty((self.indxener.size, angl.size, self.numbdqlt))
+        for a, i in enumerate(self.indxener):
+            indxenerfull = int(self.indxenerincl[min(i, self.indxenerincl.size - 1)])
+            for m in range(self.numbdqlt):
+                indxdqltfull = int(self.indxdqltincl[min(m, self.indxdqltincl.size - 1)])
+                block = min(indxenerfull + self.numbenerfull * indxdqltfull, self.numbblock - 1)
+                para = self.psfp[block * self.numbpara:(block + 1) * self.numbpara]
+                scalangl = 1. if self.scal is None else float(self.scal[indxenerfull, indxdqltfull])  # [rad]
+                scaldevi = angl / scalangl
+                if self.typemodlpsfn == 'singgaus':
+                    prof = retr_singgaus(scaldevi, para[0])
+                elif self.typemodlpsfn == 'singking':
+                    prof = retr_singking(scaldevi, para[0], para[1])
+                else:
+                    prof = retr_doubking(scaldevi, para[4], para[0], para[1], para[2], para[3])
+                psfn[a, :, m] = prof / scalangl**2
+        return psfn
 
 
 def retr_psfnwdth(gdat, psfn, frac):
@@ -2889,6 +2944,95 @@ def setp_indxswepsave(gdat):
     gdat.boolsave[gdat.indxswepsave] = True
     gdat.indxsampsave = np.zeros(gdat.numbswep, dtype=int) - 1
     gdat.indxsampsave[gdat.indxswepsave] = np.arange(gdat.numbsamp)
+    gdat.indxswepanim = retr_indxswepanim(gdat.numbswep, gdat.numbburn, getattr(gdat, 'numbframanim', None))
+    gdat.boolanim = np.zeros(gdat.numbswep, dtype=bool)
+    gdat.boolanim[gdat.indxswepanim] = True
+
+
+def retr_indxswepanim(numbswep, numbburn, numbframanim):
+    '''Sweeps whose state is recorded for animations: one third through burn-in from the initial state, the rest after it.'''
+
+    if not numbframanim:
+        return np.array([], dtype=int)
+    if numbframanim < 2:
+        raise ValueError('numbframanim must be at least two.')
+    numbframburn = int(round(numbframanim / 3.)) if numbburn > 0 else 0
+    indxburn = np.linspace(0, numbburn, numbframburn, endpoint=False).astype(int)
+    indxpost = np.linspace(numbburn, numbswep - 1, numbframanim - numbframburn).astype(int)
+    return np.unique(np.concatenate((indxburn, indxpost)))
+
+
+def setp_propelemdata(gdat, numbgrid=400):
+    '''Build a data-informed birth, death, and jump density for one-dimensional element catalogs.
+
+    When a single population of 1D elements (``typeexpr='fire'``) has no user-supplied
+    ``retr_drawpropelem``, element positions are proposed in proportion to a matched-filter
+    score of the data, computed with the population's own profile at typical shape
+    parameters. The density does not depend on the sampler state, so PCAT's Hastings
+    term keeps the chain exact. Set ``boolpropelemdata=False`` to draw elements from the prior.
+    '''
+    from .time_series import retr_dictpropelemtmpl
+
+    gmod = gdat.fitt
+    if not getattr(gdat, 'boolpropelemdata', True) or getattr(gdat, 'retr_drawpropelem', None) is not None:
+        return
+    if gdat.typeexpr != 'fire' or gmod.numbpopl != 1 or gdat.numbpixl != 1 or gdat.numbener < 3:
+        return
+    names = list(gmod.namepara.genrelem[0])
+    if 'elin' not in names or 'flux' not in names or gmod.typeelem[0] == 'lghtlinekepl':
+        return
+
+    def icdf(name, unit):
+        minm, maxm = getattr(gmod.minmpara, name), getattr(gmod.maxmpara, name)
+        if getattr(gmod.scalpara, name, 'self') == 'logt':
+            return minm * (maxm / minm)**unit
+        return minm + (maxm - minm) * unit
+
+    unit = (np.arange(numbgrid) + 0.5) / numbgrid
+    dictelem = {name: np.full(numbgrid, icdf(name, 0.5)) for name in names}
+    dictelem['elin'] = icdf('elin', unit)
+    dictelem['flux'] = np.ones(numbgrid)
+    spec = np.asarray(retr_elem_spec(gdat, gmod.typeelem[0], gmod.spectype[0], dictelem), dtype=float)
+    # counts per bin of a unit-amplitude element, matching retr_cntp
+    templates = spec * gdat.expo[:, 0, 0][:, None] * gdat.apix
+    if gdat.enerdiff:
+        templates = templates * gdat.deltener[:, None]
+    data = np.asarray(gdat.cntpdata, dtype=float)[:, 0, 0]
+    if not np.all(np.isfinite(templates)) or not np.any(templates):
+        return
+    proposal = retr_dictpropelemtmpl(
+        data - np.median(data), np.maximum(data, 1.), templates.T,
+        getattr(gmod.minmpara, 'flux'), getattr(gmod.maxmpara, 'flux'),
+        index_position=names.index('elin'), index_flux=names.index('flux'), number_parameters=len(names),
+    )
+    for name, valu in proposal.items():
+        setattr(gdat, name, valu)
+    if gdat.typeverb > 0:
+        print('Using a matched-filter density for element births, deaths, and jumps.')
+
+
+def retr_psfpstat(gmod, gmodstat):
+    '''Return PSF parameters: sampled ones when registered, otherwise the fixed experiment values.'''
+
+    indxpsfp = getattr(gmod.indxpara, 'psfp', None)
+    if indxpsfp is not None and np.size(indxpsfp) > 0:
+        return gmodstat.paragenrscalfull[indxpsfp]
+    return np.asarray(gmod.psfpexpr, dtype=float)
+
+
+def retr_animstate(gdat, gdatmodi):
+    '''Return a copy of the current chain state for animation frames.'''
+
+    this = gdatmodi.this
+    state = dict(cntrswep=int(gdatmodi.cntrswep), boolburn=bool(gdatmodi.cntrswep < gdat.numbburn),
+                 facttmpr=float(getattr(this, 'facttmpr', 1.)), paragenrscalfull=np.copy(this.paragenrscalfull),
+                 lliktotl=float(np.ravel(this.lliktotl)[0]), lpostotl=float(np.ravel(this.lpostotl)[0]))
+    for name in ('numbelem', 'cntpmodl'):
+        if hasattr(this, name):
+            state[name] = np.copy(getattr(this, name))
+    if hasattr(this, 'dictelem'):
+        state['dictelem'] = deepcopy(this.dictelem)
+    return state
     
 
 def retr_cntspnts(gdat, listposi, spec):
@@ -4936,7 +5080,9 @@ def setp_modlemis_init(gdat, strgmodl='fitt'):
     if not hasattr(gmod, 'lablpopl'):
         gmod.lablpopl = [''] * getattr(gmod, 'numbpopl', 0)
     if not hasattr(gmod, 'typeevalpsfn'):
-        gmod.typeevalpsfn = 'none'
+        # point sources deposit flux only through their PSF kernel
+        boolpnts = any(str(typeelem).startswith('lghtpnts') for typeelem in getattr(gmod, 'typeelem', []))
+        gmod.typeevalpsfn = 'kern' if boolpnts else 'none'
     if not hasattr(gmod, 'boollens'):
         gmod.boollens = False
     if not hasattr(gmod, 'boollenssubh'):
@@ -8622,6 +8768,9 @@ def init_stat(gdat):
                 
                 if gmod.typemodltran == 'pois':
                     gmod.this.paragenrunitfull[numbelemindx[l]] = np.random.poisson(meanelemtemp)
+                else:
+                    # a random start draws the catalog size from its uniform prior
+                    gmod.this.paragenrunitfull[numbelemindx[l]] = np.random.randint(minmnumbelem[l], maxmnumbelem[l] + 1)
                 gmod.this.paragenrunitfull[numbelemindx[l]] = round(gmod.this.paragenrunitfull[numbelemindx[l]])
                 gmod.this.paragenrunitfull[numbelemindx[l]] = \
                                         min(gmod.this.paragenrunitfull[numbelemindx[l]], maxmnumbelem[l])
@@ -9104,7 +9253,7 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         return
     
     if gmod.typeevalpsfn != 'none' and (strgmodl == 'true' or boolinit or gdat.boolmodipsfn):
-        psfp = gmodstat.paragenrscalfull[gmod.indxpara.psfp]
+        psfp = retr_psfpstat(gmod, gmodstat)
         if gdat.booldiag:
             if np.where(psfp == 0)[0].size == psfp.size:
                 raise Exception('')
@@ -9937,9 +10086,11 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     
     # more derived parameters
     if (gmod.typeevalpsfn == 'kern' or gmod.typeevalpsfn == 'full') and (strgmodl == 'true' or boolinit or gdat.boolmodipsfn):
-        ### PSF FWHM
-        if gdat.typepixl == 'cart':
-            fwhm = 2. * retr_psfnwdth(gdat, gmodstat.psfn, 0.5)
+        ### PSF FWHM [rad]
+        angl = np.linspace(0., gdat.maxmgangdata, 2000)  # [rad]
+        psfn = gmodstat.psfnintp(angl)
+        # the first angle below half the central value bounds the half width
+        fwhm = 2. * angl[np.argmax(psfn < 0.5 * psfn[:, :1, :], axis=1)]
         setattr(gmodstat, 'fwhm', fwhm)
     
     if gmod.numbpopl > 0 and gmod.boolelemsbrtdfncanyy:
@@ -10710,7 +10861,7 @@ def eval_modl(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     indxpara = np.arange(gmodstat.paragenrscalfull.size) 
 
     if gmod.typeevalpsfn != 'none' and (strgmodl == 'true' or boolinit or gdat.boolmodipsfn):
-        psfp = gmodstat.paragenrscalfull[gmod.indxpara.psfp]
+        psfp = retr_psfpstat(gmod, gmodstat)
         if gdat.booldiag:
             if np.where(psfp == 0)[0].size == psfp.size:
                 raise Exception('')
@@ -11102,18 +11253,12 @@ def eval_modl(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     
     if (gmod.typeevalpsfn == 'kern' or gmod.typeevalpsfn == 'full') and gmod.numbpopl > 0:
         if strgmodl == 'true' or boolinit or gdat.boolmodipsfn:
-            if gdat.typepixl == 'heal':
-                gmodstat.psfn = retr_psfn(gdat, psfp, gdat.indxener, gdat.blimpara.angl, gmod.typemodlpsfn, strgmodl)
-                gmodstat.psfnintp = sp.interpolate.interp1d(gdat.blimpara.angl, gmodstat.psfn, axis=1, fill_value='extrapolate')
-                fwhm = 2. * retr_psfnwdth(gdat, gmodstat.psfn, 0.5)
+            if gdat.kernevaltype == 'ulip':
+                gmodstat.psfnintp = PointSpreadFunction(gdat, psfp, gmod.typemodlpsfn)
+                if gdat.booldiag:
+                    if not np.isfinite(gmodstat.psfnintp(0.05)).all():
+                        raise Exception('')
             if gdat.typepixl == 'cart':
-                if gdat.kernevaltype == 'ulip':
-                    gmodstat.psfn = retr_psfn(gdat, psfp, gdat.indxener, gdat.blimpara.angl, gmod.typemodlpsfn, strgmodl)
-                    gmodstat.psfnintp = sp.interpolate.interp1d(gdat.blimpara.angl, gmodstat.psfn, axis=1, fill_value='extrapolate')
-                    if gdat.booldiag:
-                        if not np.isfinite(gmodstat.psfnintp(0.05)).all():
-                            raise Exception('')
-
                 if gdat.kernevaltype == 'bspx':
                     
                     gmodstat.psfn = retr_psfn(gdat, psfp, gdat.indxener, gdat.blimpara.anglcart.flatten(), gmod.typemodlpsfn, strgmodl)
@@ -11938,6 +12083,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
             for k in gdatfinl.indxproc:
                 gdatfinl.timereal[k] = listgdatmodi[k].timereal
                 gdatfinl.timeproc[k] = listgdatmodi[k].timeproc
+            gdatfinl.listanimstate = getattr(listgdatmodi[0], 'listanimstate', [])
         
             # find the np.maximum likelihood and posterior over the chains
             gdatfinl.indxprocmaxmllik = np.argmax(gdatfinl.maxmllikproc)
@@ -15627,19 +15773,24 @@ def plot_scatcntp(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, indxdqltplot, in
             lablxaxi = '$%s$ [%s]' % (gdat.lablener, gdat.strgenerunit)
         cntpdata = gdat.cntpdata[:, 0, indxdqltplot]
         cntpmodl = ydat.reshape(gdat.numbener)
+        colrmodl = 'tab:blue'
         axis.step(xener, cntpdata, where='mid', color='black', label='Data')
         if strgstat == 'pdfn':
             axis.errorbar(xener, cntpmodl, yerr=np.asarray(yerr).reshape(gdat.numbener), marker='o', \
-                          markersize=3, color=colr, capsize=3, label='Model')
+                          markersize=3, color=colrmodl, capsize=3, label='Model')
         else:
-            axis.plot(xener, cntpmodl, marker='o', markersize=3, color=colr, label='Model')
+            axis.plot(xener, cntpmodl, lw=1.8, color=colrmodl, label='Model')
 
         enerfact = 1e-6 if gdat.typeexpr == 'fire' else 1.
+        limtener = (np.amin(xener), np.amax(xener))
         if gdat.typedata == 'simu' and hasattr(gdat, 'refr') and hasattr(gdat.refr, 'dictelem'):
             boollabl = True
             for l in gmod.indxpopl:
                 if gmod.typeelem[l].startswith('lghtline') and 'elin' in gdat.refr.dictelem[l]:
                     for elin in np.asarray(gdat.refr.dictelem[l]['elin']).reshape(-1):
+                        # reference arrays can be padded beyond the true catalog size
+                        if not limtener[0] <= elin * enerfact <= limtener[1]:
+                            continue
                         axis.axvline(elin * enerfact, color='tab:green', ls='--', alpha=0.9, \
                                      label='True line' if boollabl else None)
                         boollabl = False
@@ -15651,11 +15802,19 @@ def plot_scatcntp(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, indxdqltplot, in
                 for l in gmod.indxpopl:
                     if gmod.typeelem[l].startswith('lghtline') and 'elin' in gmodstat.dictelem[l]:
                         for elin in np.atleast_1d(gmodstat.dictelem[l]['elin']):
-                            axis.axvline(elin * enerfact, color=gmod.colrelem[l], ls=':', alpha=0.8, \
+                            axis.axvline(elin * enerfact, color='tab:orange', ls=':', lw=1.5, alpha=0.9, \
                                          label='Fitted line' if boollabl else None)
                             boollabl = False
         axis.set_xlabel(lablxaxi)
         axis.set_ylabel('Counts per spectral bin')
+        if strgstat == 'this' and gdatmodi is not None and hasattr(gdatmodi, 'cntrswep'):
+            from .plotting import animation_phase_label
+            axis.set_title(animation_phase_label(dict(cntrswep=gdatmodi.cntrswep,
+                                                      boolburn=gdatmodi.cntrswep < gdat.numbburn)))
+        # fixed, data-based limits keep animation frames comparable from the prior draw onward
+        rangdata = np.ptp(cntpdata)
+        axis.set_ylim(min(0., np.amin(cntpdata)) - 0.03 * rangdata, np.amax(cntpdata) + 0.12 * rangdata)
+        axis.set_xlim(limtener[0] - 0.02 * np.ptp(xener), limtener[1] + 0.02 * np.ptp(xener))
         make_legd(axis)
         plt.tight_layout()
         path = retr_plotpath(gdat, gdatmodi, strgpdfn, strgstat, strgmodl, nameplot)
@@ -16700,7 +16859,7 @@ def init( \
          ## proposal scale for FIRE element parameters in transformed coordinates
          stdvpropelemfire=1e-4, \
          ## adapt within-model proposal scales during burn-in
-         booladaptstdp=False, \
+         booladaptstdp=True, \
             
          # number of samples for Bootstrap
          numbsampboot=None, \
@@ -16711,6 +16870,8 @@ def init( \
 
          # plotting
          numbswepplot=None, \
+         ## number of chain-0 states recorded from the initial prior draw through burn-in and sampling
+         numbframanim=None, \
          
          # random state
          ## seed for numpy random number generator
@@ -18403,6 +18564,7 @@ def init( \
                 if gdat.typeverb > -1:
                     print('Warning: rescaled saved initial fitted HST count maps by %.3g to match data scale.' % factrsclinit)
         narr_task('Writing mandatory initialization state to disk.', gdat=gdat, phase='during', major=True)
+        setp_propelemdata(gdat)
         path = gdat.pathoutpcnfg + 'gdatinit'
         try:
             writfile(gdat, path)
@@ -19277,6 +19439,7 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
         gdatmodi.indxparastdp[k-gmod.numbpopl] = [k]
     
     workdict = {}
+    listanimstate = []
     # list of variable names with type numpy array
     for strgvarb in gdat.liststrgvarbarry:
         valu = getattr(gdatmodi.this, strgvarb)
@@ -19401,9 +19564,14 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
 
         # decide whether to make a frame
         boolmakeplotfram = getattr(gdat, 'boolmakeplotfram', False)
-        thismakefram = (gdatmodi.cntrswep % gdat.numbswepplot == 0) and \
+        if getattr(gdat, 'numbframanim', None):
+            thismakefram = gdat.boolanim[gdatmodi.cntrswep] and gdatmodi.indxprocwork == 0 \
+                                and boolmakeplotfram and gdat.boolmakeplot
+        else:
+            thismakefram = (gdatmodi.cntrswep % gdat.numbswepplot == 0) and \
                                                 gdatmodi.indxprocwork == int(float(gdatmodi.cntrswep) / gdat.numbswep * gdat.numbproc) \
                             and boolmakeplotfram and gdat.boolmakeplot
+        boolrecoanim = gdatmodi.indxprocwork == 0 and gdat.boolanim[gdatmodi.cntrswep]
         
         # decide whether to make a log
         boollogg = False
@@ -19664,10 +19832,13 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
 
         # refresh derived quantities from the finalized state before
         # recording outputs for this sweep.
-        if (thismakefram or gdat.boolsave[gdatmodi.cntrswep] or boollogg):
+        if (thismakefram or gdat.boolsave[gdatmodi.cntrswep] or boollogg or boolrecoanim):
             initchro(gdat, gdatmodi, 'proc')
             proc_samp(gdat, gdatmodi, 'this', 'fitt')
             stopchro(gdat, gdatmodi, 'proc')
+
+        if boolrecoanim:
+            listanimstate.append(retr_animstate(gdat, gdatmodi))
 
         # save the sample
         if gdat.boolsave[gdatmodi.cntrswep]:
@@ -19964,6 +20135,7 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
         elif strgvarb in gdat.liststrgvarbarrysamp:
             valu = valu[:gdatmodi.numbsampactl]
         setattr(gdatmodi, 'list' + gdat.strgpdfn + strgvarb, valu)
+    gdatmodi.listanimstate = listanimstate
 
     gdatmodi.timereal = time.time() - timereal
     gdatmodi.timeproc = time.process_time() - timeproc

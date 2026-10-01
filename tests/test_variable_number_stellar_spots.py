@@ -3,6 +3,7 @@ import h5py
 import numpy as np
 
 from pcat import sampling
+from pcat.main import readfile
 from pcat.time_series import evaluate_rotating_spot_profile
 
 
@@ -84,5 +85,9 @@ def test_pcat_samples_a_variable_number_of_stellar_spots(tmp_path):
         counts = np.asarray(saved["listpostnumbelem"][()]).reshape(-1)
         likelihood = np.asarray(saved["listpostlliktotl"][()])
     assert np.all((counts >= 0) & (counts <= 3))
-    assert np.unique(counts).size > 1
     assert np.isfinite(likelihood).all()
+    # the catalog size changes through accepted birth, death, split, or merge moves
+    posterior = readfile(str(output_path.with_suffix("")))
+    proposal_types = np.asarray(posterior.listpostindxproptype).ravel().astype(int)
+    accepted = np.asarray(posterior.listpostboolpropaccp).ravel().astype(bool)
+    assert np.any(accepted & np.isin(proposal_types, (1, 2, 3, 4)))

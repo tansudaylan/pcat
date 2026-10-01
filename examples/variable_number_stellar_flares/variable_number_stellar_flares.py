@@ -27,6 +27,7 @@ import numpy as np
 import tdpy
 from nicomedia import retr_lcurmodl_flarsing
 from pcat.time_series import evaluate_flare_profile, retr_dictpropelemtmpl
+from pcat.plotting import animation_phase_label, animation_states
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
 RUN_NAME = EXAMPLE_PATH.name
@@ -136,6 +137,7 @@ def run_pcat(edges, template, numbswep, proposal):
         fittmaxmnumbelempop0=10,
         inittype="rand",
         typeseed=0,
+        numbframanim=24,
         numbproc=NUMBER_CHAINS,
         probtran=0.5,
         probspmr=0.3,
@@ -210,26 +212,31 @@ def plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, typefileplot, c
 
 
 def render_flare_posterior_frames(meantime, observed_counts, posterior):
-    """Render simulated photometry and changing PCAT flare models on fixed axes."""
-    models = np.asarray(posterior.listpostcntpmodl, dtype=float)[:, :, 0, 0]
-    indices = np.linspace(0, len(models) - 1, min(12, len(models)), dtype=int)
-    lower = 0.85 * min(BASELINE_COUNT_RATE, observed_counts.min(), models[indices].min())  # [counts per bin]
-    upper = 1.08 * max(observed_counts.max(), models[indices].max())  # [counts per bin]
+    """Render simulated photometry and PCAT flare models from the prior draw to posterior samples."""
+    snapshots = animation_states(posterior)
+    models = np.array([np.asarray(snapshot["cntpmodl"], dtype=float)[:, 0, 0] for snapshot in snapshots])
+    # data-based limits; early burn-in models may leave the axes
+    span = float(np.ptp(observed_counts))
+    lower = float(observed_counts.min()) - 0.05 * span  # [counts per bin]
+    upper = float(observed_counts.max()) + 0.25 * span  # [counts per bin]
     visual_root = EXAMPLE_PATH / "visuals"
     visual_root.mkdir(parents=True, exist_ok=True)
+    for old_frame in visual_root.glob("flare_photometry_swep*.png"):
+        print(f"Removing previous frame {old_frame}...")
+        old_frame.unlink()
     paths = []
-    for index in indices:
+    for snapshot, model in zip(snapshots, models):
         figure, axis = plt.subplots(figsize=(6.0, 4.3), facecolor="white")
         hours = (meantime - TIME_OFFSET_DAYS) * 24.0  # [hour]
         axis.plot(hours, observed_counts, color="#555D61", lw=0.7, alpha=0.75,
                   label="Simulated 2-min photometry")
-        axis.plot(hours, models[index], color="#B04435", lw=1.6,
-                  label="PCAT flare-catalog model")
+        axis.plot(hours, model, color="#B04435", lw=1.6,
+                  label=f"PCAT model, {int(np.ravel(snapshot['numbelem'])[0])} flares")
         axis.set(xlim=(0, 24), ylim=(lower, upper), xlabel="Time [hour]",
-                 ylabel="Counts per 2 min bin", title="Simulated stellar-flare time series")
+                 ylabel="Counts per 2 min bin", title=animation_phase_label(snapshot))
         axis.grid(False)
         axis.legend(loc="upper right", framealpha=1, facecolor="white")
-        path = visual_root / f"flare_photometry_swep{index:09d}.png"
+        path = visual_root / f"flare_photometry_swep{snapshot['cntrswep']:09d}.png"
         print(f"Writing to {path}...")
         figure.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
         plt.close(figure)

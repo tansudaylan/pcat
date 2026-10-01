@@ -97,7 +97,7 @@ PIPELINE_EXAMPLES = [
     ),
     (
         ROOT / "variable_number_stellar_flares" / "variable_number_stellar_flares.py",
-        ("--smoke",),
+        (),
         ROOT / "variable_number_stellar_flares",
         "variable_number_stellar_flares",
         False,
@@ -105,7 +105,7 @@ PIPELINE_EXAMPLES = [
     ),
     (
         ROOT / "variable_number_stellar_spots" / "variable_number_stellar_spots.py",
-        ("--smoke",),
+        (),
         ROOT / "variable_number_stellar_spots",
         "variable_number_stellar_spots",
         False,
@@ -130,12 +130,12 @@ PIPELINE_EXAMPLES = [
 ]
 
 COLLAGE_EXAMPLES = (
-    (ROOT / "unbinned_gaussian_mixture" / "unbinned_gaussian_mixture.py", ("--smoke",)),
+    (ROOT / "unbinned_gaussian_mixture" / "unbinned_gaussian_mixture.py", ()),
     (ROOT / "roman_strong_lens_perturber_catalog" / "roman_strong_lens_perturber_catalog.py",
-     ("--posterior-frames", "--smoke")),
+     ("--posterior-frames",)),
     (ROOT / "variable_number_exoplanets_radial_velocity" / "variable_number_exoplanets_radial_velocity.py",
-     ("--smoke",)),
-    (ROOT / "transit_timing_variations" / "transit_timing_variations.py", ("--smoke",)),
+     ()),
+    (ROOT / "transit_timing_variations" / "transit_timing_variations.py", ()),
     (ROOT / "jwst_miri_ngc7027_line_catalog" / "jwst_miri_ngc7027_line_catalog.py",
      ("--numbswep", "400")),
 )
@@ -160,6 +160,14 @@ UTILITY_EXAMPLES = [
     (
         ROOT / "burn_in_strategies" / "burn_in_strategies.py",
         ROOT / "burn_in_strategies" / "visuals" / "burn_in_performance_comparison.png",
+    ),
+    (
+        ROOT / "mejiro_roman_strong_lens" / "mejiro_roman_strong_lens.py",
+        ROOT / "mejiro_roman_strong_lens" / "visuals" / "mejiro_roman_lens_image_fit.png",
+    ),
+    (
+        ROOT / "mismodeling_flare_catalog" / "mismodeling_flare_catalog.py",
+        ROOT / "mismodeling_flare_catalog" / "visuals" / "mismodeling_catalog_size.png",
     ),
 ]
 

@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pcat import sampling
+from pcat.plotting import animation_phase_label, animation_states
 from pcat.time_series import evaluate_rotating_spot_profile, retr_dictpropelemtmpl
 
 
@@ -118,6 +119,9 @@ def run_pcat(edges, baseline_template, number_sweeps, proposal):
         limtparaelem=LIMITS,
         stdvpropelemfire=[0.02, 0.02, 0.05],
         booladaptstdp=True,
+        # a prior draw starts far from the data, so the likelihood is annealed during burn-in
+        boolburntmpr=True,
+        factburntmpr=0.8,
         anlytype="spec",
         maxmgangdata=1e-4,
         inittype="rand",
@@ -131,6 +135,7 @@ def run_pcat(edges, baseline_template, number_sweeps, proposal):
         numbburn=number_sweeps // 2,
         numbsamp=min(max(number_sweeps // 40, 16), 2000),
         numbswepplot=max(number_sweeps // 20, 1),
+        numbframanim=24,
         **proposal,
         boolmakeplot=True,
         boolmakeplotinit=False,
@@ -155,16 +160,17 @@ def read_posterior():
 
 
 def render_spot_posterior_frames(time_days, observed_counts, posterior):
-    """Render changing transdimensional spot fits for the posterior collage."""
+    """Render spot fits from the initial prior draw through burn-in to posterior samples."""
 
-    models = np.asarray(posterior.listpostcntpmodl, dtype=float)[:, :, 0, 0]
-    number_spots = np.asarray(posterior.listpostnumbelem, dtype=int).reshape(-1)
-    frame_indices = np.unique(
-        np.linspace(0, models.shape[0] - 1, min(18, models.shape[0]), dtype=int)
-    )
+    snapshots = animation_states(posterior)
+    models = np.array([np.asarray(snapshot["cntpmodl"], dtype=float)[:, 0, 0] for snapshot in snapshots])
     hours = (time_days - TIME_OFFSET_DAYS) * 24.0  # [hour]
-    upper = 1.05 * max(float(observed_counts.max()), float(models.max()))
-    residual_limit = max(1.0, 1.1 * float(np.max(np.abs(observed_counts - models))))
+    # data-based limits remove unused space; early burn-in models may leave the axes
+    span = float(np.ptp(observed_counts))
+    limits = (float(observed_counts.min()) - 0.08 * span, float(observed_counts.max()) + 0.25 * span)
+    posterior_models = models[[not snapshot["boolburn"] for snapshot in snapshots]]
+    residual_limit = max(5.0 * np.sqrt(np.median(observed_counts)),
+                         1.3 * float(np.max(np.abs(observed_counts - posterior_models))))
     output_directory = EXAMPLE_PATH / "visuals"
     output_directory.mkdir(parents=True, exist_ok=True)
     for old_frame in output_directory.glob("stellar_spot_photometry_swep*.png"):
@@ -172,9 +178,9 @@ def render_spot_posterior_frames(time_days, observed_counts, posterior):
         old_frame.unlink()
 
     output_paths = []
-    for frame_index in frame_indices:
-        model = models[frame_index]
-        spot_count = int(number_spots[min(frame_index, number_spots.size - 1)])
+    for snapshot, model in zip(snapshots, models):
+        frame_index = snapshot["cntrswep"]
+        spot_count = int(np.ravel(snapshot["numbelem"])[0])
         figure, axes = plt.subplots(
             2, 1, figsize=(7.0, 4.5), sharex=True,
             gridspec_kw={"height_ratios": (3.0, 1.0)},
@@ -182,12 +188,12 @@ def render_spot_posterior_frames(time_days, observed_counts, posterior):
         axes[0].scatter(hours, observed_counts, s=7, color="#60686B", alpha=0.65,
                         linewidths=0, label="Simulated photometry")
         axes[0].plot(hours, model, color="#A51C30", lw=1.5,
-                     label="PCAT starspot model")
-        axes[0].set(xlim=(hours[0], hours[-1]), ylim=(0.0, upper),
+                     label=f"PCAT model, {spot_count} spots")
+        axes[0].set(xlim=(hours[0], hours[-1]), ylim=limits,
                     ylabel="Counts per 0.1 day bin",
-                    title=f"Variable starspot catalog | N = {spot_count}")
+                    title=animation_phase_label(snapshot))
         axes[0].legend(loc="upper right", fontsize=8, frameon=True,
-                       fancybox=True, framealpha=1.0)
+                       fancybox=True, framealpha=1.0, ncol=2)
         axes[1].axhline(0.0, color="black", lw=0.8, linestyle="dashed")
         axes[1].scatter(hours, observed_counts - model, s=6, color="#0072B2",
                         alpha=0.7, linewidths=0)

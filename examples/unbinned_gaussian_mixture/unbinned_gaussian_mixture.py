@@ -13,6 +13,7 @@ from matplotlib.patches import Circle
 from scipy.special import logsumexp
 
 from pcat.fixed import sample_fixed_chains
+from pcat.plotting import animation_phase_label, animation_states
 
 
 ROOT = Path(__file__).resolve().parent
@@ -36,23 +37,27 @@ def event_log_likelihood(centers_flat, events):
     return float(np.sum(logsumexp(-0.5 * distances, axis=1) - np.log(4 * np.pi * WIDTH**2)))
 
 
-def render_posterior_frames(events, chain, output_directory: Path):
-    """Plot the actual events and selected PCAT posterior centers on fixed axes."""
+def render_posterior_frames(events, snapshots, output_directory: Path):
+    """Plot the events and PCAT's component centers from the prior draw through burn-in and sampling."""
 
     output_directory.mkdir(parents=True, exist_ok=True)
+    for old_frame in output_directory.glob("gmix_events_swep*.png"):
+        print(f"Removing previous frame {old_frame}...")
+        old_frame.unlink()
     paths = []
-    for sweep in np.linspace(0, len(chain) - 1, min(12, len(chain)), dtype=int):
-        centers = np.asarray(chain[sweep]).reshape(2, 2)
+    for snapshot in snapshots:
+        sweep = snapshot["cntrswep"]
+        centers = np.asarray(snapshot["paragenrscalfull"][:4]).reshape(2, 2)
         figure, axis = plt.subplots(figsize=(5.2, 5.2), facecolor="white")
         axis.scatter(events[:, 0], events[:, 1], s=10, color="#424E54", alpha=0.55,
                      label="Simulated individual events")
         for index, center in enumerate(centers):
             color = ("#B24A37", "#167D72")[index]
             axis.add_patch(Circle(center, 2 * WIDTH, fill=False, linewidth=2.0,
-                                  edgecolor=color, label=f"Posterior component {index + 1}"))
+                                  edgecolor=color, label=f"PCAT component {index + 1}"))
             axis.plot(*center, marker="x", markersize=9, color=color)
         axis.set(xlim=(-2, 2), ylim=(-2, 2), xlabel="Event coordinate x", ylabel="Event coordinate y",
-                 title="Unbinned Gaussian-mixture posterior")
+                 title=animation_phase_label(snapshot))
         axis.set_aspect("equal")
         axis.grid(False)
         axis.legend(loc="upper left", framealpha=1.0, facecolor="white", edgecolor="black", fontsize=8)
@@ -65,22 +70,23 @@ def render_posterior_frames(events, chain, output_directory: Path):
 
 
 def run_example(smoke: bool = False):
-    """Run PCAT on simulated individual events and return its plotted posterior."""
+    """Run PCAT on simulated individual events from a prior draw and return its frames."""
     events = simulate_events()
-    chain, _ = sample_fixed_chains(
+    sample_count, burn_count = (200, 100) if smoke else (2000, 1000)
+    chain, _, state = sample_fixed_chains(
         events, event_log_likelihood, None,
         ("center_x_1", "center_y_1", "center_x_2", "center_y_2"), ("self",) * 4,
         np.full(4, -1.6), np.full(4, 1.6), None, None,
-        np.array([[-0.8, -0.3, 0.7, 0.6]]), 1,
-        20 if smoke else 80, 5 if smoke else 20,
+        None, 4, sample_count, burn_count,
         pathbase=str(ROOT), typeverb=0, boolmakeplot=False,
         boolmakeplotinit=False, boolmakeplotfram=False, makeanim=False,
+        numbframanim=24, return_state=True,
     )
     posterior_path = ROOT / "data" / "unbinned_gmm_posterior.npz"
     posterior_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Writing to {posterior_path}...")
     np.savez_compressed(posterior_path, events=events, chain=chain)
-    return events, chain, render_posterior_frames(events, chain.reshape(-1, 4), ROOT / "visuals")
+    return events, chain, render_posterior_frames(events, animation_states(state), ROOT / "visuals")
 
 
 def main():

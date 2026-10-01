@@ -25,8 +25,8 @@ def test_voigt_split_merge_run_records_proposal_durations(tmp_path):
         durations = file['listpostchrototl'][()].ravel()
         log_acceptance = file['listpostaccplprb'][()].ravel()
         acceptance = file['listpostaccpprob'][()].ravel()
-    # all five proposal families are exercised: within, birth, death, split, merge
-    assert set(np.unique(proposal_types)) == {0, 1, 2, 3, 4}
+    # within, birth, death, split, and merge are exercised (jump is also on by default)
+    assert {0, 1, 2, 3, 4} <= set(np.unique(proposal_types).astype(int))
     # per-sweep totals are durations [s], not clock readings
     assert np.all(durations > 0.) and np.all(durations < 1.)
     np.testing.assert_allclose(np.exp(np.minimum(log_acceptance, 0.)), acceptance)

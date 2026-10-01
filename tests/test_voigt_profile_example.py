@@ -33,10 +33,11 @@ def test_voigt_profile_configuration_calls_pcat_pipeline(monkeypatch):
     assert configuration["strgcnfg"] == "voigt_nomi"
     assert configuration["spectype"] == ["voig"]
     assert configuration["typeelem"] == ["lghtlinevoig"]
-    assert configuration["strgexpo"] == pytest.approx(1.0e5)
+    assert configuration["strgexpo"] == pytest.approx(1.0e4)
     assert configuration["truenumbelempop0"] == 2
     assert configuration["typeseed"] == 0
     assert configuration["typeseedelem"] == 17
-    assert configuration["inittype"] == "refr"
+    assert configuration["inittype"] == "rand"
+    assert configuration["numbframanim"] == 24
     assert configuration["dicttrue"]["typeelem"] == ["lghtlinevoig"]
     assert configuration["dictfitt"]["spectype"] == ["voig"]

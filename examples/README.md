@@ -33,6 +33,8 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `hall+2026_herschel_dsfg_multiplicity/`: crowded three-band source multiplicity inspired by Hall et al. (2026)
 - `simulated_hst_strong_lens/`: catalog inference in a simulated Hubble Space Telescope lens image
 - `roman_strong_lens_perturber_catalog/`: a seeded Roman strong-lens benchmark and its generated diagnostic
+- `mejiro_roman_strong_lens/`: PCAT inference of the lens and source of a Roman F129 exposure simulated by mejiro, and the parameter bias caused by a PSF 30% too wide
+- `mismodeling_flare_catalog/`: correct and misspecified fits of the same flare light curves, showing catalogs inflated by a wrong flare profile or an unmodeled stellar modulation
 - `simulated_rubin_cluster_lens/`: a synthetic Rubin-like cluster-scale lens fitted with PCAT's Poisson image sampler
 - `rubin_dp1_confirmed_strong_lenses/`: an RSP-only workflow that crossmatches confirmed SIMBAD lens systems to real Rubin DP1 imaging, retrieves all catalog-footprint matches, and runs demonstration PCAT fits
 - `catalog_association_completeness_purity/`: completeness and purity across catalog-matching radii
