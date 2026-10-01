@@ -31,6 +31,11 @@ def _assert_circular_asset(name):
     opaque_rgb = image[..., :3][image[..., 3] == 255]
     assert np.any(np.all(opaque_rgb == CRIMSON, axis=1))
     assert np.any(np.all(opaque_rgb == BLACK, axis=1))
+    white = np.all(image[..., :3] > 245, axis=-1) & (image[..., 3] > 0)
+    coordinates = np.argwhere(white)
+    center = 0.5 * (np.asarray(image.shape[:2]) - 1.0)
+    radius = np.linalg.norm((coordinates - center) / (0.5 * height), axis=1)
+    assert radius.max() < logo.DISC_RADIUS / 1.02
 
 
 def test_primary_logo_exports_are_circular_and_use_brand_palette():

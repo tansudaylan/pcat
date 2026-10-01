@@ -28,33 +28,35 @@ TRANSITIONS = [
 ]
 
 
-def draw_disc(axis):
+def draw_disc(axis, scale=1.0):
     """Draw the circular Harvard Crimson field and black outline."""
-    axis.add_patch(Circle((0.0, 0.0), DISC_RADIUS, facecolor=CRIMSON, edgecolor=BLACK, linewidth=2.5, zorder=0))
+    axis.add_patch(Circle((0.0, 0.0), DISC_RADIUS, facecolor=CRIMSON,
+                          edgecolor=BLACK, linewidth=2.5 * scale, zorder=0))
 
 
-def draw_icon(axis):
+def draw_icon(axis, scale=1.0):
     """Draw the four-dimensionality glyphs and PCAT wordmark inside the circle."""
-    draw_disc(axis)
-    line = dict(color=WHITE, lw=3.6, solid_capstyle="round", zorder=2)
+    draw_disc(axis, scale=scale)
+    line = dict(color=WHITE, lw=3.6 * scale, solid_capstyle="round", zorder=2)
     half = 0.5 * SIZE
 
     # 0-D: a point
-    axis.scatter(*CENTERS[0], s=190, color=WHITE, zorder=2)
-    axis.scatter(*CENTERS[0], s=54, color=BLACK, zorder=3)
+    axis.scatter(*CENTERS[0], s=190 * scale**2, color=WHITE, zorder=2)
+    axis.scatter(*CENTERS[0], s=54 * scale**2, color=BLACK, zorder=3)
 
     # 1-D: a segment with end caps
     x, y = CENTERS[1]
     axis.plot([x - half, x + half], [y, y], **line)
     for end in (x - half, x + half):
         axis.plot([end, end], [y - 0.045, y + 0.045], **line)
-    axis.scatter(x + 0.04, y, s=54, color=BLACK, zorder=3)
+    axis.scatter(x + 0.04, y, s=54 * scale**2, color=BLACK, zorder=3)
 
     # 2-D: a square
     x, y = CENTERS[2]
     axis.add_patch(Polygon([(x - half, y - half), (x + half, y - half), (x + half, y + half), (x - half, y + half)],
-                           closed=True, facecolor="none", edgecolor=WHITE, lw=3.6, joinstyle="round", zorder=2))
-    axis.scatter(x - 0.035, y + 0.025, s=54, color=BLACK, zorder=3)
+                           closed=True, facecolor="none", edgecolor=WHITE,
+                           lw=3.6 * scale, joinstyle="round", zorder=2))
+    axis.scatter(x - 0.035, y + 0.025, s=54 * scale**2, color=BLACK, zorder=3)
 
     # 3-D: a wireframe cube in oblique projection
     x, y = CENTERS[3] - 0.5 * DEPTH
@@ -63,21 +65,42 @@ def draw_icon(axis):
     for face in (back, front):
         for edge in range(4):
             points = np.array([face[edge], face[(edge + 1) % 4]])
-            line_artist, = axis.plot(*points.T, color=WHITE, lw=CUBE_EDGE_WIDTH, solid_capstyle="round", zorder=2)
+            line_artist, = axis.plot(*points.T, color=WHITE,
+                                     lw=CUBE_EDGE_WIDTH * scale,
+                                     solid_capstyle="round", zorder=2)
             line_artist.set_gid("pcat-cube-edge")
     for corner in range(4):
-        line_artist, = axis.plot(*np.array([front[corner], back[corner]]).T, color=WHITE,
-                                 lw=CUBE_EDGE_WIDTH, solid_capstyle="round", zorder=2)
+        line_artist, = axis.plot(*np.array([front[corner], back[corner]]).T,
+                     color=WHITE, lw=CUBE_EDGE_WIDTH * scale,
+                     solid_capstyle="round", zorder=2)
         line_artist.set_gid("pcat-cube-edge")
-    axis.scatter(x + 0.045, y + 0.02, s=54, color=BLACK, zorder=3)
+    axis.scatter(x + 0.045, y + 0.02, s=54 * scale**2, color=BLACK, zorder=3)
 
     # Reversible transitions connect the four parameter-space glyphs.
     for start, end in TRANSITIONS:
-        axis.add_patch(FancyArrowPatch(start, end, arrowstyle="<|-|>", mutation_scale=3,
-                                       lw=1.5, color=BLACK, zorder=4))
+        axis.add_patch(
+            FancyArrowPatch(
+                start,
+                end,
+                arrowstyle="<|-|>",
+                mutation_scale=3 * scale,
+                lw=1.5 * scale,
+                color=BLACK,
+                zorder=4,
+            )
+        )
 
-    axis.text(*LOGO_TEXT_POSITION, "PCAT", color=WHITE, fontsize=LOGO_FONT_SIZE, fontweight="bold",
-              family="DejaVu Sans", ha="center", va="center", zorder=5)
+    axis.text(
+        *LOGO_TEXT_POSITION,
+        "PCAT",
+        color=WHITE,
+        fontsize=LOGO_FONT_SIZE * scale,
+        fontweight="bold",
+        family="DejaVu Sans",
+        ha="center",
+        va="center",
+        zorder=5,
+    )
 
 
 def save(figure, path_stem, bbox_inches="tight"):
@@ -102,7 +125,7 @@ def draw_logo():
         figure, axis = plt.subplots(figsize=figsize)
         axis.set(xlim=(-1.02, 1.02), ylim=(-1.02, 1.02), aspect="equal")
         axis.axis("off")
-        draw_icon(axis)
+        draw_icon(axis, scale=figsize[0] / 3.0)
         save(figure, path_stem, bbox_inches=bbox_inches)
 
     draw_circular_asset("pcat_icon", (1.0, 1.0))
@@ -112,14 +135,14 @@ def draw_logo():
     figure, axis = plt.subplots(figsize=(7.5, 2.0))
     axis.set(xlim=(-3.75, 3.75), ylim=(-1.0, 1.0), aspect="equal")
     axis.axis("off")
-    draw_icon(axis)
+    draw_icon(axis, scale=2.0 / 3.0)
     save(figure, "pcat_banner", bbox_inches=None)
 
     figure = plt.figure(figsize=(6.4, 3.2), dpi=200, facecolor=WHITE)
     axis = figure.add_axes([0.25, 0.0, 0.5, 1.0])
     axis.set(xlim=(-1.02, 1.02), ylim=(-1.02, 1.02), aspect="equal")
     axis.axis("off")
-    draw_icon(axis)
+    draw_icon(axis, scale=3.2 / 3.0)
     path = PATH_STATIC / "pcat_social_preview.png"
     print(f"Writing to {path}...")
     figure.savefig(path, dpi=200, facecolor=WHITE)
