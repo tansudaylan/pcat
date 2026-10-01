@@ -18,6 +18,7 @@ on the number of planets must agree.
 from tdpy.verbosity import print
 
 import argparse
+from tdpy.cli import add_plot_arguments
 import shutil
 import time
 from pathlib import Path
@@ -212,7 +213,7 @@ def main():
     parser.add_argument("--numbswepplan", type=int, default=200000, help="PCAT sweeps, variable planet count.")
     parser.add_argument("--nliveplan", type=int, default=1000, help="dynesty live points, variable planet count.")
     parser.add_argument("--part", choices=("fixed", "variable", "both"), default="both")
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     arguments = parser.parse_args()
     configure_style(arguments.typeplotback)

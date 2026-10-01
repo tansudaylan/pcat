@@ -11,6 +11,7 @@ from __future__ import annotations
 from tdpy.verbosity import print
 
 import argparse
+from tdpy.cli import add_plot_arguments
 from pathlib import Path
 import shutil
 import time
@@ -214,7 +215,7 @@ def plot_temperature_schedule(results, typefileplot="png"):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=1200)
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    add_plot_arguments(parser)
     arguments = parser.parse_args()
     results = run_benchmark(arguments.numbswep)
     plot_posterior_comparison(results, arguments.typefileplot)

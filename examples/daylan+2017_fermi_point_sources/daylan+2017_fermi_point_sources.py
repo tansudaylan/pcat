@@ -6,6 +6,7 @@ from __future__ import annotations
 from tdpy.verbosity import print
 
 import argparse
+from tdpy.cli import add_plot_arguments
 import shutil
 import sys
 from pathlib import Path
@@ -156,7 +157,7 @@ def main() -> int:
     parser.add_argument("--smoke", action="store_true", help="Run a small pipeline check.")
     parser.add_argument("--quick", action="store_true", help="Run the 300-source mock at reduced resolution and depth.")
     parser.add_argument("--fresh", action="store_true", help="Remove cached output first.")
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    add_plot_arguments(parser)
     arguments = parser.parse_args()
     if arguments.fresh:
         for path in (

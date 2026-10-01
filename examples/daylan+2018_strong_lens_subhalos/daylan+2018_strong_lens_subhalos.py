@@ -6,6 +6,7 @@ from __future__ import annotations
 from tdpy.verbosity import print
 
 import argparse
+from tdpy.cli import add_plot_arguments
 import shutil
 import sys
 from pathlib import Path
@@ -68,7 +69,7 @@ def main() -> None:
     parser.add_argument("--smoke", action="store_true", help="Run a short pipeline check.")
     parser.add_argument("--fresh", action="store_true", help="Remove cached output first.")
     parser.add_argument("--one-subhalo", action="store_true", help="Fit one subhalo instead of a variable catalog.")
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    add_plot_arguments(parser)
     arguments = parser.parse_args()
     run_reproduction(
         arguments.one_subhalo,

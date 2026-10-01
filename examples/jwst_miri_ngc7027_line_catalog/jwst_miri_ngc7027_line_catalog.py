@@ -15,6 +15,7 @@ sigma_eff includes a fractional floor for calibration and fringe residuals.
 from tdpy.verbosity import print
 
 import argparse
+from tdpy.cli import add_plot_arguments
 import shutil
 from pathlib import Path
 
@@ -225,7 +226,7 @@ def plot_line_count(posterior, typefileplot):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=200_000)
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--skip-sampling", action="store_true", help="Replot an existing chain.")
     arguments = parser.parse_args()

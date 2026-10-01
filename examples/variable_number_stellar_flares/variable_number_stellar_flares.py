@@ -16,6 +16,7 @@ axis, and each flare has a peak amplitude plus independent rise and decay time s
 from tdpy.verbosity import print
 
 import argparse
+from tdpy.cli import add_plot_arguments
 import shutil
 from pathlib import Path
 
@@ -209,7 +210,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=30_000)
     parser.add_argument("--smoke", action="store_true", help="Run a short pipeline check.")
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--skip-sampling", action="store_true", help="Replot an existing chain.")
     arguments = parser.parse_args()

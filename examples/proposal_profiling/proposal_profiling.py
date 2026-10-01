@@ -12,6 +12,7 @@ summarizes both.
 from tdpy.verbosity import print
 
 import argparse
+from tdpy.cli import add_plot_arguments
 import shutil
 import sys
 from pathlib import Path
@@ -183,7 +184,7 @@ def plot_time_breakdown_by_phase(chain, typefileplot):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=20000)
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--skip-sampling", action="store_true",
                         help="Replot from an existing chain without sampling again.")

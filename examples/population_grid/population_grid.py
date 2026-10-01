@@ -6,6 +6,7 @@ offsets, 100 samples for the "Positive" population and 10,000 for "Negative".
 """
 
 import argparse
+from tdpy.cli import add_plot_arguments
 from pathlib import Path
 
 import numpy as np
@@ -25,7 +26,7 @@ def simulate_populations(seed=0):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
+    add_plot_arguments(parser)
     arguments = parser.parse_args()
 
     listpara = simulate_populations()
