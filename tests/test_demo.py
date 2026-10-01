@@ -317,6 +317,20 @@ def test_split_merge_jacobian_changes_counterfactual_acceptance_probability():
     assert summary["merge"]["without_jacobian"].tolist() == pytest.approx([0.4, 1.0])
 
 
+def test_log_acceptance_trace_is_not_summarized_as_a_posterior_parameter():
+    from types import SimpleNamespace
+
+    from pcat.main import _retr_posterior_summary_channels
+
+    channels = _retr_posterior_summary_channels(
+        SimpleNamespace(),
+        SimpleNamespace(liststrgchan=["accplprb", "accpprob", "lliktotl"]),
+        "post",
+    )
+
+    assert channels == ["accpprob", "lliktotl"]
+
+
 def test_daylan2018_smoke_configuration_generates_proposal_animation(tmp_path, monkeypatch):
     script_path = (
         REPOSITORY_ROOT / "examples" / "daylan+2018_strong_lens_subhalos"

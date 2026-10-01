@@ -90,12 +90,30 @@ data-informed draw.
 
 The final state stores per-sweep proposal IDs in ``listpostindxproptype``,
 accept/reject flags in ``listpostboolpropaccp``, and acceptance probabilities in
-``listpostaccpprob``. Final processing also computes ``accpwith``, ``accpbrth``,
+``listpostaccpprob``. The unclipped log acceptance ratio is stored in
+``listpostaccplprb`` so it remains available when exponentiation underflows.
+Final processing also computes ``accpwith``, ``accpbrth``,
 ``accpdeth``, ``accpsplt``, ``accpmerg``, and ``accpjump`` from attempted moves.
 An acceptance fraction is accepted attempts divided by attempts of that type.
 It is a tuning diagnostic, not a target to maximize. Very small steps can have
 high acceptance but explore the posterior slowly; large steps can have low
 acceptance and waste evaluations.
+
+The ``proposal_state_animation`` example uses the native split/merge moves to
+show the Jacobian correction. Splitting parent amplitude ``F`` into ``r F`` and
+``(1-r) F`` contributes ``log|J| = log(F)``; merging applies its negative. The
+figure compares each valid proposal's acceptance probability with a
+counterfactual that holds every other term fixed and removes only ``log|J|``.
+This is an algebraic comparison of the same proposals, not a second MCMC chain.
+
+.. figure:: ../examples/proposal_state_animation/visuals/jacobian_acceptance_effect.png
+  :alt: Split and merge acceptance changes from the Jacobian correction
+  :width: 100%
+  :align: center
+
+  The left panel shows the log-acceptance-ratio shift for each valid proposal.
+  The right panel shows the acceptance curve with the median Jacobian from the
+  run and its no-Jacobian counterfactual.
 
 .. figure:: ../examples/proposal_profiling/visuals/proposal_acceptance_and_cost.png
    :alt: Acceptance fraction and computational cost by PCAT proposal type

@@ -60,9 +60,21 @@ posterior samples.
 
 The matching retained-state sequence from the same short simulated Voigt-line
 run is shown below. It contains frames only at `numbswepplot` cadence, while the
-candidate animation contains all 24 sweeps.
+candidate animation contains all 120 sweeps.
 
 ![Retained PCAT chain states at plotting cadence](examples/proposal_state_animation/visuals/post/anim/proposal_sequence.gif)
+
+### Jacobian in split and merge moves
+
+PCAT splits a parent amplitude-coordinate value $F$ into $rF$ and $(1-r)F$.
+This amplitude-fraction transformation contributes $\log|J|=\log F$ to the split acceptance ratio; the
+reverse merge uses the negative term. The example records the unclipped log
+acceptance ratio, then compares each prior-valid proposal with a counterfactual
+that omits only the Jacobian. Its acceptance curves show how the median
+split/merge Jacobians change acceptance probability at a fixed remainder of the
+ratio. The counterfactual is not a second chain.
+
+![Split and merge acceptance with and without the Jacobian](examples/proposal_state_animation/visuals/jacobian_acceptance_effect.png)
 
 ## Package organization
 

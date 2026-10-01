@@ -324,6 +324,16 @@ def test_documentation_distinguishes_posterior_and_candidate_animations():
     assert "examples/proposal_state_animation/visuals/post/anim/proposal_candidates.gif" in readme
 
 
+def test_jacobian_example_is_linked_and_documents_unclipped_acceptance():
+    readme = (REPOSITORY_ROOT / "README.md").read_text()
+    sampling = (DOCS_ROOT / "sampling.rst").read_text()
+    script = (REPOSITORY_ROOT / "examples/proposal_state_animation/proposal_state_animation.py").read_text()
+
+    assert "visuals/jacobian_acceptance_effect.png" in readme
+    assert "listpostaccplprb" in script
+    assert "listpostaccplprb" in sampling
+
+
 def test_readme_lists_daylan_applications_first_without_reproduction_language():
     readme = (REPOSITORY_ROOT / "README.md").read_text()
     applications = readme.split("## Applications\n", 1)[1].split("\n## ", 1)[0]

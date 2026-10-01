@@ -45,6 +45,9 @@ def summarize_jacobian_acceptance(worker):
         result[name] = {
             "actual": actual,
             "without_jacobian": np.exp(np.minimum(log_acceptance[selected] - jacobian[selected], 0.0)),
+            "log_acceptance": log_acceptance[selected],
+            "log_acceptance_without_jacobian": log_acceptance[selected] - jacobian[selected],
+            "jacobian": jacobian[selected],
             "accepted": accepted[selected],
         }
     return result
@@ -54,40 +57,51 @@ def plot_jacobian_acceptance(summary, output_path):
     """Plot each split/merge probability against its no-Jacobian counterfactual."""
     colors = {"split": "#A51C30", "merge": "#007C78"}
     markers = {"split": "o", "merge": "^"}
-    figure, axes = plt.subplots(1, 2, figsize=(9.0, 3.7), constrained_layout=True)
-    probability_axis, rate_axis = axes
-    probability_axis.plot([0.0, 1.0], [0.0, 1.0], color="0.5", lw=0.8, ls="--")
+    figure, axes = plt.subplots(
+        1, 2, figsize=(9.0, 4.0), constrained_layout=True,
+        gridspec_kw={"width_ratios": (1.0, 1.7)},
+    )
+    shift_axis, probability_axis = axes
     positions = np.arange(2, dtype=float)
-    width = 0.24
     for index, name in enumerate(("split", "merge")):
         values = summary[name]
-        actual = values["actual"]
-        without = values["without_jacobian"]
-        accepted = values["accepted"]
-        probability_axis.plot(actual, without, color=colors[name], alpha=0.25, lw=0.8)
-        probability_axis.scatter(
-            actual, without, color=colors[name], marker=markers[name], s=24,
-            alpha=0.8, linewidths=0, label=f"{name} (n={actual.size})",
+        log_shift = (values["log_acceptance_without_jacobian"] - values["log_acceptance"]) / np.log(10.0)
+        shift_axis.scatter(
+            np.full(log_shift.size, positions[index]), log_shift,
+            color=colors[name], marker=markers[name], s=30,
+            alpha=0.8, linewidths=0, label=f"{name} (n={log_shift.size})",
         )
-        rate_axis.bar(positions[index] - width, np.mean(actual), width,
-                      color=colors[name], alpha=0.55, label="With Jacobian" if index == 0 else None)
-        rate_axis.bar(positions[index], np.mean(without), width,
-                      color=colors[name], label="Without Jacobian" if index == 0 else None)
-        rate_axis.bar(positions[index] + width, np.mean(accepted), width,
-                      color=colors[name], alpha=0.25, hatch="//",
-                      label="Observed acceptance" if index == 0 else None)
 
-    probability_axis.set(
-        xlabel="PCAT acceptance probability",
-        ylabel="Counterfactual probability without Jacobian",
-        xlim=(-0.03, 1.03), ylim=(-0.03, 1.03),
-    )
-    probability_axis.legend(loc="best", frameon=True, fancybox=True, framealpha=1.0)
-    rate_axis.set(
+        baseline_logratio = np.linspace(-5.0, 1.0, 301)
+        median_jacobian = float(np.median(values["jacobian"]))
+        probability_axis.plot(
+            baseline_logratio,
+            np.exp(np.minimum(0.0, baseline_logratio + median_jacobian)),
+            color=colors[name], lw=1.5,
+            label=f"{name}, with J",
+        )
+        probability_axis.plot(
+            baseline_logratio, np.exp(np.minimum(0.0, baseline_logratio)),
+            color=colors[name], lw=1.0, ls="--", alpha=0.7,
+            label=f"{name}, without J",
+        )
+
+    shift_axis.axhline(0.0, color="0.5", lw=0.8, ls="--")
+    shift_axis.set(
         xticks=positions, xticklabels=("Split", "Merge"),
-        ylabel="Mean probability or observed fraction", ylim=(0.0, 1.0),
+        ylabel="Change in log10 acceptance ratio without J [dex]",
     )
-    rate_axis.legend(loc="best", frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
+    shift_axis.legend(loc="best", frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
+    probability_axis.set(
+        xlabel="Log acceptance ratio before Jacobian",
+        ylabel="Acceptance probability",
+        ylim=(0.0, 1.03),
+        title="Median log|J|: split %.2f, merge %.2f" % (
+            np.median(summary["split"]["jacobian"]),
+            np.median(summary["merge"]["jacobian"]),
+        ),
+    )
+    probability_axis.legend(loc="upper left", frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
     for axis in axes:
         axis.grid(False)
     output_path = Path(output_path)
@@ -158,6 +172,7 @@ def run_example(number_sweeps=120):
                 "mean_actual_probability": float(np.mean(values["actual"])),
                 "mean_without_jacobian": float(np.mean(values["without_jacobian"])),
                 "observed_acceptance_fraction": float(np.mean(values["accepted"])),
+                "median_log_jacobian": float(np.median(values["jacobian"])),
             }
             for name, values in jacobian_summary.items()
         },

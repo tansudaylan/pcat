@@ -4,7 +4,7 @@ These notebooks apply probabilistic cataloging to point-source images, Gaussian 
 
 Sampler runs write a `proposal_activity.gif` with cumulative attempt and acceptance counts for each move type. Runs with model frames also write a `proposal_sequence.gif` that labels each frame with its proposal and acceptance status.
 
-Set `boolmakeanimprop=True` for a third product, `proposal_candidates.gif`, which shows every candidate before the accept/reject decision. It includes rejected candidates and is therefore a proposal diagnostic rather than a posterior-sample animation. The `proposal_state_animation/` notebook runs a short simulated Voigt-line example and displays the retained-state and every-candidate animations together.
+Set `boolmakeanimprop=True` for a third product, `proposal_candidates.gif`, which shows every candidate before the accept/reject decision. It includes rejected candidates and is therefore a proposal diagnostic rather than a posterior-sample animation. The `proposal_state_animation/` notebook runs 120 sweeps of a simulated Voigt-line example and displays the retained-state and every-candidate animations together. It also compares PCAT's split/merge acceptance probabilities with same-proposal counterfactuals that omit only the Jacobian.
 
 ## Publication coverage
 
@@ -40,7 +40,7 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `jwst_miri_ngc7027_line_catalog/`: transdimensional emission-line catalog of the planetary nebula NGC 7027 from a real JWST MIRI MRS spectrum
 - `variable_number_stellar_flares/`: transdimensional catalog of a variable number of stellar flares in a simulated photometric time series
 - `proposal_profiling/`: execution time, prior-support fraction, and acceptance of each proposal type on the simulated Voigt spectrum
-- `proposal_state_animation/`: retained chain states and every attempted proposal from the same simulated Voigt-line run
+- `proposal_state_animation/`: retained states, every Voigt-line proposal, and a split/merge Jacobian acceptance comparison
 - `burn_in_strategies/`: fixed, adaptive, and likelihood-tempered burn-in on correlated and bimodal simulated targets
 - `sampler_comparison_emcee_dynesty/`: PCAT, emcee, and dynesty on one simulated sinusoid posterior
 - `population_grid/`: corner, histogram, and pair plots of two simulated sample populations

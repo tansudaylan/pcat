@@ -424,8 +424,11 @@ def _retr_tempered_log_target_difference(current, candidate, inverse_temperature
 
 
 def _retr_posterior_summary_channels(gdatfinl, gdatmodi, strgpdfn):
-    """Return registered channels plus saved histogram chains needing summaries."""
-    channels = list(getattr(gdatmodi, 'liststrgchan', []))
+    """Return channels with meaningful posterior summaries and saved histograms."""
+    channels = [
+        name for name in getattr(gdatmodi, 'liststrgchan', [])
+        if name != 'accplprb'
+    ]
     for name in getattr(gdatmodi, 'liststrgvarbarrysamp', []):
         if name.startswith('hist') and hasattr(gdatfinl, 'list' + strgpdfn + name) and name not in channels:
             channels.append(name)
