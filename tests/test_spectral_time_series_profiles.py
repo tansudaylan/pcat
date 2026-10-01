@@ -104,6 +104,14 @@ def test_rotating_spot_profile_rejects_width_longer_than_period():
         )
 
 
+def test_rotating_spot_profile_supports_zero_spot_state():
+    values = evaluate_rotating_spot_profile(
+        [0.0, 1.0], [], [], [], period_days=2.0  # [day]
+    )
+
+    assert values.shape == (2, 0)
+
+
 def test_native_parameter_sets_are_profile_specific():
     assert spectral_profile_parameters("pvoi") == ("flux", "elin", "sigm", "gamm", "frac")
     assert spectral_profile_parameters("skew") == ("flux", "elin", "sigm", "skew")

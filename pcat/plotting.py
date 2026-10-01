@@ -184,7 +184,8 @@ class PosteriorAnimationPanel:
     """Describe one posterior-frame sequence in an animation collage."""
 
     label: str
-    pattern: str
+    pattern: str | None = None
+    static_image: str | None = None
 
 
 def histogram_frame_limits(reference_count: float, maximum_model_count: float) -> tuple[float, float]:
@@ -379,16 +380,16 @@ POSTERIOR_ANIMATION_PANELS = (
         "daylan+2017_fermi_point_sources/visuals/fermi_ngpc_sources_swep*.png",
     ),
     PosteriorAnimationPanel(
-        "Daylan+2018 | deflection residual",
-        "daylan+2018_strong_lens_subhalos/daylan2018_catalog/visuals/post/fram/thisdeflresi_swep*.png",
-    ),
-    PosteriorAnimationPanel(
-        "JWST MIRI | line-center catalog",
-        "jwst_miri_ngc7027_line_catalog/visuals/jwst_line_hist_swep*.png",
-    ),
-    PosteriorAnimationPanel(
         "Voigt lines | spectral model",
         "voigt_spectral_line_catalog/pcat_runs/voigt_nomi/visuals/post/fram/thisscatcntpevt0_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Simulated photometry | rotating starspots",
+        "variable_number_stellar_spots/visuals/stellar_spot_photometry_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "PCAT | transdimensional inference",
+        static_image="docs/_static/pcat_logo.png",
     ),
     PosteriorAnimationPanel(
         "Roman/WFI | simulated strong-lens arcs",
@@ -421,6 +422,13 @@ def _animation_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
 def _animation_frame_paths(
     panel: PosteriorAnimationPanel, examples_root: Path
 ) -> list[Path]:
+    if panel.static_image is not None:
+        path = examples_root.parent / panel.static_image
+        if not path.is_file():
+            raise RuntimeError(f"{panel.label} requires a static image at {path}.")
+        return [path]
+    if panel.pattern is None:
+        raise ValueError(f"{panel.label} needs a frame pattern or static image.")
     paths = sorted(examples_root.glob(panel.pattern))
     if len(paths) < 2:
         raise RuntimeError(
@@ -592,8 +600,11 @@ def make_posterior_animation_collage(
             source_path = paths[source_index]
             print(f"Reading from {source_path}...")
             with Image.open(source_path) as source:
+                rgba = source.convert("RGBA")
+                white_background = Image.new("RGBA", rgba.size, "white")
+                white_background.alpha_composite(rgba)
                 panel_image = ImageOps.contain(
-                    source.convert("RGB"),
+                    white_background.convert("RGB"),
                     (panel_size, panel_size),
                     Image.Resampling.LANCZOS,
                 )

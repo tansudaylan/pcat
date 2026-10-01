@@ -32,13 +32,12 @@ association, and detector point-spread functions.
 
 ## Posterior samples
 
-![Nine PCAT posterior views across unbinned, image, spectral, and time-series inference](examples/pcat_posterior_samples.gif)
+![PCAT posterior collage with eight changing inference views and its central logo](examples/pcat_posterior_samples.gif)
 
-Each synchronized frame combines nine changing views from an unbinned Gaussian
-mixture of simulated events, a simulated Fermi-LAT northern Galactic cap source
-catalog inspired by Daylan et al. (2017), a Daylan et al. (2018) lens-deflection
-example, observed JWST/MIRI line-center catalogs, simulated Voigt lines,
-PSF-convolved Roman/WFI strong-lens arcs, and simulated flare photometry, radial
+Each synchronized frame combines eight changing views around the PCAT logo. The
+panels show an unbinned Gaussian mixture of simulated events, simulated
+Fermi-LAT point sources, transdimensional Voigt-line fitting, variable-number
+rotating starspots, Roman/WFI strong-lens arcs, stellar flares, radial
 velocities, and transit times. The time-series and line-histogram axes remain
 fixed across frames. The publication-inspired simulations illustrate PCAT's
 sampling behavior and do not reproduce published posterior values.

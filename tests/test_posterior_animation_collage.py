@@ -27,6 +27,14 @@ def _write_frame(path: Path, color: str, marker: int) -> None:
 def test_make_collage_combines_posterior_sequences(tmp_path):
     examples_root = tmp_path / "examples"
     for panel_index, panel in enumerate(POSTERIOR_ANIMATION_PANELS):
+        if panel.static_image is not None:
+            _write_frame(
+                examples_root.parent / panel.static_image,
+                "#A51C30",
+                panel_index * 5,
+            )
+            continue
+        assert panel.pattern is not None
         relative_pattern = Path(panel.pattern)
         frame_root = examples_root / relative_pattern.parent
         stem = relative_pattern.name.replace("*.png", "")
@@ -57,6 +65,16 @@ def test_collage_rejects_frozen_source_sequence(tmp_path):
 
     with pytest.raises(RuntimeError, match="no visual evolution"):
         _animation_frame_paths(panel, tmp_path)
+
+
+def test_collage_places_spectral_fit_logo_and_spots_in_requested_panels():
+    panels = POSTERIOR_ANIMATION_PANELS
+
+    assert len(panels) == 9
+    assert "Voigt lines" in panels[2].label
+    assert "rotating starspots" in panels[3].label
+    assert panels[4].static_image == "docs/_static/pcat_logo.png"
+    assert all("deflection" not in panel.label.lower() for panel in panels)
 
 
 def test_animation_frames_use_one_shared_palette():
@@ -118,7 +136,7 @@ def test_readme_embeds_multiframe_collage():
     readme_path = EXAMPLES_ROOT.parent / "README.md"
     readme = readme_path.read_text()
     assert DEFAULT_POSTERIOR_COLLAGE.is_file()
-    assert "![Nine PCAT posterior views across unbinned, image, spectral, and time-series inference]" in readme
+    assert "![PCAT posterior collage with eight changing inference views and its central logo]" in readme
     assert str(DEFAULT_POSTERIOR_COLLAGE.relative_to(EXAMPLES_ROOT.parent)) in readme
     with Image.open(DEFAULT_POSTERIOR_COLLAGE) as animation:
         assert animation.n_frames >= 16
@@ -132,9 +150,13 @@ def test_readme_embeds_multiframe_collage():
     margin = 20
     title_height = 66
     label_height = 42
-    for panel_index in range(len(POSTERIOR_ANIMATION_PANELS)):
+    for panel_index, panel in enumerate(POSTERIOR_ANIMATION_PANELS):
         row, column = divmod(panel_index, 3)
         x = margin + column * (panel_size + margin)
         y = title_height + margin + row * (panel_size + label_height + margin)
         crops = [frame.crop((x, y, x + panel_size, y + panel_size)).tobytes() for frame in frames]
-        assert len(set(crops)) > 1, POSTERIOR_ANIMATION_PANELS[panel_index].label
+        if panel.static_image is not None:
+            assert len(set(crops)) == 1, panel.label
+            assert crops[0] != Image.new("RGB", (panel_size, panel_size), "white").tobytes()
+        else:
+            assert len(set(crops)) > 1, panel.label

@@ -176,6 +176,9 @@ Gaussian, instantaneous-rise exponential-decay, fast-rise exponential-decay
 (FRED), and Davenport empirical flare templates have profile-specific sampled
 parameters. The ``variable_number_stellar_flares`` example fits native FRED
 components with independent rise and decay times to simulated FRED flares. The
+``variable_number_stellar_spots`` example fits a transdimensional catalog of
+periodic Gaussian spot dips to simulated stellar photometry. It samples the
+number, phase, depth, and width of spots for a fixed rotation period. The
 ``variable_number_exoplanets_radial_velocity`` example instead uses dedicated
 Keplerian elements, a radial-velocity likelihood, analytically marginalized
 instrument offsets, and numerically marginalized stellar jitter for a simulated

@@ -65,9 +65,9 @@ def evaluate_rotating_spot_profile(
     fwhm_days = np.atleast_1d(np.asarray(fwhm_days, dtype=float))
     period_days = float(period_days)
     reference_time_days = float(reference_time_days)
-    if (time_days.size == 0 or not np.isfinite(time_days).all() or depth_counts.size == 0
+    if (time_days.size == 0 or not np.isfinite(time_days).all()
             or depth_counts.size != phase_epoch_days.size or depth_counts.size != fwhm_days.size):
-        raise ValueError("time and spot parameter arrays must be finite and have matching nonzero sizes")
+        raise ValueError("time and spot parameter arrays must be finite and have matching sizes")
     if (not np.isfinite(depth_counts).all() or np.any(depth_counts <= 0.0)
             or not np.isfinite(phase_epoch_days).all() or not np.isfinite(fwhm_days).all()
             or np.any(fwhm_days <= 0.0)):

@@ -104,6 +104,14 @@ PIPELINE_EXAMPLES = [
         True,
     ),
     (
+        ROOT / "variable_number_stellar_spots" / "variable_number_stellar_spots.py",
+        ("--smoke",),
+        ROOT / "variable_number_stellar_spots",
+        "variable_number_stellar_spots",
+        False,
+        True,
+    ),
+    (
         ROOT / "voigt_spectral_line_catalog" / "voigt_spectral_line_catalog.py",
         ("--smoke",),
         ROOT / "voigt_spectral_line_catalog" / "pcat_runs" / "voigt_nomi",

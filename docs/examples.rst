@@ -61,15 +61,16 @@ transit-timing series, the public JWST/MIRI spectrum, the proposal profiler,
 and the sampler comparison. The JWST example may retrieve public MAST data.
 Notebooks requiring authenticated services or interactive inspection are excluded.
 
-Nine changing inference views are synchronized below. The panels show a genuinely
-unbinned Gaussian mixture, point sources in a simulated Daylan et al. (2017)
-Fermi-LAT northern Galactic cap, strong lenses including Roman/WFI lensed arcs,
-line catalogs from the public JWST/MIRI spectrum, simulated spectral lines, and
-simulated stellar-flare photometry, radial velocities, and transit times. The
-time-series and histogram axes remain fixed; the GIF uses one shared color palette.
+Eight changing inference views and the central PCAT logo are synchronized below.
+The panels show a genuinely unbinned Gaussian mixture, point sources in a
+simulated Daylan et al. (2017) Fermi-LAT northern Galactic cap, transdimensional
+Voigt-line fitting, a variable catalog of rotating starspots, simulated
+Roman/WFI lensed arcs, stellar flares, radial velocities, and transit times.
+The time-series and histogram axes remain fixed; the GIF uses one shared color
+palette.
 
 .. image:: ../examples/pcat_posterior_samples.gif
-   :alt: Nine PCAT posterior views across unbinned, image, spectral, and time-series inference
+   :alt: Eight changing PCAT inference views around the PCAT logo
    :width: 760px
    :align: center
 
@@ -132,6 +133,15 @@ Publication and instrument examples
    .. code-block:: bash
 
       python examples/variable_number_stellar_flares/variable_number_stellar_flares.py --smoke
+
+``variable_number_stellar_spots``
+   Simulated rotating-star photometry with three injected dark spots. PCAT fits
+   a zero-to-five-spot catalog using a fixed 3.2-day rotation period while
+   sampling each spot's phase, depth, and width.
+
+   .. code-block:: bash
+
+      python examples/variable_number_stellar_spots/variable_number_stellar_spots.py --smoke
 
 ``roman_strong_lens_perturber_catalog``
    Seeded Roman strong-lens population benchmark and catalog-detection

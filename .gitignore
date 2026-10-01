@@ -24,6 +24,8 @@ examples/daylan+2017_fermi_point_sources/visuals/*
 !examples/jwst_miri_ngc7027_line_catalog/visuals/*.png
 !examples/variable_number_stellar_flares/visuals/
 !examples/variable_number_stellar_flares/visuals/*.png
+!examples/variable_number_stellar_spots/visuals/
+!examples/variable_number_stellar_spots/visuals/*.png
 !examples/simulated_rubin_cluster_lens/visuals/
 !examples/simulated_rubin_cluster_lens/visuals/*.png
 !examples/simulated_rubin_cluster_lens/visuals/*.pdf
