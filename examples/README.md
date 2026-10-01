@@ -12,7 +12,7 @@ Set `boolmakeanimprop=True` for a third product, `proposal_candidates.gif`, whic
 | --- | --- | --- | --- |
 | Daylan et al. (2017), [10.3847/1538-4357/aa679e](https://doi.org/10.3847/1538-4357/aa679e) | Fermi-LAT point-source populations | `daylan+2017_fermi_point_sources/` | Scaled synthetic analog |
 | Portillo et al. (2017), [10.3847/1538-3881/aa8565](https://doi.org/10.3847/1538-3881/aa8565) | Crowded SDSS M2 field | `portillo+2017_crowded_sdss_m2/` | Scaled synthetic analog |
-| Daylan et al. (2018), [10.3847/1538-4357/aaa1f2](https://doi.org/10.3847/1538-4357/aaa1f2) | Strong-lens subhalo catalogs | `daylan+2018_strong_lens_subhalos/` | Scaled synthetic analog |
+| Daylan et al. (2018), [10.3847/1538-4357/aaaa1e](https://doi.org/10.3847/1538-4357/aaaa1e) | Strong-lens subhalo catalogs | `daylan+2018_strong_lens_subhalos/` | Scaled synthetic analog |
 | Feder et al. (2020), [10.3847/1538-3881/ab74cf](https://doi.org/10.3847/1538-3881/ab74cf) | Multiband SDSS deblending | `feder+2020_multiband_sdss_deblending/` | Scaled synthetic analog |
 | Butler et al. (2022), [10.3847/1538-4357/ac6c04](https://doi.org/10.3847/1538-4357/ac6c04) | SPIRE CIB, cirrus, and rSZ separation | `butler+2022_spire_sz_component_separation/` | Scaled synthetic analog |
 | Feder et al. (2023), [10.3847/1538-3881/ace69b](https://doi.org/10.3847/1538-3881/ace69b) | SPIRE point-plus-diffuse inference | `feder+2023_point_diffuse_spire/` | Scaled synthetic analog |

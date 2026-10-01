@@ -108,13 +108,14 @@ def test_verified_pcat_publications_have_examples():
     publication_examples = {
         "10.3847/1538-4357/aa679e": "daylan+2017_fermi_point_sources",
         "10.3847/1538-3881/aa8565": "portillo+2017_crowded_sdss_m2",
-        "10.3847/1538-4357/aaa1f2": "daylan+2018_strong_lens_subhalos",
+        "10.3847/1538-4357/aaaa1e": "daylan+2018_strong_lens_subhalos",
         "10.3847/1538-3881/ab74cf": "feder+2020_multiband_sdss_deblending",
         "10.3847/1538-4357/ac6c04": "butler+2022_spire_sz_component_separation",
         "10.3847/1538-3881/ace69b": "feder+2023_point_diffuse_spire",
         "10.3847/1538-4357/ae1e7a": "hall+2026_herschel_dsfg_multiplicity",
     }
     index = (examples / "README.md").read_text()
+    assert "10.3847/1538-4357/aaa1f2" not in index
 
     for doi, directory in publication_examples.items():
         root = examples / directory
@@ -344,6 +345,23 @@ def test_readme_lists_daylan_applications_first_without_reproduction_language():
         "### [Daylan et al. 2018 Strong-lens subhalo catalogs](examples/daylan+2018_strong_lens_subhalos/)",
     ]
     assert "reproduc" not in applications.lower()
+
+
+def test_readthedocs_index_links_repository_and_pcat_publications():
+    index = (DOCS_ROOT / "index.rst").read_text()
+
+    for link in (
+        "https://github.com/tansudaylan/pcat",
+        "https://doi.org/10.3847/1538-4357/aa679e",
+        "https://doi.org/10.3847/1538-4357/aaaa1e",
+        "https://doi.org/10.3847/1538-3881/aa8565",
+        "https://doi.org/10.3847/1538-3881/ab74cf",
+        "https://doi.org/10.3847/1538-4357/ac6c04",
+        "https://doi.org/10.3847/1538-3881/ace69b",
+        "https://doi.org/10.3847/1538-4357/ae1e7a",
+    ):
+        assert link in index
+    assert "10.3847/1538-4357/aaa1f2" not in index
 
 
 def test_burn_in_options_and_comparison_are_documented():

@@ -1,11 +1,23 @@
 PCAT documentation
 ==================
 
-The Probabilistic Cataloger (PCAT) is a hierarchical, transdimensional Bayesian
-inference framework for datasets whose number of sources or other model elements
-is unknown. It samples an ensemble of catalogs rather than returning only one
-best-fit catalog. The framework was introduced by `Daylan, Portillo, and
-Finkbeiner (2017) <https://doi.org/10.3847/1538-4357/aa679e>`_ in ApJ 839, 4.
+The Probabilistic Cataloger (PCAT) is a hierarchical Bayesian inference
+framework for Poisson-distributed images, spectra, photon events, and other
+data. It supports both fixed-dimensional inference and transdimensional
+inference over metamodels whose candidate models can have different numbers of
+elements. The sampler and maintained examples are available in the `PCAT GitHub
+repository <https://github.com/tansudaylan/pcat>`_.
+
+PCAT was introduced by `Daylan, Portillo, and Finkbeiner (2017)
+<https://doi.org/10.3847/1538-4357/aa679e>`_ in *ApJ*, 839, 4. A later
+application to strongly lensed systems is `Daylan et al. (2018)
+<https://doi.org/10.3847/1538-4357/aaaa1e>`_, *ApJ*, 854, 141. Other published
+applications include `Portillo et al. (2017)
+<https://doi.org/10.3847/1538-3881/aa8565>`_, `Feder et al. (2020)
+<https://doi.org/10.3847/1538-3881/ab74cf>`_, `Butler et al. (2022)
+<https://doi.org/10.3847/1538-4357/ac6c04>`_, `Feder et al. (2023)
+<https://doi.org/10.3847/1538-3881/ace69b>`_, and `Hall et al. (2026)
+<https://doi.org/10.3847/1538-4357/ae1e7a>`_.
 
 PCAT supports arbitrary user-supplied likelihood functions, a unified Poisson
 image likelihood with point, extended, and lensed components, spectral-line
