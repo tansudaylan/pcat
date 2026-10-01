@@ -114,6 +114,7 @@ def plot_jacobian_acceptance(summary, output_path):
 
 def run_example(number_sweeps=120):
     """Run the simulated Voigt problem and return animations and Jacobian plot."""
+    run_root = EXAMPLE_PATH / "pcat_runs" / RUN_NAME
     namespace = load_example_namespace(
         "voigt_spectral_line_catalog/voigt_spectral_line_catalog.py"
     )
@@ -144,20 +145,22 @@ def run_example(number_sweeps=120):
         numbproc=1,
         typeverb=0,
     )
-    for path in (EXAMPLE_PATH / "data" / "outp" / RUN_NAME, EXAMPLE_PATH / "visuals"):
+    for path in (run_root, EXAMPLE_PATH / "visuals"):
         if path.exists():
             print(f"Removing cached example output {path}...")
             shutil.rmtree(path)
     sampling.sample(**configuration)
     from pcat.main import readfile
 
-    worker = readfile(str(EXAMPLE_PATH / "data" / "outp" / RUN_NAME / "gdatmodi0000post"))
+    worker = readfile(
+        str(run_root / "data" / "outp" / RUN_NAME / "gdatmodi0000post")
+    )
     jacobian_summary = summarize_jacobian_acceptance(worker)
     jacobian_path = plot_jacobian_acceptance(
         jacobian_summary, EXAMPLE_PATH / "visuals" / "jacobian_acceptance_effect.png"
     )
 
-    animation_root = EXAMPLE_PATH / "visuals" / "post" / "anim"
+    animation_root = run_root / "visuals" / "post" / "anim"
     posterior_path = animation_root / "proposal_sequence.gif"
     proposal_path = animation_root / "proposal_candidates.gif"
     if not posterior_path.is_file() or not proposal_path.is_file():

@@ -18,4 +18,4 @@ python examples/proposal_state_animation/proposal_state_animation.py
 
 ![Retained model, every proposed candidate, and Jacobian acceptance comparison](visuals/jacobian_acceptance_effect.png)
 
-PCAT writes `proposal_sequence.gif` for retained states and `proposal_candidates.gif` for every candidate, including rejected proposals. The static comparison is saved as `jacobian_acceptance_effect.png`.
+PCAT writes `proposal_sequence.gif` for retained states and `proposal_candidates.gif` for every candidate, including rejected proposals. Each candidate frame overlays the current and proposed predictions on the data in one panel and compares their data-minus-model residuals in a second panel; colors and arrows mark the transition. The static comparison is saved as `jacobian_acceptance_effect.png`.

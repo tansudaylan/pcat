@@ -48,10 +48,11 @@ sampling behavior and do not reproduce published posterior values.
 The posterior animation above visualizes retained chain states. Set
 `boolmakeanimprop=True` to additionally render every proposed candidate before
 the Metropolis-Hastings decision, whether accepted or rejected. The candidate
-animation compares current and proposed predictions and unit-prior coordinates,
-and labels the proposal type, acceptance probability, decision, proposal-density
-ratio, and Jacobian. Rejected candidates are proposal diagnostics rather than
-posterior samples.
+animation overlays current and proposed models on the data in one panel and
+compares both data-minus-model residuals in another. Colors and arrows show the
+proposed state change. Frames label the proposal type, acceptance probability,
+decision, proposal-density ratio, and Jacobian. Rejected candidates remain
+visible as proposals, not posterior samples.
 
 ![Every PCAT proposal candidate, including rejected states](examples/proposal_state_animation/visuals/post/anim/proposal_candidates.gif)
 

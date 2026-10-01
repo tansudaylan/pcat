@@ -4,7 +4,7 @@ These notebooks apply probabilistic cataloging to point-source images, Gaussian 
 
 Sampler runs write a `proposal_activity.gif` with cumulative attempt and acceptance counts for each move type. Runs with model frames also write a `proposal_sequence.gif` that labels each frame with its proposal and acceptance status.
 
-Set `boolmakeanimprop=True` for a third product, `proposal_candidates.gif`, which shows every candidate before the accept/reject decision. It includes rejected candidates and is therefore a proposal diagnostic rather than a posterior-sample animation. The `proposal_state_animation/` notebook runs 120 sweeps of a simulated Voigt-line example and displays the retained-state and every-candidate animations together. It also compares PCAT's split/merge acceptance probabilities with same-proposal counterfactuals that omit only the Jacobian.
+Set `boolmakeanimprop=True` for a third product, `proposal_candidates.gif`, which shows every candidate before the accept/reject decision. One panel overlays current and proposed models on the data; the other compares their residuals. Colors and arrows identify the proposed transition. The animation includes rejected candidates, which are proposals rather than posterior samples. The `proposal_state_animation/` notebook runs 120 sweeps of a simulated Voigt-line example and displays the retained-state and every-candidate animations together. It also compares PCAT's split/merge acceptance probabilities with same-proposal counterfactuals that omit only the Jacobian.
 
 ## Publication coverage
 

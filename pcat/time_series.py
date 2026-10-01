@@ -26,6 +26,7 @@ FLARE_PROFILE_PARAMETERS = {
     "flarfred": ("flux", "elin", "scalrise", "scalfall"),
     "flardav": ("flux", "elin", "fwhm"),
 }
+ROTATING_SPOT_PARAMETERS = {"spotrot": ("flux", "elin", "fwhm")}
 
 
 def flare_profile_parameters(profile: str) -> tuple[str, ...]:
@@ -36,6 +37,53 @@ def flare_profile_parameters(profile: str) -> tuple[str, ...]:
         raise ValueError(
             f"Unknown flare profile {profile!r}; choose from {tuple(FLARE_PROFILE_PARAMETERS)}."
         ) from exception
+
+def rotating_spot_parameters(profile: str) -> tuple[str, ...]:
+    """Return sampled parameters for a rotating stellar-spot profile."""
+
+    try:
+        return ROTATING_SPOT_PARAMETERS[profile]
+    except KeyError as exception:
+        raise ValueError(
+            f"Unknown rotating spot profile {profile!r}; "
+            f"choose from {tuple(ROTATING_SPOT_PARAMETERS)}."
+        ) from exception
+
+def evaluate_rotating_spot_profile(
+    time_days,
+    depth_counts,
+    phase_epoch_days,
+    fwhm_days,
+    period_days,
+    reference_time_days=0.0,  # [day]
+):
+    """Return periodic Gaussian dimmings, one negative component per spot."""
+
+    time_days = np.asarray(time_days, dtype=float).reshape(-1, 1)
+    depth_counts = np.atleast_1d(np.asarray(depth_counts, dtype=float))
+    phase_epoch_days = np.atleast_1d(np.asarray(phase_epoch_days, dtype=float))
+    fwhm_days = np.atleast_1d(np.asarray(fwhm_days, dtype=float))
+    period_days = float(period_days)
+    reference_time_days = float(reference_time_days)
+    if (time_days.size == 0 or not np.isfinite(time_days).all() or depth_counts.size == 0
+            or depth_counts.size != phase_epoch_days.size or depth_counts.size != fwhm_days.size):
+        raise ValueError("time and spot parameter arrays must be finite and have matching nonzero sizes")
+    if (not np.isfinite(depth_counts).all() or np.any(depth_counts <= 0.0)
+            or not np.isfinite(phase_epoch_days).all() or not np.isfinite(fwhm_days).all()
+            or np.any(fwhm_days <= 0.0)):
+        raise ValueError("spot depths, epochs, and widths must be finite and positive")
+    if not np.isfinite(period_days) or period_days <= 0.0 or not np.isfinite(reference_time_days):
+        raise ValueError("period must be finite and positive and reference time finite")
+    if np.any(fwhm_days >= period_days):
+        raise ValueError("spot widths must be shorter than the rotation period")
+
+    phase_offset_days = np.remainder(
+        time_days - reference_time_days - phase_epoch_days[None, :] + 0.5 * period_days,
+        period_days,
+    ) - 0.5 * period_days
+    sigma_days = fwhm_days / (2.0 * np.sqrt(2.0 * np.log(2.0)))  # [day]
+    profile = np.exp(-0.5 * (phase_offset_days / sigma_days[None, :]) ** 2)
+    return -depth_counts[None, :] * profile
 
 
 def evaluate_flare_profile(
@@ -89,7 +137,10 @@ def evaluate_flare_profile(
 
 __all__ = [
     "FLARE_PROFILE_PARAMETERS",
+    "ROTATING_SPOT_PARAMETERS",
     "evaluate_flare_profile",
+    "evaluate_rotating_spot_profile",
     "flare_profile_parameters",
+    "rotating_spot_parameters",
     "log_likelihood_transit_times",
 ]

@@ -8,7 +8,12 @@ from pcat.spectral import (
     gaussian_lsf_kernel,
     spectral_profile_parameters,
 )
-from pcat.time_series import evaluate_flare_profile, flare_profile_parameters
+from pcat.time_series import (
+    evaluate_flare_profile,
+    evaluate_rotating_spot_profile,
+    flare_profile_parameters,
+    rotating_spot_parameters,
+)
 
 
 @pytest.mark.parametrize(
@@ -73,6 +78,30 @@ def test_fred_has_independent_rise_and_decay_times():
         [-1.0, 0.0, 1.0], "flarfred", [1.0], [0.0], rise_time=[0.2], decay_time=[2.0]
     )[:, 0]
     assert values[0] < values[2] < values[1]
+
+
+def test_rotating_spot_profile_repeats_and_only_dims_the_star():
+    time_days = np.array([1.25, 4.45, 7.65, 2.85])  # [day]
+    values = evaluate_rotating_spot_profile(
+        time_days,
+        [120.0],
+        [0.25],
+        [0.16],
+        period_days=3.2,  # [day]
+        reference_time_days=1.0,  # [day]
+    )[:, 0]
+
+    np.testing.assert_allclose(values[:3], -120.0)
+    assert values[3] > -1e-8
+    assert np.all(values <= 0.0)
+    assert rotating_spot_parameters("spotrot") == ("flux", "elin", "fwhm")
+
+
+def test_rotating_spot_profile_rejects_width_longer_than_period():
+    with pytest.raises(ValueError, match="shorter than the rotation period"):
+        evaluate_rotating_spot_profile(
+            [0.0], [10.0], [0.0], [2.0], period_days=1.0  # [day]
+        )
 
 
 def test_native_parameter_sets_are_profile_specific():

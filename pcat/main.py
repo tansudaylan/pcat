@@ -4,6 +4,7 @@ from tdpy.verbosity import print
 import matplotlib as mpl
 mpl.use('agg')
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import seaborn as sns
 
 # numpy
@@ -67,7 +68,12 @@ from tdpy.util import summgene
 
 from .plotting import histogram_frame_limits, plot_grid as plot_grid_native
 from .spectral import apply_gaussian_resolving_power, apply_line_spread_function, evaluate_line_profile, spectral_profile_parameters
-from .time_series import evaluate_flare_profile, flare_profile_parameters
+from .time_series import (
+    evaluate_flare_profile,
+    evaluate_rotating_spot_profile,
+    flare_profile_parameters,
+    rotating_spot_parameters,
+)
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _REPO_ROOT not in sys.path:
@@ -122,6 +128,15 @@ def retr_elem_spec(gdat, typeelem, spectype, dictelem):
             gdat.bctrpara.ener, spectype, dictelem['flux'], dictelem['elin'],
             rise_time=dictelem.get('scalrise'), decay_time=dictelem.get('scalfall'),
             fwhm=dictelem.get('fwhm'))
+    if spectype == 'spotrot':
+        return evaluate_rotating_spot_profile(
+            gdat.bctrpara.ener,
+            dictelem['flux'],
+            dictelem['elin'],
+            dictelem['fwhm'],
+            period_days=gdat.spot_period_days,
+            reference_time_days=getattr(gdat, 'spot_reference_time_days', 0.0),
+        )
     if typeelem.startswith('lghtline'):
         spec = retr_spec(
             gdat, dictelem['flux'], elin=dictelem['elin'], edisintp=getattr(gdat, 'edisintp', None),
@@ -6642,6 +6657,8 @@ def setp_paragenrscalbase(gdat, strgmodl='fitt'):
                 namespopl.append(['flux', 'elin', 'phas', 'ecce', 'argp'])
                 bounds['flux'] = (0.3, 300.)  # [m/s]
                 bounds['elin'] = (1.2, 2. * rangeener)  # [day]
+            elif profiles[l] == 'spotrot':
+                namespopl.append(list(rotating_spot_parameters(profiles[l])))
             elif profiles[l].startswith('flar'):
                 namespopl.append(list(flare_profile_parameters(profiles[l])))
             else:
@@ -13134,53 +13151,199 @@ def _proposal_model_array(gdat, state):
     return values
 
 
-def _draw_proposal_model(axis, values, data_limit, title, valid=True):
-    """Draw one current or proposed prediction using a stable data-derived scale."""
-    axis.set_title(title, fontsize=9)
+def _proposal_data_array(gdat):
+    """Return observed counts in the same display shape as proposal models."""
+
+    values = np.asarray(getattr(gdat, 'cntpdata', np.ones(1)), dtype=float)
+    if values.ndim == 3:
+        values = values[0, :, 0]
+    values = np.squeeze(values)
+    if values.ndim == 1:
+        numbside = int(getattr(gdat, 'numbsidecart', 0) or 0)
+        if numbside > 1 and values.size == numbside ** 2:
+            values = values.reshape((numbside, numbside))
+    return values
+
+
+def _align_proposal_model(values, data):
+    """Match a proposal prediction to the displayed data shape when possible."""
+
+    if values is None:
+        return None
+    values = np.asarray(values, dtype=float)
+    if values.shape == data.shape:
+        return values
+    if values.size == data.size:
+        return values.reshape(data.shape)
+    return None
+
+
+def _proposal_contour_levels(values):
+    finite = np.asarray(values, dtype=float)
+    finite = finite[np.isfinite(finite)]
+    if finite.size < 2 or finite.min() >= finite.max():
+        return np.array([])
+    return np.linspace(finite.min(), finite.max(), 5)[1:-1]
+
+
+def _proposal_center(values):
+    """Return a model-weighted pixel center or the maximum bin for a series."""
+
+    values = np.asarray(values, dtype=float)
+    if values.ndim == 1:
+        finite = np.isfinite(values)
+        if not finite.any():
+            return None
+        index = int(np.nanargmax(values))
+        return float(index), float(values[index])
+    weights = np.where(np.isfinite(values), np.maximum(values, 0.), 0.)
+    total = weights.sum()
+    if total <= 0.:
+        return None
+    ycoord, xcoord = np.indices(values.shape)
+    return float((xcoord * weights).sum() / total), float((ycoord * weights).sum() / total)
+
+
+def _draw_proposal_data_panel(axis, data, current_model, candidate_model, valid, data_limit):
+    """Show observed data with both model states and their proposed movement."""
+
+    current_color = '#0072B2'
+    candidate_color = '#A51C30'
+    axis.set_title('Observed data and model states', fontsize=9)
     axis.grid(False)
-    if not valid or values is None or not np.any(np.isfinite(values)):
-        axis.text(0.5, 0.5, 'Outside prior support', ha='center', va='center', transform=axis.transAxes)
-        axis.set_xticks([])
-        axis.set_yticks([])
-        return
-    if values.ndim == 2:
-        axis.imshow(values, origin='lower', cmap='viridis', vmin=0., vmax=data_limit, interpolation='nearest')
+    if data.ndim == 2:
+        axis.imshow(data, origin='lower', cmap='gray_r', vmin=0., vmax=data_limit,
+                    interpolation='nearest')
         axis.set_xlabel('Pixel x')
         axis.set_ylabel('Pixel y')
+        for model, color in ((current_model, current_color), (candidate_model, candidate_color)):
+            if model is not None:
+                levels = _proposal_contour_levels(model)
+                if levels.size:
+                    axis.contour(model, levels=levels, colors=[color], origin='lower', linewidths=1.0)
+        current_center = _proposal_center(current_model) if current_model is not None else None
+        candidate_center = _proposal_center(candidate_model) if candidate_model is not None else None
+        if current_center is not None:
+            axis.scatter(*current_center, s=30, marker='o', facecolor=current_color,
+                         edgecolor='white', linewidth=0.6, zorder=4)
+        if candidate_center is not None:
+            axis.scatter(*candidate_center, s=34, marker='X', facecolor=candidate_color,
+                         edgecolor='white', linewidth=0.6, zorder=5)
+        if current_center is not None and candidate_center is not None:
+            axis.annotate('', xy=candidate_center, xytext=current_center,
+                          arrowprops=dict(arrowstyle='->', color='black', lw=1.2))
+        axis.set_aspect('equal')
     else:
-        axis.plot(np.ravel(values), color='#A51C30', lw=1.2)
-        axis.set_ylim(0., data_limit)
+        bins = np.arange(data.size)
+        axis.plot(bins, data, color='black', lw=1.0, label='Observed data')
+        for model, color, label in (
+            (current_model, current_color, 'Current model'),
+            (candidate_model, candidate_color, 'Proposed model'),
+        ):
+            if model is not None:
+                axis.plot(bins, model, color=color, lw=1.2, label=label)
+        if current_model is not None and candidate_model is not None:
+            current_bin = int(np.nanargmax(current_model))
+            candidate_bin = int(np.nanargmax(candidate_model))
+            axis.annotate('', xy=(candidate_bin, data_limit * 0.92),
+                          xytext=(current_bin, data_limit * 0.92),
+                          arrowprops=dict(arrowstyle='->', color='black', lw=1.2))
         axis.set_xlabel('Data bin')
-        axis.set_ylabel('Predicted counts')
+        axis.set_ylabel('Observed counts')
+        axis.set_ylim(0., data_limit)
+
+    if data.ndim == 2:
+        handles = [
+            Line2D([0], [0], color=current_color, lw=1.2, marker='o', label='Current state'),
+            Line2D([0], [0], color=candidate_color, lw=1.2, marker='X', label='Proposed state'),
+        ]
+        if current_model is not None and candidate_model is not None:
+            handles.append(Line2D([0], [0], color='black', lw=1.2, marker='>', label='State move'))
+        axis.legend(handles=handles, loc='upper right', frameon=True, fancybox=True,
+                    framealpha=1.0, fontsize=8)
+    else:
+        axis.legend(loc='upper right', frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
+    if not valid:
+        axis.text(0.02, 0.02, 'Proposed state outside prior support',
+                  transform=axis.transAxes, ha='left', va='bottom', fontsize=8,
+                  color=candidate_color)
+
+
+def _draw_proposal_residual_panel(axis, data, current_model, candidate_model, valid):
+    """Compare current and proposed residuals in a shared panel."""
+
+    current_color = '#0072B2'
+    candidate_color = '#A51C30'
+    current_residual = data - current_model if current_model is not None else None
+    candidate_residual = data - candidate_model if candidate_model is not None else None
+    axis.set_title('Residuals (data − model)', fontsize=9)
+    axis.grid(False)
+
+    if data.ndim == 2:
+        residual = candidate_residual if candidate_residual is not None else current_residual
+        if residual is None:
+            residual = np.zeros_like(data)
+        finite = np.abs(residual[np.isfinite(residual)])
+        limit = max(1., float(np.percentile(finite, 99.5))) if finite.size else 1.
+        axis.imshow(residual, origin='lower', cmap='coolwarm', vmin=-limit, vmax=limit,
+                    interpolation='nearest')
+        for values, color, style in (
+            (current_residual, current_color, 'dashed'),
+            (candidate_residual, candidate_color, 'solid'),
+        ):
+            if values is not None:
+                levels = _proposal_contour_levels(values)
+                if levels.size:
+                    axis.contour(values, levels=levels, colors=[color], linestyles=style,
+                                 origin='lower', linewidths=0.9)
+        axis.set_xlabel('Pixel x')
+        axis.set_ylabel('Pixel y')
+        axis.set_aspect('equal')
+    else:
+        bins = np.arange(data.size)
+        axis.axhline(0., color='black', lw=0.8, linestyle='dashed')
+        if current_residual is not None:
+            axis.plot(bins, current_residual, color=current_color, lw=1.0, label='Current residual')
+        if candidate_residual is not None:
+            axis.plot(bins, candidate_residual, color=candidate_color, lw=1.0,
+                      label='Proposed residual')
+        axis.set_xlabel('Data bin')
+        axis.set_ylabel('Residual counts')
+        axis.legend(loc='upper right', frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
+
+    if data.ndim == 2:
+        handles = []
+        if current_residual is not None:
+            handles.append(Line2D([0], [0], color=current_color, lw=1.0, linestyle='dashed',
+                                  label='Current residual'))
+        if candidate_residual is not None:
+            handles.append(Line2D([0], [0], color=candidate_color, lw=1.0,
+                                  label='Proposed residual'))
+        if handles:
+            axis.legend(handles=handles, loc='upper right', frameon=True, fancybox=True,
+                        framealpha=1.0, fontsize=8)
+    if not valid:
+        axis.text(0.02, 0.02, 'Candidate not evaluated', transform=axis.transAxes,
+                  ha='left', va='bottom', fontsize=8)
 
 
 def _write_proposal_candidate_frame(gdat, gdatmodi, accepted, pathout):
-    """Plot the current and proposed states for one sweep, including rejected candidates."""
+    """Plot data with overlaid current/proposed states beside their residuals."""
     current = gdatmodi.this
     candidate = gdatmodi.next
     valid = bool(getattr(current, 'boolpropfilt', False))
-    data = np.asarray(getattr(gdat, 'cntpdata', np.ones(1)), dtype=float)
+    data = _proposal_data_array(gdat)
     finite_data = data[np.isfinite(data)]
     data_limit = max(1., 1.2 * np.percentile(finite_data, 99.5)) if finite_data.size else 1.
-    current_model = _proposal_model_array(gdat, current)
-    candidate_model = _proposal_model_array(gdat, candidate) if valid else None
+    current_model = _align_proposal_model(_proposal_model_array(gdat, current), data)
+    candidate_model = _align_proposal_model(_proposal_model_array(gdat, candidate), data) if valid else None
 
-    figure = plt.figure(figsize=(9.0, 5.2), facecolor='white')
-    grid = figure.add_gridspec(2, 2, height_ratios=(3., 1.35), hspace=0.38, wspace=0.28)
-    _draw_proposal_model(figure.add_subplot(grid[0, 0]), current_model, data_limit, 'Current state')
-    _draw_proposal_model(figure.add_subplot(grid[0, 1]), candidate_model, data_limit, 'Proposed candidate', valid)
-
-    axis = figure.add_subplot(grid[1, :])
-    current_unit = np.asarray(getattr(current, 'paragenrunitfull', []), dtype=float).reshape(-1)
-    candidate_unit = np.asarray(getattr(candidate, 'paragenrunitfull', []), dtype=float).reshape(-1)
-    if current_unit.size:
-        axis.plot(np.arange(current_unit.size), current_unit, 'o-', ms=2.5, lw=0.8, color='black', label='Current')
-    if candidate_unit.size:
-        axis.plot(np.arange(candidate_unit.size), candidate_unit, 'o-', ms=2.5, lw=0.8,
-                  color='#A51C30', alpha=0.8, label='Candidate')
-    axis.set(xlabel='Generative parameter index', ylabel='Unit-prior coordinate', ylim=(-0.05, 1.05))
-    axis.grid(False)
-    axis.legend(loc='upper right', frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
+    figure = plt.figure(figsize=(10.0, 4.8), facecolor='white')
+    grid = figure.add_gridspec(1, 2, left=0.07, right=0.98, bottom=0.18, top=0.80, wspace=0.22)
+    axis_data = figure.add_subplot(grid[0, 0])
+    axis_residual = figure.add_subplot(grid[0, 1])
+    _draw_proposal_data_panel(axis_data, data, current_model, candidate_model, valid, data_limit)
+    _draw_proposal_residual_panel(axis_residual, data, current_model, candidate_model, valid)
 
     proposal_index = int(np.asarray(getattr(current, 'indxproptype', 0)).reshape(-1)[0])
     labels = list(getattr(gdat, 'lablproptype', []))
@@ -13199,7 +13362,7 @@ def _write_proposal_candidate_frame(gdat, gdatmodi, accepted, pathout):
     candidate_log_posterior = float(getattr(candidate, 'lpostotl', np.nan)) if valid else np.nan
     figure.text(
         0.5,
-        0.01,
+        0.025,
         r'$\log \pi$: %.3g $\rightarrow$ %.3g   |   $\log q_r/q_f$: %.3g   |   $\log|J|$: %.3g' %
         (current_log_posterior, candidate_log_posterior, float(np.asarray(getattr(current, 'ltrp', [0.])).reshape(-1)[0]),
          float(np.asarray(getattr(current, 'ljcb', [0.])).reshape(-1)[0])),

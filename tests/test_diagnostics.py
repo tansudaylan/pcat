@@ -4,6 +4,7 @@ import importlib
 from pathlib import Path
 from types import SimpleNamespace
 
+import pcat.main as pcat_main
 from PIL import Image
 
 from pcat.diagnostics import (
@@ -374,7 +375,9 @@ def test_proposal_animation_uses_recorded_types_and_acceptance(tmp_path):
         assert animation.size[0] > 800
 
 
-def test_rejected_proposal_candidate_frame_shows_both_states(tmp_path):
+def test_rejected_proposal_candidate_frame_shows_data_and_residual_panels(
+    tmp_path, monkeypatch
+):
     current = SimpleNamespace(
         boolpropfilt=True,
         cntpmodl=np.array([[[1.], [2.], [3.], [4.]]]),
@@ -397,11 +400,62 @@ def test_rejected_proposal_candidate_frame_shows_both_states(tmp_path):
     )
     worker = SimpleNamespace(this=current, next=candidate, cntrswep=3)
     output_path = tmp_path / "proposal_candidates_swep000000003.png"
+    figures = []
+    make_figure = pcat_main.plt.figure
+
+    def capture_figure(*args, **kwargs):
+        figure = make_figure(*args, **kwargs)
+        figures.append(figure)
+        return figure
+
+    monkeypatch.setattr(pcat_main.plt, "figure", capture_figure)
 
     assert _write_proposal_candidate_frame(state, worker, False, output_path) == str(output_path)
+    assert len(figures) == 1
+    assert [axis.get_title() for axis in figures[0].axes] == [
+        "Observed data and model states",
+        "Residuals (data − model)",
+    ]
+    assert figures[0].axes[0].images
+    assert figures[0].axes[1].images
+    assert any(
+        getattr(text, "arrow_patch", None) is not None
+        for text in figures[0].axes[0].texts
+    )
+    assert {text.get_text() for text in figures[0].axes[0].get_legend().get_texts()} == {
+        "Current state", "Proposed state", "State move"
+    }
     with Image.open(output_path) as image:
         assert image.width > image.height
         assert image.width > 1000
+
+
+def test_proposal_candidate_frame_shows_one_dimensional_data_and_residuals(tmp_path):
+    current = SimpleNamespace(
+        boolpropfilt=True,
+        cntpmodl=np.array([1., 3., 2., 5., 3.]),
+        indxproptype=np.array([0]),
+        accpprob=np.array([0.4]),
+        lpostotl=-3.0,
+        ltrp=np.array([0.1]),
+        ljcb=np.array([0.0]),
+    )
+    candidate = SimpleNamespace(
+        cntpmodl=np.array([1., 2., 4., 4., 3.]),
+        lpostotl=-3.2,
+    )
+    state = SimpleNamespace(
+        cntpdata=np.array([[[1.], [4.], [2.], [5.], [3.]]]),
+        lablproptype=["Within-model proposal"],
+    )
+    worker = SimpleNamespace(this=current, next=candidate, cntrswep=0)
+    output_path = tmp_path / "proposal_candidates_swep000000000.png"
+
+    _write_proposal_candidate_frame(state, worker, True, output_path)
+
+    with Image.open(output_path) as image:
+        assert image.width > image.height
+    assert output_path.is_file()
 
 
 def test_element_parameter_labels_are_descriptive():
