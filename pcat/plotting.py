@@ -185,14 +185,18 @@ class PosteriorAnimationPanel:
     pattern: str
 
 
+def histogram_frame_limits(reference_count: float, maximum_model_count: float) -> tuple[float, float]:
+    """Keep all posterior histogram bars within one stable logarithmic y-range."""
+
+    maximum = max(100.0, float(np.max(np.atleast_1d(reference_count))),
+                  float(np.max(np.atleast_1d(maximum_model_count))))
+    return 0.5, 1.1 * maximum
+
+
 POSTERIOR_ANIMATION_PANELS = (
     PosteriorAnimationPanel(
-        "Gaussian mixture | model intensity",
-        "gaussian_mixture_catalog/visuals/post/fram/thiscntpmodl_*.png",
-    ),
-    PosteriorAnimationPanel(
-        "Gaussian mixture | residual counts",
-        "gaussian_mixture_catalog/visuals/post/fram/thiscntpresi_swep*.png",
+        "Unbinned Gaussian mixture | event catalog",
+        "gaussian_mixture_catalog/visuals/post/fram/thisscatcntpen00evt0_swep*.png",
     ),
     PosteriorAnimationPanel(
         "Fermi-LAT | low-energy source model",

@@ -64,7 +64,7 @@ import tdpy.util as tdpy_util
 from tdpy.paths import make_directory, make_symlink, open_narr
 from tdpy.util import summgene
 
-from .plotting import plot_grid as plot_grid_native
+from .plotting import histogram_frame_limits, plot_grid as plot_grid_native
 from .spectral import apply_gaussian_resolving_power, apply_line_spread_function, evaluate_line_profile, spectral_profile_parameters
 from .time_series import evaluate_flare_profile, flare_profile_parameters
 
@@ -18037,8 +18037,9 @@ def init( \
                 # plot settings
                 ## upper limit of histograms
                 if gdat.limtydathistfeat is None:
-                    gdat.limtydathistfeat = [0.5, max(100., 10**np.ceil(np.log10(gdat.refr.numbelemtotl)))]
-                    #gdat.limtydathistfeat = [0.5, max(100., 10**np.ceil(np.log10(gdat.fitt.maxmpara.numbelemtotl)))]
+                    gdat.limtydathistfeat = histogram_frame_limits(
+                        gdat.refr.numbelemtotl, gdat.fitt.maxmpara.numbelemtotl
+                    )
 
             # initial plots
             if gdat.boolmakeplot and gdat.boolmakeplotinit:

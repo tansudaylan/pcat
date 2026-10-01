@@ -10,6 +10,7 @@ from pcat.plotting import (
     POSTERIOR_ANIMATION_PANELS,
     _animation_frame_paths,
     _quantize_shared_palette,
+    histogram_frame_limits,
     make_image_sequence_animation,
     make_posterior_animation_collage,
 )
@@ -66,6 +67,12 @@ def test_animation_frames_use_one_shared_palette():
 
     assert all(frame.mode == "P" for frame in quantized)
     assert all(frame.getpalette() == quantized[0].getpalette() for frame in quantized[1:])
+
+
+def test_histogram_frame_limits_cover_full_fitted_catalog():
+    lower, upper = histogram_frame_limits(reference_count=40, maximum_model_count=600)
+    assert lower > 0
+    assert upper > 600
 
 
 def test_make_image_sequence_animation_includes_every_cutout(tmp_path):
