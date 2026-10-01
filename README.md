@@ -1,10 +1,9 @@
 # PCAT
 
-<img src="https://raw.githubusercontent.com/tansudaylan/pcat/master/docs/_static/pcat_banner.png" alt="PCAT, the Probabilistic Cataloger" width="480">
+<img src="https://raw.githubusercontent.com/tansudaylan/pcat/master/docs/_static/pcat_logo.png" alt="Circular PCAT logo" width="280">
 
-The primary mark is circular and uses Harvard Crimson, black, and white. Five related alternatives explore nested spaces, catalog birth/death, a dimension ladder, a model orbit, and reversible catalog branching.
-
-![Current circular PCAT mark and five logo concepts](docs/_static/pcat_logo_concepts.png)
+The sole PCAT mark is a Harvard Crimson circle with a black outline, the white
+dot, line, square, and cube, and readable `PCAT` lettering inside the circle.
 
 ## Purpose
 
