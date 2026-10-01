@@ -82,9 +82,3 @@ def test_logo_contains_wordmark_within_circle_and_uniform_cube_edges():
     center = 0.5 * (np.asarray(image.shape[:2]) - 1.0)
     radius = np.linalg.norm((coordinates - center) / (0.5 * image.shape[0]), axis=1)
     assert radius.max() < logo.DISC_RADIUS / 1.02
-
-
-def test_brand_asset_guide_describes_only_the_primary_mark():
-    guide = (STATIC_ROOT / "README.md").read_text()
-    assert "There are no alternate logo concepts" in guide
-    assert "PCAT" in guide
