@@ -1,7 +1,46 @@
 import numpy as np
 import pytest
+from types import SimpleNamespace
 
 from pcat import forward_model_image
+from pcat import main
+
+
+def test_zero_poisson_realization_is_kept_without_retry(monkeypatch):
+
+    calls = []
+
+    def draw(rate):
+        calls.append(rate.copy())
+        return np.zeros_like(rate, dtype=int)
+
+    monkeypatch.setattr(np.random, "poisson", draw)
+    counts = main.draw_simulated_counts(np.array([[[0.1]]]))
+    assert counts.sum() == 0
+    assert len(calls) == 1
+
+
+def test_invalid_poisson_expectation_is_rejected():
+    for rate in (-1.0, np.nan, np.inf):
+        with pytest.raises(ValueError, match="finite and nonnegative"):
+            main.draw_simulated_counts(np.array([rate]))
+
+
+def test_zero_counts_survive_data_processing(monkeypatch):
+    monkeypatch.setattr(main, 'retr_spatmean', lambda *args, **kwargs: (0., 0.))
+    monkeypatch.setattr(main, 'setp_varb', lambda *args, **kwargs: None)
+    state = SimpleNamespace(typedata='simu', cntpdata=np.zeros((1, 1, 1)),
+                            liststrgmodl=['true'], true=SimpleNamespace(),
+                            indxdqlt=[0], numbpixl=1, indxener=[0],
+                            blimpara=SimpleNamespace(cntpdata=np.array([-0.5, 0.5])),
+                            typepixl='heal')
+
+    main.proc_cntpdata(state)
+
+    assert state.cntpdata[0, 0, 0] == 0
+    assert state.varidata[0, 0, 0] == 1
+    assert state.llikoffs[0, 0, 0] == 0
+    assert state.histcntpdataevt0.tolist() == [1]
 
 
 def test_forward_model_image_conserves_centered_source_flux():

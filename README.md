@@ -2,8 +2,11 @@
 
 <img src="https://raw.githubusercontent.com/tansudaylan/pcat/master/docs/_static/pcat_logo.png" alt="Circular PCAT logo" width="280">
 
-The sole PCAT mark is a Harvard Crimson circle with a black outline, the white
-dot, line, square, and cube, and readable `PCAT` lettering inside the circle.
+The sole PCAT mark is a Harvard Crimson circle with a black outline and a large
+`PCAT` wordmark. White dot, line, square, and cube glyphs represent 0D through
+3D parameter spaces, with black two-way arrows between them to symbolize
+transdimensional moves. The wordmark and glyphs fit inside the circle without
+overlap.
 
 ## Purpose
 

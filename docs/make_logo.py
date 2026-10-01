@@ -15,11 +15,17 @@ CRIMSON = "#A51C30"  # Harvard Crimson
 BLACK = "#000000"
 WHITE = "#FFFFFF"
 DISC_RADIUS = 0.98
-CENTERS = np.array([[-0.4, 0.34], [0.4, 0.34], [-0.4, -0.15], [0.4, -0.15]])
-SIZE = 0.27  # relative edge length in logo coordinates
-DEPTH = np.array([0.10, 0.09])  # relative oblique offset of cube's back face
-CUBE_EDGE_WIDTH = 2.5
-LOGO_TEXT_POSITION = (0.0, -0.68)
+CENTERS = np.array([[-0.62, 0.30], [-0.21, 0.30], [0.21, 0.30], [0.62, 0.30]])
+SIZE = 0.28  # relative edge length in logo coordinates
+DEPTH = np.array([0.07, 0.07])  # relative oblique offset of cube's back face
+CUBE_EDGE_WIDTH = 3.0
+LOGO_TEXT_POSITION = (0.0, -0.33)
+LOGO_FONT_SIZE = 44
+TRANSITIONS = [
+    ((-0.54, 0.30), (-0.36, 0.30)),
+    ((-0.07, 0.30), (0.07, 0.30)),
+    ((0.35, 0.30), (0.45, 0.30)),
+]
 
 
 def draw_disc(axis):
@@ -30,7 +36,7 @@ def draw_disc(axis):
 def draw_icon(axis):
     """Draw the four-dimensionality glyphs and PCAT wordmark inside the circle."""
     draw_disc(axis)
-    line = dict(color=WHITE, lw=2.8, solid_capstyle="round", zorder=2)
+    line = dict(color=WHITE, lw=3.6, solid_capstyle="round", zorder=2)
     half = 0.5 * SIZE
 
     # 0-D: a point
@@ -47,7 +53,7 @@ def draw_icon(axis):
     # 2-D: a square
     x, y = CENTERS[2]
     axis.add_patch(Polygon([(x - half, y - half), (x + half, y - half), (x + half, y + half), (x - half, y + half)],
-                           closed=True, facecolor="none", edgecolor=WHITE, lw=2.8, joinstyle="round", zorder=2))
+                           closed=True, facecolor="none", edgecolor=WHITE, lw=3.6, joinstyle="round", zorder=2))
     axis.scatter(x - 0.035, y + 0.025, s=54, color=BLACK, zorder=3)
 
     # 3-D: a wireframe cube in oblique projection
@@ -66,12 +72,11 @@ def draw_icon(axis):
     axis.scatter(x + 0.045, y + 0.02, s=54, color=BLACK, zorder=3)
 
     # Reversible transitions connect the four parameter-space glyphs.
-    jumps = [((-0.23, 0.34), (0.22, 0.34)), ((0.24, 0.18), (-0.23, 0.025)), ((-0.23, -0.15), (0.22, -0.15))]
-    for start, end in jumps:
-        axis.add_patch(FancyArrowPatch(start, end, arrowstyle="<|-|>", mutation_scale=9,
+    for start, end in TRANSITIONS:
+        axis.add_patch(FancyArrowPatch(start, end, arrowstyle="<|-|>", mutation_scale=3,
                                        lw=1.5, color=BLACK, zorder=4))
 
-    axis.text(*LOGO_TEXT_POSITION, "PCAT", color=WHITE, fontsize=25, fontweight="bold",
+    axis.text(*LOGO_TEXT_POSITION, "PCAT", color=WHITE, fontsize=LOGO_FONT_SIZE, fontweight="bold",
               family="DejaVu Sans", ha="center", va="center", zorder=5)
 
 

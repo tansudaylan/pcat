@@ -9351,74 +9351,12 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
 
     # simulated-data specific
     if strgmodl == 'true' and strgstat == 'this':
-
-        # HST strong-lens mocks can collapse into near-zero expected counts in sparse
-        # compatibility paths, producing the degenerate one-count rescue image.
-        # Preserve morphology by scaling the expected map to a minimum total-count floor.
-        if gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3') and gmod.boollens:
-            cntsexptotl = float(np.sum(cntp['modl']))
-            # Keep HST-like mock images in a realistic count regime.
-            minmcntsexptotl = 8e4
-            if np.isfinite(cntsexptotl) and cntsexptotl > 0. and cntsexptotl < minmcntsexptotl:
-                factrscl = minmcntsexptotl / cntsexptotl
-                cntp['modl'] *= factrscl
-                if gdat.typeverb > -1:
-                    print('Warning: rescaled true HST lens expected counts by %.3g (from %.3g to %.3g) to avoid under-exposed mock data.' % \
-                          (factrscl, cntsexptotl, float(np.sum(cntp['modl']))))
-                if gdat.booldiag:
-                    setattr(gmodstat, 'cntpmodl', cntp['modl'])
-        
-        # generate count data
-        cntptemp = np.zeros((gdat.numbener, gdat.numbpixl, gdat.numbdqlt))
-        for i in gdat.indxener:
-            for j in gdat.indxpixl:
-                for m in gdat.indxdqlt:
-                    cntptemp[i, j, m] = np.random.poisson(cntp['modl'][i, j, m])
-
-        # In low-count simulated setups, an all-zero Poisson realization can occur even when
-        # the expected model map is positive; retry a few times before failing hard.
-        if np.amax(cntptemp) == 0:
-            maxcexp = float(np.amax(cntp['modl']))
-            if maxcexp > 0.:
-                for _ in range(8):
-                    for i in gdat.indxener:
-                        for j in gdat.indxpixl:
-                            for m in gdat.indxdqlt:
-                                cntptemp[i, j, m] = np.random.poisson(cntp['modl'][i, j, m])
-                    if np.amax(cntptemp) > 0:
-                        break
-                if np.amax(cntptemp) == 0:
-                    indxmaxm = np.unravel_index(np.argmax(cntp['modl']), cntp['modl'].shape)
-                    cntptemp[indxmaxm] = 1.
-                    print('Warning: promoted one count at model maximum after repeated all-zero Poisson draws.')
+        cntptemp = draw_simulated_counts(cntp['modl'])
         setattr(gdat, 'cntpdata', cntptemp)
-        
-        if np.amax(cntptemp) == 0:
-            indxmaxm = np.unravel_index(np.argmax(cntp['modl']), cntp['modl'].shape)
-            cntptemp[indxmaxm] = 1.
-            setattr(gdat, 'cntpdata', cntptemp)
-            print('Warning: promoted one count at model maximum to avoid all-zero simulated data.')
 
         print('Will process the true model...')
         proc_cntpdata(gdat)
 
-    # Compatibility: in sparse HST lens pathways, fitted maps can initialize at
-    # very low normalization. Align count scale only during initialization so
-    # posterior sweeps can evolve naturally.
-    if boolinit and strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and \
-                    gdat.typeexpr.startswith('HST_WFC3'):
-        cntsexptotl = float(np.sum(cntp['modl'])) if np.size(cntp['modl']) > 0 else 0.
-        cntstargtotl = 8e4
-        if hasattr(gdat, 'cntpdata') and np.size(gdat.cntpdata) > 0:
-            cntstargtotl = float(np.sum(gdat.cntpdata))
-        if np.isfinite(cntsexptotl) and np.isfinite(cntstargtotl) and cntsexptotl > 0. and cntstargtotl > 0. and cntsexptotl < 0.05 * cntstargtotl:
-            factrscl = cntstargtotl / cntsexptotl
-            cntp['modl'] *= factrscl
-            if gdat.booldiag:
-                setattr(gmodstat, 'cntpmodl', cntp['modl'])
-            if gdat.typeverb > -1:
-                print('Warning: rescaled fitted HST model counts by %.3g to match data count scale.' % factrscl)
-    
     ## diagnostics
     if gdat.booldiag:
         meancntpmodl = np.mean(cntp['modl'])
@@ -12921,6 +12859,15 @@ def retr_arryfromlist(listtemp):
         arry[k, ...] = listtemp[k]
     
     return arry
+
+
+def draw_simulated_counts(expected_counts):
+    """Draw once from a valid Poisson expectation, including legitimate zero maps."""
+
+    rate = np.asarray(expected_counts, dtype=float)
+    if not np.isfinite(rate).all() or np.any(rate < 0):
+        raise ValueError("Simulated count expectations must be finite and nonnegative")
+    return np.random.poisson(rate)
 
 
 def proc_cntpdata(gdat):

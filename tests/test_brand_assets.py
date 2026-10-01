@@ -61,6 +61,11 @@ def test_logo_contains_wordmark_within_circle_and_uniform_cube_edges():
         ((text_bounds.x0, text_bounds.y0), (text_bounds.x1, text_bounds.y1))
     )
     assert np.max(np.hypot(text_corners[:, 0], text_corners[:, 1])) < logo.DISC_RADIUS
+    assert axis.texts[0].get_fontsize() >= 40
+    symbol_bottom = np.min(logo.CENTERS[:, 1]) - logo.SIZE / 2.0 - logo.DEPTH[1] / 2.0
+    assert text_corners[:, 1].max() < symbol_bottom
+    assert np.allclose(logo.CENTERS[:, 1], logo.CENTERS[0, 1])
+    assert np.ptp(logo.CENTERS[:, 0]) >= 1.2
     cube_edges = [line for line in axis.lines if line.get_gid() == "pcat-cube-edge"]
     assert len(cube_edges) == 12
     assert {line.get_linewidth() for line in cube_edges} == {logo.CUBE_EDGE_WIDTH}
