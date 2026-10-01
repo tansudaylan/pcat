@@ -18,9 +18,9 @@ import sys
 from pathlib import Path
 
 import h5py
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from pcat.demo import configure_example_style, save_example_figure
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
 RUN_NAME = EXAMPLE_PATH.name
@@ -96,35 +96,6 @@ def read_chain():
         }
 
 
-def configure_style(typeplotback):
-    """Apply the white (default) or dark figure theme without gridlines."""
-    colrfore = "white" if typeplotback == "dark" else "black"
-    colrback = "black" if typeplotback == "dark" else "white"
-    mpl.rcParams.update({
-        "font.size": 10,
-        "text.usetex": False,
-        "axes.grid": False,
-        "figure.facecolor": colrback,
-        "axes.facecolor": colrback,
-        "savefig.facecolor": colrback,
-        "axes.edgecolor": colrfore,
-        "axes.labelcolor": colrfore,
-        "xtick.color": colrfore,
-        "ytick.color": colrfore,
-        "text.color": colrfore,
-        "legend.fancybox": True,
-        "legend.framealpha": 1.0,
-    })
-
-
-def save(figure, name, typefileplot):
-    path = EXAMPLE_PATH / "visuals" / f"{name}.{typefileplot}"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Writing to {path}...")
-    figure.savefig(path, dpi=300, bbox_inches="tight")
-    plt.close(figure)
-
-
 def plot_time_per_proposal(chain, typefileplot):
     """Show the distribution of the wall-clock time per sweep by proposal type."""
     indxtype = [k for k in range(len(LABELS)) if np.any(chain["type"] == k)]
@@ -139,7 +110,7 @@ def plot_time_per_proposal(chain, typefileplot):
     axis.set_yticks(range(1, len(indxtype) + 1), [LABELS[k] for k in indxtype])
     axis.set_xlabel("Wall-clock time per sweep [ms]")
     axis.set_xlim(0.0, max(np.percentile(times, 75) for times in listtime) * 1.9)
-    save(figure, "proposal_time_per_sweep", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "proposal_time_per_sweep", typefileplot)
 
 
 def plot_acceptance_and_cost(chain, typefileplot):
@@ -158,7 +129,7 @@ def plot_acceptance_and_cost(chain, typefileplot):
     axis.set_ylabel("Fraction")
     axis.set_ylim(0.0, 1.25)
     axis.legend(loc="upper right", ncol=3)
-    save(figure, "proposal_acceptance_and_cost", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "proposal_acceptance_and_cost", typefileplot)
 
 
 def plot_time_breakdown_by_phase(chain, typefileplot):
@@ -178,7 +149,7 @@ def plot_time_breakdown_by_phase(chain, typefileplot):
                     label=f"Tertiary bookkeeping (outside the sweep), mean {meantime['tert']:.3f} ms")
     axis.set_xlabel("Mean wall-clock time per sweep [ms]")
     axis.legend(loc="lower right", fontsize=8)
-    save(figure, "proposal_time_breakdown_by_phase", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "proposal_time_breakdown_by_phase", typefileplot)
 
 
 def main():
@@ -192,7 +163,7 @@ def main():
     if not arguments.skip_sampling:
         run_sampler(arguments.numbswep)
     chain = read_chain()
-    configure_style(arguments.typeplotback)
+    configure_example_style(arguments.typeplotback)
     plot_time_per_proposal(chain, arguments.typefileplot)
     plot_acceptance_and_cost(chain, arguments.typefileplot)
     plot_time_breakdown_by_phase(chain, arguments.typefileplot)

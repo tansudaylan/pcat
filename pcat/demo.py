@@ -47,6 +47,42 @@ def run_pipeline_demo(output_root: Path, **configuration: object) -> None:
     print(f"PCAT wrote outputs under {output_root}")
 
 
+def configure_example_style(typeplotback: str = "white") -> str:
+    """Apply the shared light or dark theme and return its foreground color."""
+    colrfore = "white" if typeplotback == "dark" else "black"
+    colrback = "black" if typeplotback == "dark" else "white"
+    mpl.rcParams.update({
+        "font.size": 10,
+        "text.usetex": False,
+        "axes.grid": False,
+        "figure.facecolor": colrback,
+        "axes.facecolor": colrback,
+        "savefig.facecolor": colrback,
+        "axes.edgecolor": colrfore,
+        "axes.labelcolor": colrfore,
+        "xtick.color": colrfore,
+        "ytick.color": colrfore,
+        "text.color": colrfore,
+        "legend.fancybox": True,
+        "legend.framealpha": 1.0,
+    })
+    return colrfore
+
+
+def save_example_figure(figure, example_root: Path, name: str, typefileplot: str) -> Path:
+    """Save and close a PCAT example figure under its standard visuals directory."""
+    if typefileplot not in {"png", "pdf"}:
+        raise ValueError("typefileplot must be 'png' or 'pdf'")
+    import matplotlib.pyplot as plt
+
+    path = Path(example_root) / "visuals" / f"{name}.{typefileplot}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Writing to {path}...")
+    figure.savefig(path, dpi=300 if typefileplot == "png" else None, bbox_inches="tight")
+    plt.close(figure)
+    return path
+
+
 def run_example_script(relative_path: str, *arguments: str) -> None:
     """Run a repository example from a notebook without leaking CLI arguments."""
     script = Path(__file__).resolve().parents[1] / "examples" / relative_path

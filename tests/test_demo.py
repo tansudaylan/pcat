@@ -47,6 +47,23 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
     assert captured["pathbase"] == str(output_root)
 
 
+def test_shared_example_plot_helpers_apply_theme_and_save(tmp_path):
+    import matplotlib.pyplot as plt
+
+    with demo.mpl.rc_context():
+        assert demo.configure_example_style("dark") == "white"
+        assert demo.mpl.rcParams["figure.facecolor"] == "black"
+        assert demo.configure_example_style("white") == "black"
+        assert demo.mpl.rcParams["axes.grid"] is False
+
+        figure, _ = plt.subplots()
+        path = demo.save_example_figure(figure, tmp_path, "shared_helper", "png")
+
+        assert path == tmp_path / "visuals" / "shared_helper.png"
+        assert path.is_file()
+        assert not plt.fignum_exists(figure.number)
+
+
 def test_publication_examples_use_proposal_rich_animated_runs(tmp_path, monkeypatch):
     from pcat import publication_examples
 

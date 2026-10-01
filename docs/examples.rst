@@ -45,8 +45,10 @@ Pipeline demonstrations
    Rubin Science Platform notebook for real Data Preview 1 imaging. It queries
    confirmed SIMBAD lens-system classifications, checks exact DP1 image
    footprints, retrieves every resulting deep-coadd cutout, displays the full
-   matched sample, and passes each usable cutout to PCAT. DP1 requires Rubin
-   data rights, and SIMBAD does not constitute a complete census of lenses.
+   matched sample and a separate multiband figure for each lens system, and
+   passes each usable cutout to PCAT. It also compares the posterior Einstein
+   radii from every successful fit in one figure. DP1 requires Rubin data
+   rights, and SIMBAD does not constitute a complete census of lenses.
 
 Run the maintained local smoke suite with:
 

@@ -25,9 +25,9 @@ from pathlib import Path
 
 import dynesty
 import emcee
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from pcat.demo import configure_example_style, save_example_figure
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
 RUN_NAME = EXAMPLE_PATH.name
@@ -147,26 +147,6 @@ def run_dynesty(likelihood, seed=5):
     return samples, elapsed, ess, (results.logz[-1], results.logzerr[-1])
 
 
-def configure_style(typeplotback):
-    colrfore = "white" if typeplotback == "dark" else "black"
-    colrback = "black" if typeplotback == "dark" else "white"
-    mpl.rcParams.update({
-        "font.size": 10, "text.usetex": False, "axes.grid": False,
-        "figure.facecolor": colrback, "axes.facecolor": colrback, "savefig.facecolor": colrback,
-        "axes.edgecolor": colrfore, "axes.labelcolor": colrfore, "xtick.color": colrfore,
-        "ytick.color": colrfore, "text.color": colrfore,
-        "legend.fancybox": True, "legend.framealpha": 1.0,
-    })
-
-
-def save(figure, name, typefileplot):
-    path = EXAMPLE_PATH / "visuals" / f"{name}.{typefileplot}"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Writing to {path}...")
-    figure.savefig(path, dpi=300, bbox_inches="tight")
-    plt.close(figure)
-
-
 def plot_marginals(results, typefileplot):
     """Overlay the marginal posteriors from the three samplers with the simulated truth."""
     figure, axes = plt.subplots(1, 3, figsize=(7.0, 2.6))
@@ -182,7 +162,7 @@ def plot_marginals(results, typefileplot):
     axes[0].set_ylabel("Posterior density")
     axes[0].legend(loc="upper left", fontsize=8)
     figure.tight_layout()
-    save(figure, "sampler_comparison_marginal_posteriors", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_marginal_posteriors", typefileplot)
 
 
 def plot_efficiency(results, typefileplot):
@@ -203,7 +183,7 @@ def plot_efficiency(results, typefileplot):
             axis.set_ylim(min(values) / 3.0, max(values) * 4.0)
         axis.set_ylabel(label)
     figure.tight_layout()
-    save(figure, "sampler_comparison_efficiency", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_efficiency", typefileplot)
 
 
 def main():
@@ -216,7 +196,7 @@ def main():
     add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     arguments = parser.parse_args()
-    configure_style(arguments.typeplotback)
+    configure_example_style(arguments.typeplotback)
     if arguments.part in ("fixed", "both"):
         compare_fixed_dimension(arguments)
     if arguments.part in ("variable", "both"):
@@ -357,7 +337,7 @@ def plot_planet_count(pcat_result, dynesty_result, typefileplot):
     axis.set_xlabel("Number of planets")
     axis.set_ylabel("Posterior probability")
     axis.legend(loc="upper left")
-    save(figure, "sampler_comparison_planet_count_posterior", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_planet_count_posterior", typefileplot)
 
 
 def plot_planet_cost(pcat_result, dynesty_result, typefileplot):
@@ -374,7 +354,7 @@ def plot_planet_cost(pcat_result, dynesty_result, typefileplot):
         axis.set_ylabel(label)
     axes[1].legend(loc="upper left")
     figure.tight_layout()
-    save(figure, "sampler_comparison_planet_count_cost", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_planet_count_cost", typefileplot)
 
 
 def plot_planet_periods(pcat_result, dynesty_result, typefileplot):
@@ -393,7 +373,7 @@ def plot_planet_periods(pcat_result, dynesty_result, typefileplot):
     axes[0].set_ylabel("Posterior density")
     axes[0].legend(loc="upper left")
     figure.tight_layout()
-    save(figure, "sampler_comparison_two_planet_periods", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_two_planet_periods", typefileplot)
 
 
 def compare_variable_dimension(arguments):

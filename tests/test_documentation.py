@@ -165,6 +165,10 @@ def test_rubin_dp1_notebook_preserves_real_data_scope():
     assert "[cutout['data'] for cutout in cutouts]" in source
     assert "rubin_dp1_confirmed_lens_cutouts.gif" in source
     assert "display(Image(filename=str(cutout_animation_path)))" in source
+    assert "for main_id in system_ids" in source
+    assert "_dp1_all_bands.png" in source
+    assert "rubin_dp1_einstein_radius_summary.png" in source
+    assert "np.percentile(result['draws'][:, 0], [16, 50, 84])" in source
 
 
 def test_simulated_rubin_cluster_notebook_contains_rendered_visuals():
@@ -390,3 +394,32 @@ def test_burn_in_options_and_comparison_are_documented():
         "burn_in_temperature_schedule.png",
     ):
         assert name in readme
+
+
+def test_spectrum_and_flare_examples_use_shared_posterior_loader():
+    for relative_path in (
+        "examples/jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py",
+        "examples/variable_number_stellar_flares/variable_number_stellar_flares.py",
+    ):
+        path = REPOSITORY_ROOT / relative_path
+        print(f"Reading from {path}...")
+        source = path.read_text()
+        assert "load_example_posterior" in source
+        assert "def read_posterior(" not in source
+        assert "data/outp/{RUN_NAME}/gdatfinlpost" in source
+
+
+def test_plotting_examples_use_shared_theme_and_save_helpers():
+    for relative_path in (
+        "examples/jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py",
+        "examples/proposal_profiling/proposal_profiling.py",
+        "examples/sampler_comparison_emcee_dynesty/sampler_comparison_emcee_dynesty.py",
+        "examples/variable_number_stellar_flares/variable_number_stellar_flares.py",
+    ):
+        path = REPOSITORY_ROOT / relative_path
+        print(f"Reading from {path}...")
+        source = path.read_text()
+        assert "configure_example_style" in source
+        assert "save_example_figure" in source
+        assert "def configure_style(" not in source
+        assert "def save(" not in source

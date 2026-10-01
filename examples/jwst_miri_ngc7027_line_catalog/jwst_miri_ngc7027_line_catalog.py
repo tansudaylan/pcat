@@ -20,9 +20,10 @@ import shutil
 from pathlib import Path
 
 import astropy.io.fits
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from pcat.demo import load_example_posterior
+from pcat.demo import configure_example_style, save_example_figure
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
 RUN_NAME = EXAMPLE_PATH.name
@@ -136,13 +137,6 @@ def run_pcat(edges, template, numbswep):
     )
 
 
-def read_posterior():
-    """Return PCAT's final posterior state."""
-    from pcat.main import readfile
-
-    return readfile(str(EXAMPLE_PATH / "data" / "outp" / RUN_NAME / "gdatfinlpost"))
-
-
 def render_line_histogram_frames(posterior):
     """Show changing PCAT line-center catalogs with shared bins and complete y-limits."""
     indices = np.linspace(0, len(posterior.listpostdictelem) - 1,
@@ -175,27 +169,6 @@ def render_line_histogram_frames(posterior):
     return paths
 
 
-def configure_style(typeplotback):
-    colrfore = "white" if typeplotback == "dark" else "black"
-    colrback = "black" if typeplotback == "dark" else "white"
-    mpl.rcParams.update({
-        "font.size": 10, "text.usetex": False, "axes.grid": False,
-        "figure.facecolor": colrback, "axes.facecolor": colrback, "savefig.facecolor": colrback,
-        "axes.edgecolor": colrfore, "axes.labelcolor": colrfore, "xtick.color": colrfore,
-        "ytick.color": colrfore, "text.color": colrfore,
-        "legend.fancybox": True, "legend.framealpha": 1.0,
-    })
-    return colrfore
-
-
-def save(figure, name, typefileplot):
-    path = EXAMPLE_PATH / "visuals" / f"{name}.{typefileplot}"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Writing to {path}...")
-    figure.savefig(path, dpi=300, bbox_inches="tight")
-    plt.close(figure)
-
-
 def plot_spectrum_fit(wavelength, flux, error, continuum, posterior, typefileplot, colrfore):
     """Data, continuum template, posterior model, and normalized residuals versus wavelength."""
     sigma = np.sqrt(error**2 + (FRACTIONAL_ERROR_FLOOR * continuum)**2)  # [Jy]
@@ -218,7 +191,7 @@ def plot_spectrum_fit(wavelength, flux, error, continuum, posterior, typefileplo
     axes[1].set_ylabel(r"Residual [$\sigma$]")
     axes[1].set_xlabel(r"Wavelength [$\mu$m]")
     figure.subplots_adjust(hspace=0.05)
-    save(figure, "jwst_miri_ngc7027_spectrum_fit", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "jwst_miri_ngc7027_spectrum_fit", typefileplot)
 
 
 def plot_line_catalog(wavelength, flux, posterior, typefileplot, colrfore):
@@ -241,7 +214,7 @@ def plot_line_catalog(wavelength, flux, posterior, typefileplot, colrfore):
     axes[1].set_xlim(wavelength[0], wavelength[-1])
     axes[1].legend(loc="upper left", fontsize=8)
     figure.subplots_adjust(hspace=0.05)
-    save(figure, "jwst_miri_ngc7027_line_catalog_samples", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "jwst_miri_ngc7027_line_catalog_samples", typefileplot)
 
 
 def plot_line_count(posterior, typefileplot):
@@ -252,7 +225,7 @@ def plot_line_count(posterior, typefileplot):
     axis.bar(values, counts / counts.sum(), color="C0")
     axis.set_xlabel("Number of emission lines")
     axis.set_ylabel("Posterior probability")
-    save(figure, "jwst_miri_ngc7027_line_count_posterior", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "jwst_miri_ngc7027_line_count_posterior", typefileplot)
 
 
 def main():
@@ -267,8 +240,10 @@ def main():
     edges, template = write_pcat_inputs(wavelength, flux, error, continuum)
     if not arguments.skip_sampling:
         run_pcat(edges, template, arguments.numbswep)
-    posterior = read_posterior()
-    colrfore = configure_style(arguments.typeplotback)
+    posterior = load_example_posterior(
+        f"{EXAMPLE_PATH.name}/data/outp/{RUN_NAME}/gdatfinlpost"
+    )
+    colrfore = configure_example_style(arguments.typeplotback)
     render_line_histogram_frames(posterior)
     plot_spectrum_fit(wavelength, flux, error, continuum, posterior, arguments.typefileplot, colrfore)
     plot_line_catalog(wavelength, flux, posterior, arguments.typefileplot, colrfore)

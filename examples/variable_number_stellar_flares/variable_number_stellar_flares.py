@@ -21,11 +21,11 @@ import shutil
 from pathlib import Path
 
 import astropy.io.fits
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import tdpy
 from nicomedia import retr_lcurmodl_flarsing
+from pcat.demo import configure_example_style, load_example_posterior, save_example_figure
 from pcat.time_series import evaluate_flare_profile, retr_dictpropelemtmpl
 from pcat.plotting import animation_phase_label, animation_states
 
@@ -161,34 +161,6 @@ def run_pcat(edges, template, numbswep, proposal):
     )
 
 
-def read_posterior():
-    """Return PCAT's final posterior state."""
-    from pcat.main import readfile
-
-    return readfile(str(EXAMPLE_PATH / "data" / "outp" / RUN_NAME / "gdatfinlpost"))
-
-
-def configure_style(typeplotback):
-    colrfore = "white" if typeplotback == "dark" else "black"
-    colrback = "black" if typeplotback == "dark" else "white"
-    mpl.rcParams.update({
-        "font.size": 10, "text.usetex": False, "axes.grid": False,
-        "figure.facecolor": colrback, "axes.facecolor": colrback, "savefig.facecolor": colrback,
-        "axes.edgecolor": colrfore, "axes.labelcolor": colrfore, "xtick.color": colrfore,
-        "ytick.color": colrfore, "text.color": colrfore,
-        "legend.fancybox": True, "legend.framealpha": 1.0,
-    })
-    return colrfore
-
-
-def save(figure, name, typefileplot):
-    path = EXAMPLE_PATH / "visuals" / f"{name}.{typefileplot}"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Writing to {path}...")
-    figure.savefig(path, dpi=300, bbox_inches="tight")
-    plt.close(figure)
-
-
 def plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, typefileplot, colrfore):
     """Simulated data, injected ground-truth flares, and PCAT's posterior model versus time."""
     modl = posterior.listpostcntpmodl[:, :, 0, 0]
@@ -208,7 +180,7 @@ def plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, typefileplot, c
     axes[1].set_ylabel(r"Residual [$\sigma$]")
     axes[1].set_xlabel("Time [hour]")
     figure.subplots_adjust(hspace=0.05)
-    save(figure, "variable_number_stellar_flares_light_curve_fit", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "variable_number_stellar_flares_light_curve_fit", typefileplot)
 
 
 def render_flare_posterior_frames(meantime, observed_counts, posterior):
@@ -258,7 +230,7 @@ def plot_flare_catalog_samples(catalog, posterior, typefileplot, colrfore):
     axis.set_xlabel("Time [hour]")
     axis.set_ylabel("Peak excess [counts per bin]")
     axis.legend(loc="upper left", fontsize=8)
-    save(figure, "variable_number_stellar_flares_catalog_samples", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "variable_number_stellar_flares_catalog_samples", typefileplot)
 
 
 def plot_flare_count_posterior(catalog, posterior, typefileplot, colrfore):
@@ -271,7 +243,7 @@ def plot_flare_count_posterior(catalog, posterior, typefileplot, colrfore):
     axis.set_xlabel("Number of flares")
     axis.set_ylabel("Posterior probability")
     axis.legend(loc="upper right", fontsize=8)
-    save(figure, "variable_number_stellar_flares_count_posterior", typefileplot)
+    save_example_figure(figure, EXAMPLE_PATH, "variable_number_stellar_flares_count_posterior", typefileplot)
 
 
 def main():
@@ -290,8 +262,10 @@ def main():
     template = write_pcat_inputs(edges, obsvcnts)
     if not arguments.skip_sampling:
         run_pcat(edges, template, numbswep, build_birth_proposal(edges, obsvcnts))
-    posterior = read_posterior()
-    colrfore = configure_style(arguments.typeplotback)
+    posterior = load_example_posterior(
+        f"{EXAMPLE_PATH.name}/data/outp/{RUN_NAME}/gdatfinlpost"
+    )
+    colrfore = configure_example_style(arguments.typeplotback)
     render_flare_posterior_frames(meantime, obsvcnts, posterior)
     plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, arguments.typefileplot, colrfore)
     plot_flare_catalog_samples(catalog, posterior, arguments.typefileplot, colrfore)

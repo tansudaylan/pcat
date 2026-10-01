@@ -36,7 +36,7 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `mejiro_roman_strong_lens/`: PCAT inference of the lens and source of a Roman F129 exposure simulated by mejiro, and the parameter bias caused by a PSF 30% too wide
 - `mismodeling_flare_catalog/`: correct and misspecified fits of the same flare light curves, showing catalogs inflated by a wrong flare profile or an unmodeled stellar modulation
 - `simulated_rubin_cluster_lens/`: a synthetic Rubin-like cluster-scale lens fitted with PCAT's Poisson image sampler
-- `rubin_dp1_confirmed_strong_lenses/`: an RSP-only workflow that crossmatches confirmed SIMBAD lens systems to real Rubin DP1 imaging, retrieves all catalog-footprint matches, and runs demonstration PCAT fits
+- `rubin_dp1_confirmed_strong_lenses/`: an RSP-only workflow that crossmatches confirmed SIMBAD lens systems to real Rubin DP1 imaging, retrieves all catalog-footprint matches, plots every lens-band cutout in a complete collage and per-system multiband figures, runs demonstration PCAT fits, and compares all fitted Einstein radii in one posterior summary figure
 - `catalog_association_completeness_purity/`: completeness and purity across catalog-matching radii
 - `voigt_spectral_line_catalog/`: nominal and high-signal Voigt-profile line detection in simulated spectra
 - `jwst_miri_ngc7027_line_catalog/`: transdimensional emission-line catalog of the planetary nebula NGC 7027 from a real JWST MIRI MRS spectrum
