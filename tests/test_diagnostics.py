@@ -458,6 +458,43 @@ def test_proposal_candidate_frame_shows_one_dimensional_data_and_residuals(tmp_p
     assert output_path.is_file()
 
 
+def test_candidate_animation_text_width_is_stable_across_sweeps(tmp_path, monkeypatch):
+    labels = ["Within-model proposal", "A much longer transdimensional proposal"]
+    figures = []
+    make_figure = pcat_main.plt.figure
+
+    def capture_figure(*args, **kwargs):
+        figure = make_figure(*args, **kwargs)
+        figures.append(figure)
+        return figure
+
+    monkeypatch.setattr(pcat_main.plt, "figure", capture_figure)
+    for sweep, proposal, accepted, posterior in (
+        (0, 0, True, -10.0),
+        (119, 1, False, -125.0),
+    ):
+        current = SimpleNamespace(
+            cntpmodl=np.array([1.0, 2.0, 3.0]),
+            indxproptype=np.array([proposal]),
+            accpprob=np.array([0.35]),
+            lpostotl=posterior,
+            ltrp=np.array([0.1]),
+            ljcb=np.array([0.0]),
+        )
+        candidate = SimpleNamespace(cntpmodl=np.array([1.1, 2.1, 2.9]), lpostotl=posterior - 1)
+        state = SimpleNamespace(cntpdata=np.array([[[1.0], [2.0], [3.0]]]), lablproptype=labels,
+                                numbswep=120)
+        worker = SimpleNamespace(this=current, next=candidate, cntrswep=sweep)
+        _write_proposal_candidate_frame(
+            state, worker, accepted, tmp_path / f"candidate_{sweep}.png"
+        )
+
+    titles = [figure._suptitle.get_text() for figure in figures]
+    footers = [figure.texts[-1].get_text() for figure in figures]
+    assert len(titles[0]) == len(titles[1])
+    assert len(footers[0]) == len(footers[1])
+
+
 def test_element_parameter_labels_are_descriptive():
     model = SimpleNamespace(
         namepara=SimpleNamespace(genr=["fluxpop00001", "sigmpop10002"]),

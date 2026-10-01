@@ -66,7 +66,7 @@ import tdpy.util as tdpy_util
 from tdpy.paths import make_directory, make_symlink, open_narr
 from tdpy.util import summgene
 
-from .plotting import histogram_frame_limits, plot_grid as plot_grid_native
+from .plotting import _pad_animation_text, histogram_frame_limits, plot_grid as plot_grid_native
 from .spectral import apply_gaussian_resolving_power, apply_line_spread_function, evaluate_line_profile, spectral_profile_parameters
 from .time_series import (
     evaluate_flare_profile,
@@ -13236,7 +13236,13 @@ def _write_proposal_activity_animation(indxproptype, boolpropaccp, lablproptype,
         image = Image.new('RGB', (width, height), (255, 255, 255))
         draw = ImageDraw.Draw(image)
         draw.text((14, 12), 'PCAT proposal activity', fill=(20, 20, 20), font=font)
-        draw.text((14, 34), 'Sweep %d of %d' % (index + 1, numbmove), fill=(50, 50, 50), font=font)
+        sweep_width = len(str(numbmove))
+        draw.text(
+            (14, 34),
+            'Sweep %0*d of %0*d' % (sweep_width, index + 1, sweep_width, numbmove),
+            fill=(50, 50, 50),
+            font=font,
+        )
         for indxpropt, labl in enumerate(listlabl):
             ypos = top + indxpropt * rowheight
             count = int(attempted[indxpropt])
@@ -13258,7 +13264,9 @@ def _write_proposal_activity_animation(indxproptype, boolpropaccp, lablproptype,
             rate = 100. * countaccp / count if count else 0.
             draw.text(
                 (670, ypos + 8),
-                '%d/%d accepted (%.0f%%)' % (countaccp, count, rate),
+                '%*d/%*d accepted (%5.1f%%)' % (
+                    sweep_width, countaccp, sweep_width, count, rate
+                ),
                 fill=(30, 30, 30),
                 font=font,
             )
@@ -13480,26 +13488,41 @@ def _write_proposal_candidate_frame(gdat, gdatmodi, accepted, pathout):
     _draw_proposal_residual_panel(axis_residual, data, current_model, candidate_model, valid)
 
     proposal_index = int(np.asarray(getattr(current, 'indxproptype', 0)).reshape(-1)[0])
-    labels = list(getattr(gdat, 'lablproptype', []))
+    labels = [str(label) for label in getattr(gdat, 'lablproptype', [])]
     proposal_label = labels[proposal_index] if 0 <= proposal_index < len(labels) else 'Proposal %d' % proposal_index
+    proposal_label = _pad_animation_text(
+        proposal_label,
+        max([len(label) for label in labels] + [len(proposal_label)]),
+    )
     acceptance_probability = float(np.asarray(getattr(current, 'accpprob', [0.])).reshape(-1)[0])
     status = 'ACCEPTED' if accepted else 'REJECTED'
+    status = _pad_animation_text(status, len('REJECTED'))
     color = '#1B7837' if accepted else '#A51C30'
+    sweep = int(gdatmodi.cntrswep) + 1
+    sweep_total = max(int(getattr(gdat, 'numbswep', sweep)), sweep)
+    sweep = f'{sweep:0{len(str(sweep_total))}d}'
     figure.suptitle(
-        'Sweep %d | %s | %s | acceptance probability %.3f' %
-        (int(gdatmodi.cntrswep) + 1, proposal_label, status, acceptance_probability),
+        'Sweep %s | %s | %s | acceptance probability %.3f' %
+        (sweep, proposal_label, status, acceptance_probability),
         color=color,
         fontsize=11,
         fontweight='bold',
+        y=0.96,
     )
     current_log_posterior = float(getattr(current, 'lpostotl', np.nan))
     candidate_log_posterior = float(getattr(candidate, 'lpostotl', np.nan)) if valid else np.nan
+    summary_values = [
+        current_log_posterior,
+        candidate_log_posterior,
+        float(np.asarray(getattr(current, 'ltrp', [0.])).reshape(-1)[0]),
+        float(np.asarray(getattr(current, 'ljcb', [0.])).reshape(-1)[0]),
+    ]
+    summary_values = [f'{value:.3e}'.rjust(11) for value in summary_values]
     figure.text(
         0.5,
         0.025,
-        r'$\log \pi$: %.3g $\rightarrow$ %.3g   |   $\log q_r/q_f$: %.3g   |   $\log|J|$: %.3g' %
-        (current_log_posterior, candidate_log_posterior, float(np.asarray(getattr(current, 'ltrp', [0.])).reshape(-1)[0]),
-         float(np.asarray(getattr(current, 'ljcb', [0.])).reshape(-1)[0])),
+        r'$\log \pi$: %s $\rightarrow$ %s   |   $\log q_r/q_f$: %s   |   $\log|J|$: %s' %
+        tuple(summary_values),
         ha='center',
         fontsize=9,
     )
@@ -13581,7 +13604,17 @@ def proc_anim(strgcnfg, pathbase=None):
             from PIL import ImageDraw, ImageFont
 
             listimag = []
-            for sweep, pathframtemp in proposal_sequence:
+            listlabel = [
+                _retr_proposal_sweep_label(
+                    sweep,
+                    gdatfinlpost.listpostindxproptype,
+                    getattr(gdatfinlpost, 'listpostboolpropaccp', []),
+                    getattr(gdatfinlpost, 'lablproptype', []),
+                )
+                for sweep, _ in proposal_sequence
+            ]
+            label_width = max(map(len, listlabel))
+            for (sweep, pathframtemp), label in zip(proposal_sequence, listlabel):
                 print('Reading from %s...' % pathframtemp)
                 with Image.open(pathframtemp) as imag:
                     imag = imag.convert('RGB')
@@ -13591,12 +13624,7 @@ def proc_anim(strgcnfg, pathbase=None):
                 draw = ImageDraw.Draw(frame)
                 draw.text(
                     (8, imag.height + 9),
-                    _retr_proposal_sweep_label(
-                        sweep,
-                        gdatfinlpost.listpostindxproptype,
-                        getattr(gdatfinlpost, 'listpostboolpropaccp', []),
-                        getattr(gdatfinlpost, 'lablproptype', []),
-                    ),
+                    _pad_animation_text(label, label_width),
                     fill=(255, 255, 255),
                     font=ImageFont.load_default(),
                 )

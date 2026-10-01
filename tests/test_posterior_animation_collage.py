@@ -14,6 +14,7 @@ from pcat.plotting import (
     histogram_frame_limits,
     make_image_sequence_animation,
     make_posterior_animation_collage,
+    _pad_animation_text,
 )
 
 
@@ -86,6 +87,15 @@ def test_animation_frames_use_one_shared_palette():
 
     assert all(frame.mode == "P" for frame in quantized)
     assert all(frame.getpalette() == quantized[0].getpalette() for frame in quantized[1:])
+
+
+def test_changing_animation_text_is_padded_to_a_fixed_width():
+    labels = ["burn-in", "posterior samples"]
+    width = max(map(len, labels))
+    padded = [_pad_animation_text(label, width) for label in labels]
+
+    assert len(padded[0]) == len(padded[1]) == width
+    assert [label.rstrip() for label in padded] == labels
 
 
 def test_histogram_frame_limits_cover_full_fitted_catalog():

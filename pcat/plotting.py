@@ -484,6 +484,11 @@ def _animation_sample_index(
     return round(frame_index * (input_count - 1) / (output_count - 1))
 
 
+def _pad_animation_text(text: str, width: int) -> str:
+    """Pad changing frame text to a fixed character width without truncation."""
+    return str(text).ljust(max(width, len(str(text))))
+
+
 def make_image_sequence_animation(
     images: tuple[np.ndarray, ...] | list[np.ndarray],
     labels: tuple[str, ...] | list[str],
@@ -515,6 +520,9 @@ def make_image_sequence_animation(
     frames: list[Image.Image] = []
     header_height = 58
     footer_height = 44
+    captions = [f"{index:03d}/{len(images):03d}  {label}" for index, label in enumerate(labels, 1)]
+    caption_width = max(map(len, captions))
+    label_size = max(12, min(22, int((image_size - 32) * 1.6 / caption_width)))
     for index, (image, label) in enumerate(zip(images, labels), start=1):
         values = np.asarray(image, dtype=float)
         finite_values = values[np.isfinite(values)]
@@ -536,8 +544,7 @@ def make_image_sequence_animation(
         canvas = Image.new("RGB", (image_size, image_size + header_height + footer_height), "white")
         draw = ImageDraw.Draw(canvas)
         draw.text((16, 16), title, fill="black", font=_animation_font(22, bold=True))
-        caption = f"{index:03d}/{len(images):03d}  {label}"
-        label_size = max(12, min(22, int((image_size - 32) * 1.6 / max(len(caption), 1))))
+        caption = _pad_animation_text(f"{index:03d}/{len(images):03d}  {label}", caption_width)
         draw.text(
             (16, header_height + (image_size - rendered.height) // 2 + rendered.height + 10),
             caption,
@@ -602,6 +609,7 @@ def make_posterior_animation_collage(
                   font=title_font)
         # panel frames follow PCAT's animation schedule, which spends the first third in burn-in
         phase = "burn-in" if frame_index < frame_count / 3 else "posterior samples"
+        phase = _pad_animation_text(phase, len("posterior samples"))
         counter = f"{phase} | frame {frame_index + 1:02d} / {frame_count:02d}"
         counter_box = draw.textbbox((0, 0), counter, font=counter_font)
         draw.text(
