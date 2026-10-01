@@ -10,6 +10,7 @@
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
+    <link rel="shortcut icon" href="_static/pcat_icon.png"/>
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
@@ -24,12 +25,13 @@
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search"  style="background: #000000" >
 
           
           
           <a href="index.html" class="icon icon-home">
             PCAT
+              <img src="_static/pcat_icon.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -42,9 +44,13 @@
               <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">How PCAT works</a></li>
 <li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="likelihoods.html">Likelihood configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sampling.html">Sampling, proposals, and convergence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gallery.html">Plotting gallery</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
 </ul>
@@ -53,7 +59,7 @@
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #000000" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">PCAT</a>
       </nav>
@@ -89,13 +95,15 @@
       <ul>
         <li><a href="api.html#pcat.associate_catalogs">pcat.associate_catalogs()</a>
 </li>
+        <li><a href="api.html#pcat.binomial_wilson_interval">pcat.binomial_wilson_interval()</a>
+</li>
         <li><a href="api.html#pcat.demo.run_example_script">pcat.demo.run_example_script()</a>
 </li>
         <li><a href="api.html#pcat.demo.run_pipeline_demo">pcat.demo.run_pipeline_demo()</a>
 </li>
         <li><a href="api.html#pcat.diagnostics.estimate_evidence">pcat.diagnostics.estimate_evidence()</a>
 </li>
-        <li><a href="api.html#pcat.main.init">pcat.main.init()</a>
+        <li><a href="api.html#pcat.image.forward_model_image">pcat.image.forward_model_image()</a>
 </li>
         <li><a href="api.html#pcat.main.proc_anim">pcat.main.proc_anim()</a>
 </li>
@@ -105,23 +113,71 @@
 </li>
         <li><a href="api.html#pcat.main.retr_listgdat">pcat.main.retr_listgdat()</a>
 </li>
-        <li><a href="api.html#pcat.main.sample">pcat.main.sample()</a>
-</li>
-        <li><a href="api.html#pcat.main.sample_parallel">pcat.main.sample_parallel()</a>
-</li>
         <li><a href="api.html#pcat.main.writfile">pcat.main.writfile()</a>
 </li>
+        <li><a href="api.html#pcat.plot_population_grid">pcat.plot_population_grid()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.make_image_sequence_animation">pcat.plotting.make_image_sequence_animation()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.make_posterior_animation_collage">pcat.plotting.make_posterior_animation_collage()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_acceptance_decomposition">pcat.plotting.plot_acceptance_decomposition()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_autocorrelation">pcat.plotting.plot_autocorrelation()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_catalog_trace">pcat.plotting.plot_catalog_trace()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_compute_budget">pcat.plotting.plot_compute_budget()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_detection_diagnostic">pcat.plotting.plot_detection_diagnostic()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_gelman_rubin">pcat.plotting.plot_gelman_rubin()</a>
+</li>
         <li><a href="api.html#pcat.plotting.plot_grid">pcat.plotting.plot_grid()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_lens_image_fit">pcat.plotting.plot_lens_image_fit()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_lens_parameter_recovery">pcat.plotting.plot_lens_parameter_recovery()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_posterior_convergence">pcat.plotting.plot_posterior_convergence()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_posterior_predictive">pcat.plotting.plot_posterior_predictive()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_proposal_ledger">pcat.plotting.plot_proposal_ledger()</a>
+</li>
+        <li><a href="api.html#pcat.plotting.plot_sampler_overview">pcat.plotting.plot_sampler_overview()</a>
 </li>
         <li><a href="api.html#pcat.posterior_convergence">pcat.posterior_convergence()</a>
 </li>
         <li><a href="api.html#pcat.psf_poly_fit">pcat.psf_poly_fit()</a>
 </li>
-        <li><a href="api.html#pcat.roman_lens.plot_detection_diagnostic">pcat.roman_lens.plot_detection_diagnostic()</a>
-</li>
         <li><a href="api.html#pcat.roman_lens.simulate_population">pcat.roman_lens.simulate_population()</a>
 </li>
         <li><a href="api.html#pcat.roman_lens.summarize_population">pcat.roman_lens.summarize_population()</a>
+</li>
+        <li><a href="api.html#pcat.sampling.init">pcat.sampling.init()</a>
+</li>
+        <li><a href="api.html#pcat.sampling.init_image">pcat.sampling.init_image()</a>
+</li>
+        <li><a href="api.html#pcat.sampling.sample">pcat.sampling.sample()</a>
+</li>
+        <li><a href="api.html#pcat.sampling.sample_allesfitter_pcat">pcat.sampling.sample_allesfitter_pcat()</a>
+</li>
+        <li><a href="api.html#pcat.sampling.sample_fixed">pcat.sampling.sample_fixed()</a>
+</li>
+        <li><a href="api.html#pcat.sampling.sample_fixed_chains">pcat.sampling.sample_fixed_chains()</a>
+</li>
+        <li><a href="api.html#pcat.sampling.sample_parallel">pcat.sampling.sample_parallel()</a>
+</li>
+        <li><a href="api.html#pcat.sampling.sample_posterior">pcat.sampling.sample_posterior()</a>
+</li>
+        <li><a href="api.html#pcat.spectral.apply_gaussian_resolving_power">pcat.spectral.apply_gaussian_resolving_power()</a>
+</li>
+        <li><a href="api.html#pcat.spectral.apply_line_spread_function">pcat.spectral.apply_line_spread_function()</a>
+</li>
+        <li><a href="api.html#pcat.spectral.evaluate_line_profile">pcat.spectral.evaluate_line_profile()</a>
+</li>
+        <li><a href="api.html#pcat.time_series.evaluate_flare_profile">pcat.time_series.evaluate_flare_profile()</a>
 </li>
       </ul></li>
   </ul></td>
@@ -135,6 +191,13 @@
 
       <ul>
         <li><a href="api.html#pcat.associate_catalogs">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.binomial_wilson_interval()
+
+      <ul>
+        <li><a href="api.html#pcat.binomial_wilson_interval">built-in function</a>
 </li>
       </ul></li>
       <li>
@@ -159,10 +222,10 @@
 </li>
       </ul></li>
       <li>
-    pcat.main.init()
+    pcat.image.forward_model_image()
 
       <ul>
-        <li><a href="api.html#pcat.main.init">built-in function</a>
+        <li><a href="api.html#pcat.image.forward_model_image">built-in function</a>
 </li>
       </ul></li>
       <li>
@@ -193,22 +256,6 @@
         <li><a href="api.html#pcat.main.retr_listgdat">built-in function</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li>
-    pcat.main.sample()
-
-      <ul>
-        <li><a href="api.html#pcat.main.sample">built-in function</a>
-</li>
-      </ul></li>
-      <li>
-    pcat.main.sample_parallel()
-
-      <ul>
-        <li><a href="api.html#pcat.main.sample_parallel">built-in function</a>
-</li>
-      </ul></li>
       <li>
     pcat.main.writfile()
 
@@ -217,10 +264,117 @@
 </li>
       </ul></li>
       <li>
+    pcat.plot_population_grid()
+
+      <ul>
+        <li><a href="api.html#pcat.plot_population_grid">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.make_image_sequence_animation()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.make_image_sequence_animation">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.make_posterior_animation_collage()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.make_posterior_animation_collage">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_acceptance_decomposition()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_acceptance_decomposition">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_autocorrelation()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_autocorrelation">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_catalog_trace()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_catalog_trace">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_compute_budget()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_compute_budget">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_detection_diagnostic()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_detection_diagnostic">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_gelman_rubin()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_gelman_rubin">built-in function</a>
+</li>
+      </ul></li>
+      <li>
     pcat.plotting.plot_grid()
 
       <ul>
         <li><a href="api.html#pcat.plotting.plot_grid">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_lens_image_fit()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_lens_image_fit">built-in function</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    pcat.plotting.plot_lens_parameter_recovery()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_lens_parameter_recovery">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_posterior_convergence()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_posterior_convergence">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_posterior_predictive()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_posterior_predictive">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_proposal_ledger()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_proposal_ledger">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.plotting.plot_sampler_overview()
+
+      <ul>
+        <li><a href="api.html#pcat.plotting.plot_sampler_overview">built-in function</a>
 </li>
       </ul></li>
       <li>
@@ -238,13 +392,6 @@
 </li>
       </ul></li>
       <li>
-    pcat.roman_lens.plot_detection_diagnostic()
-
-      <ul>
-        <li><a href="api.html#pcat.roman_lens.plot_detection_diagnostic">built-in function</a>
-</li>
-      </ul></li>
-      <li>
     pcat.roman_lens.simulate_population()
 
       <ul>
@@ -256,6 +403,90 @@
 
       <ul>
         <li><a href="api.html#pcat.roman_lens.summarize_population">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.sampling.init()
+
+      <ul>
+        <li><a href="api.html#pcat.sampling.init">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.sampling.init_image()
+
+      <ul>
+        <li><a href="api.html#pcat.sampling.init_image">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.sampling.sample()
+
+      <ul>
+        <li><a href="api.html#pcat.sampling.sample">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.sampling.sample_allesfitter_pcat()
+
+      <ul>
+        <li><a href="api.html#pcat.sampling.sample_allesfitter_pcat">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.sampling.sample_fixed()
+
+      <ul>
+        <li><a href="api.html#pcat.sampling.sample_fixed">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.sampling.sample_fixed_chains()
+
+      <ul>
+        <li><a href="api.html#pcat.sampling.sample_fixed_chains">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.sampling.sample_parallel()
+
+      <ul>
+        <li><a href="api.html#pcat.sampling.sample_parallel">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.sampling.sample_posterior()
+
+      <ul>
+        <li><a href="api.html#pcat.sampling.sample_posterior">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.spectral.apply_gaussian_resolving_power()
+
+      <ul>
+        <li><a href="api.html#pcat.spectral.apply_gaussian_resolving_power">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.spectral.apply_line_spread_function()
+
+      <ul>
+        <li><a href="api.html#pcat.spectral.apply_line_spread_function">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.spectral.evaluate_line_profile()
+
+      <ul>
+        <li><a href="api.html#pcat.spectral.evaluate_line_profile">built-in function</a>
+</li>
+      </ul></li>
+      <li>
+    pcat.time_series.evaluate_flare_profile()
+
+      <ul>
+        <li><a href="api.html#pcat.time_series.evaluate_flare_profile">built-in function</a>
 </li>
       </ul></li>
   </ul></td>

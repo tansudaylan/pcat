@@ -90,12 +90,30 @@ data-informed draw.
 
 The final state stores per-sweep proposal IDs in ``listpostindxproptype``,
 accept/reject flags in ``listpostboolpropaccp``, and acceptance probabilities in
-``listpostaccpprob``. Final processing also computes ``accpwith``, ``accpbrth``,
+``listpostaccpprob``. The unclipped log acceptance ratio is stored in
+``listpostaccplprb`` so it remains available when exponentiation underflows.
+Final processing also computes ``accpwith``, ``accpbrth``,
 ``accpdeth``, ``accpsplt``, ``accpmerg``, and ``accpjump`` from attempted moves.
 An acceptance fraction is accepted attempts divided by attempts of that type.
 It is a tuning diagnostic, not a target to maximize. Very small steps can have
 high acceptance but explore the posterior slowly; large steps can have low
 acceptance and waste evaluations.
+
+The ``proposal_state_animation`` example uses the native split/merge moves to
+show the Jacobian correction. Splitting parent amplitude ``F`` into ``r F`` and
+``(1-r) F`` contributes ``log|J| = log(F)``; merging applies its negative. The
+figure compares each valid proposal's acceptance probability with a
+counterfactual that holds every other term fixed and removes only ``log|J|``.
+This is an algebraic comparison of the same proposals, not a second MCMC chain.
+
+.. figure:: ../examples/proposal_state_animation/visuals/jacobian_acceptance_effect.png
+  :alt: Split and merge acceptance changes from the Jacobian correction
+  :width: 100%
+  :align: center
+
+  The left panel shows the log-acceptance-ratio shift for each valid proposal.
+  The right panel shows the acceptance curve with the median Jacobian from the
+  run and its no-Jacobian counterfactual.
 
 .. figure:: ../examples/proposal_profiling/visuals/proposal_acceptance_and_cost.png
    :alt: Acceptance fraction and computational cost by PCAT proposal type
@@ -154,6 +172,29 @@ The sampler uses a target acceptance of 0.44 for one-dimensional updates and
 burn-in length and proposal settings with scientific results, and check that
 posterior summaries are stable to a longer run or a different seed.
 
+Set ``boolburntmpr=True`` to temper the likelihood during the first
+``factburntmpr`` fraction of burn-in. The default fraction is 0.75. At tempered
+sweep ``s`` out of ``N`` tempered sweeps, PCAT uses
+
+.. math::
+
+  \beta_s = \left(\frac{s + 1}{N}\right)^4
+
+and evaluates the target as ``log_prior + beta_s * log_likelihood``. The prior
+is not tempered. ``beta_s`` is stored for every sweep in
+``listpostfacttmpr`` and equals one before retained sampling begins. Tempering
+can help a chain cross likelihood barriers during burn-in, but it can reduce
+local effective sample size and does not guarantee discovery of every mode.
+
+``typeopti="hess"`` is a separate experimental option. It estimates local
+finite-difference curvature to initialize proposal scales; it does not perform
+gradient descent or optimize the initial state. PCAT currently provides no
+gradient-descent burn-in mode.
+
+The :doc:`examples` page links ``burn_in_strategies``, which compares fixed,
+adaptive, and tempered plus adaptive burn-in on correlated and bimodal
+simulated targets.
+
 Automatic convergence monitoring
 --------------------------------
 
@@ -172,6 +213,22 @@ available. Inspect the values saved in ``gdatfinlpost`` and the convergence
 plots. Automatic stopping does not establish that the likelihood, model, or
 priors are scientifically adequate.
 
+With posterior plotting enabled, completed runs write separate figures under
+``visuals/post/convergence/``. Fixed-parameter figures show per-worker traces,
+autocorrelation, approximate effective sample size, and cross-worker R-hat.
+For transdimensional populations, the figures show catalog-size traces,
+autocorrelation, occupancy, within-worker size transitions, and mixing metrics.
+Early-versus-late distributions compare each sampled one-dimensional element
+feature without assigning identities to elements across birth or death moves.
+The approximate effective sample size uses a bounded autocorrelation window;
+short runs can yield unstable estimates. A single worker has no cross-worker
+R-hat, which is shown as unavailable rather than assigned a value.
+
+To create the figures from a saved posterior without rerunning inference, call
+``pcat.plotting.plot_posterior_convergence(state, output_directory)`` after
+loading ``gdatfinlpost`` with ``pcat.main.readfile``. The figures support
+inspection and do not replace checks for multiple modes or model mismatch.
+
 Animations and saved diagnostics
 --------------------------------
 
@@ -182,7 +239,23 @@ which shows cumulative proposal attempts and acceptances, and
 ``proposal_sequence.gif``, which labels each saved state frame with its sweep,
 proposal type, and acceptance result. The sequence animation uses saved frame
 intervals rather than every sweep. A rejected proposal remains represented by
-the retained chain state; the rejected candidate image is not separately saved.
+the retained chain state.
+
+Set ``boolmakeanimprop=True`` to additionally write one candidate frame for
+every sweep of worker zero. PCAT renders the frame after evaluating the
+candidate and acceptance probability but before an accepted candidate replaces
+the current state. ``proposal_candidates.gif`` therefore shows accepted and
+rejected candidates, including moves outside prior support. Each frame compares
+current and candidate predictions and unit-prior coordinates and reports the
+proposal type, acceptance probability, decision, log posterior values,
+proposal-density ratio, and Jacobian.
+
+Candidate frames are proposal diagnostics, not posterior samples. The option is
+off by default because it performs plotting and writes one PNG per sweep. Its
+runtime and storage scale linearly with ``numbswep``. Use short runs for proposal
+inspection, then disable it for production inference. The
+``proposal_state_animation`` example produces both retained-state and
+every-candidate animations from the same simulated Voigt-line run.
 
 The proposal-profiling example includes a visual comparison of acceptance and
 cost above and writes proposal activity with its run. See :doc:`outputs` for

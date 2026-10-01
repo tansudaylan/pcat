@@ -11,6 +11,7 @@
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
+    <link rel="shortcut icon" href="_static/pcat_icon.png"/>
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
@@ -20,19 +21,20 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Outputs and diagnostics" href="outputs.html" />
-    <link rel="prev" title="Capabilities" href="capabilities.html" /> 
+    <link rel="prev" title="Sampling, proposals, and convergence" href="sampling.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search"  style="background: #000000" >
 
           
           
           <a href="index.html" class="icon icon-home">
             PCAT
+              <img src="_static/pcat_icon.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -45,7 +47,10 @@
               <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">How PCAT works</a></li>
 <li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="likelihoods.html">Likelihood configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sampling.html">Sampling, proposals, and convergence</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#pipeline-demonstrations">Pipeline demonstrations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#publication-and-instrument-examples">Publication and instrument examples</a></li>
@@ -54,6 +59,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gallery.html">Plotting gallery</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
 </ul>
@@ -62,7 +68,7 @@
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #000000" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">PCAT</a>
       </nav>
@@ -92,84 +98,189 @@ them.</p>
 <section id="pipeline-demonstrations">
 <h2>Pipeline demonstrations<a class="headerlink" href="#pipeline-demonstrations" title="Link to this heading"></a></h2>
 <dl>
-<dt><code class="docutils literal notranslate"><span class="pre">chan_demo</span></code></dt><dd><p>Compact Chandra-style point-source detection with simulated data.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">chandra_point_source_catalog</span></code></dt><dd><p>Compact Chandra-style point-source detection with simulated data.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">gmix_demo</span></code></dt><dd><p>Two-dimensional variable-width Gaussian-mixture inference with genuine
+<dt><code class="docutils literal notranslate"><span class="pre">gaussian_mixture_catalog</span></code></dt><dd><p>Two-dimensional variable-width Gaussian-mixture inference with genuine
 birth and death transitions.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">hst_lens</span></code></dt><dd><p>Hubble Space Telescope Wide Field Camera 3 image inference with lens mass,
+<dt><code class="docutils literal notranslate"><span class="pre">unbinned_gaussian_mixture</span></code></dt><dd><p>PCAT fits the coordinates of 140 individually simulated events directly,
+without spatial count bins. Its notebook runs the sampler, reads the saved
+center posterior, and displays the generated event-catalog frames.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">transit_timing_variations</span></code></dt><dd><p>PCAT fits a sinusoidal timing perturbation to 24 individually simulated
+mid-transit times. Its notebook reads the timing posterior and displays
+the sampled model against the simulated timing residuals.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">simulated_hst_strong_lens</span></code></dt><dd><p>Hubble Space Telescope Wide Field Camera 3 image inference with lens mass,
 foreground lens-galaxy emission, source emission, and lensed emission.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/hst_lens/generate_demo.py
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/simulated_hst_strong_lens/simulated_hst_strong_lens.py
 </pre></div>
 </div>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">simulated_rubin_cluster_lens</span></code></dt><dd><p>Simulated Rubin-like cluster-scale lens with a Gaussian point-spread function.
+The notebook samples the Einstein radius and source position with PCAT’s
+Poisson image likelihood, then shows the fitted image, residuals, and
+posterior parameter distributions. It does not analyze Rubin observations.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">rubin_dp1_confirmed_strong_lenses</span></code></dt><dd><p>Rubin Science Platform notebook for real Data Preview 1 imaging. It queries
+confirmed SIMBAD lens-system classifications, checks exact DP1 image
+footprints, retrieves every resulting deep-coadd cutout, displays the full
+matched sample, and passes each usable cutout to PCAT. DP1 requires Rubin
+data rights, and SIMBAD does not constitute a complete census of lenses.</p>
+</dd>
 </dl>
-<p>Run the image analyses, Roman benchmark, and reduced Voigt calculation with:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/run_examples.py
+<p>Run the maintained local smoke suite with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/run_all_examples.py
 </pre></div>
 </div>
-<p>Posterior samples from four maintained examples are synchronized below. The
-panels show model intensity for a Gaussian mixture, model counts for point
-sources and a strong lens, and the model with data for spectral lines.</p>
-<a class="reference internal image-reference" href="_images/pcat_posterior_samples.gif"><img alt="Animated posterior samples from four maintained PCAT examples" class="align-center" src="_images/pcat_posterior_samples.gif" style="width: 760px;" />
+<p>The suite runs the compact image and publication-inspired simulations, the
+stellar-flare and Voigt smoke configurations, an unbinned Gaussian mixture,
+simulated Roman strong-lens posterior images, simulated radial-velocity and
+transit-timing series, the public JWST/MIRI spectrum, the proposal profiler,
+and the sampler comparison. The JWST example may retrieve public MAST data.
+Notebooks requiring authenticated services or interactive inspection are excluded.</p>
+<p>Eight changing inference views and the central PCAT logo are synchronized below.
+The panels show a genuinely unbinned Gaussian mixture, point sources in a
+simulated Daylan et al. (2017) Fermi-LAT northern Galactic cap, transdimensional
+Voigt-line fitting, a variable catalog of rotating starspots, simulated
+Roman/WFI lensed arcs, stellar flares, radial velocities, and transit times.
+The time-series and histogram axes remain fixed; the GIF uses one shared color
+palette.</p>
+<a class="reference internal image-reference" href="_images/pcat_posterior_samples.gif"><img alt="Eight changing PCAT inference views around the PCAT logo" class="align-center" src="_images/pcat_posterior_samples.gif" style="width: 760px;" />
 </a>
 </section>
 <section id="publication-and-instrument-examples">
 <h2>Publication and instrument examples<a class="headerlink" href="#publication-and-instrument-examples" title="Link to this heading"></a></h2>
 <dl>
-<dt><code class="docutils literal notranslate"><span class="pre">Daylan+2017</span></code></dt><dd><p>Scaled mock-catalog reproduction of Daylan, Portillo, and Finkbeiner (2017).
+<dt><code class="docutils literal notranslate"><span class="pre">daylan+2017_fermi_point_sources</span></code></dt><dd><p>Scaled mock-catalog reproduction of Daylan, Portillo, and Finkbeiner (2017).
 The smoke mode preserves the inference pattern while reducing the source
 count and chain length.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="s1">&#39;examples/Daylan+2017/generate_reproduction.py&#39;</span><span class="w"> </span>--smoke<span class="w"> </span>--fresh
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="s1">&#39;examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py&#39;</span><span class="w"> </span>--smoke<span class="w"> </span>--fresh
 </pre></div>
 </div>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">Daylan+2018</span></code></dt><dd><p>Simulated Hubble Space Telescope Wide Field Camera 3 strong-lens analysis
+<dt><code class="docutils literal notranslate"><span class="pre">daylan+2018_strong_lens_subhalos</span></code></dt><dd><p>Simulated Hubble Space Telescope Wide Field Camera 3 strong-lens analysis
 comparing a variable subhalo catalog with a fixed one-subhalo fit.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="s1">&#39;examples/Daylan+2018/generate_reproduction.py&#39;</span><span class="w"> </span>--smoke
-python<span class="w"> </span><span class="s1">&#39;examples/Daylan+2018/generate_reproduction.py&#39;</span><span class="w"> </span>--smoke<span class="w"> </span>--one-subhalo
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="s1">&#39;examples/daylan+2018_strong_lens_subhalos/daylan+2018_strong_lens_subhalos.py&#39;</span><span class="w"> </span>--smoke
+python<span class="w"> </span><span class="s1">&#39;examples/daylan+2018_strong_lens_subhalos/daylan+2018_strong_lens_subhalos.py&#39;</span><span class="w"> </span>--smoke<span class="w"> </span>--one-subhalo
 </pre></div>
 </div>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">voigt-profile</span></code></dt><dd><p>Transdimensional detection of an unknown number of Voigt-profile emission
+<dt><code class="docutils literal notranslate"><span class="pre">voigt_spectral_line_catalog</span></code></dt><dd><p>Transdimensional detection of an unknown number of Voigt-profile emission
 lines in simulated spectral data.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/voigt-profile/pcat_voigt_profile_detection.py<span class="w"> </span>--configuration<span class="w"> </span>nomi
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/voigt_spectral_line_catalog/voigt_spectral_line_catalog.py<span class="w"> </span>--configuration<span class="w"> </span>nomi
 </pre></div>
 </div>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">roman_lens_catalog</span></code></dt><dd><p>Seeded Roman strong-lens population benchmark and catalog-detection
-diagnostic.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/roman_lens_catalog/roman_lens_catalog_diagnostic.py
+<dt><code class="docutils literal notranslate"><span class="pre">jwst_miri_ngc7027_line_catalog</span></code></dt><dd><p>Transdimensional Voigt-line catalog for the public James Webb Space Telescope
+(JWST) MIRI Medium Resolution Spectrometer spectrum of NGC 7027 from program
+1523. The script downloads the level-3 spectrum from the Mikulski Archive for
+Space Telescopes when it is absent, maps the measured flux and uncertainty to
+effective Poisson counts, and fits a line catalog over 5.30–5.535 microns.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py<span class="w"> </span>--numbswep<span class="w"> </span><span class="m">200000</span>
 </pre></div>
 </div>
-<a class="reference internal image-reference" href="_images/roman_lens_catalog_diagnostic.png"><img alt="Simulated Roman strong-lens images, residual, and catalog posterior" class="align-center" src="_images/roman_lens_catalog_diagnostic.png" style="width: 720px;" />
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">variable_number_exoplanets_radial_velocity</span></code></dt><dd><p>Simulated six-year, two-instrument radial-velocity series containing three
+injected planets. PCAT samples a variable catalog of Keplerian signals while
+marginalizing instrument offsets and stellar jitter. The default 100,000
+sweeps are intended for the full demonstration; <code class="docutils literal notranslate"><span class="pre">--smoke</span></code> provides a short
+pipeline check.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/variable_number_exoplanets_radial_velocity/variable_number_exoplanets_radial_velocity.py<span class="w"> </span>--smoke
+</pre></div>
+</div>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">variable_number_stellar_flares</span></code></dt><dd><p>Simulated one-day, TESS-like light curve with fast-rise, exponential-decay
+flares. PCAT fits a variable catalog of native FRED bursts with independent
+peak amplitude, peak time, rise time, and decay time.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/variable_number_stellar_flares/variable_number_stellar_flares.py<span class="w"> </span>--smoke
+</pre></div>
+</div>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">variable_number_stellar_spots</span></code></dt><dd><p>Simulated rotating-star photometry with three injected dark spots. PCAT fits
+a zero-to-five-spot catalog using a fixed 3.2-day rotation period while
+sampling each spot’s phase, depth, and width.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/variable_number_stellar_spots/variable_number_stellar_spots.py<span class="w"> </span>--smoke
+</pre></div>
+</div>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">roman_strong_lens_perturber_catalog</span></code></dt><dd><p>Seeded Roman strong-lens population benchmark and catalog-detection
+diagnostic.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/roman_strong_lens_perturber_catalog/roman_strong_lens_perturber_catalog.py
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/roman_strong_lens_perturber_catalog.png"><img alt="Simulated Roman strong-lens images, residual, and catalog posterior" class="align-center" src="_images/roman_strong_lens_perturber_catalog.png" style="width: 720px;" />
 </a>
 <p>The four panels trace one simulated detector image through the macro-lens
 model and residual, then summarize catalog posterior probabilities across
 the seeded lens population.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">fermi_lat_pg1553</span></code></dt><dd><p>Fermi Large Area Telescope event-filter configuration for PG 1553+113. This
+<dt><code class="docutils literal notranslate"><span class="pre">fermi_lat_pg1553_event_filter</span></code></dt><dd><p>Fermi Large Area Telescope event-filter configuration for PG 1553+113. This
 utility requires the Fermi Science Tools and local mission data.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">portillo+2017_crowded_sdss_m2</span></code></dt><dd><p>Simulated Sloan Digital Sky Survey crowded-field deblending patterned after
+Portillo et al. (2017).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">feder+2020_multiband_sdss_deblending</span></code></dt><dd><p>Simulated multiband Sloan Digital Sky Survey deblending patterned after
+Feder et al. (2020).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">butler+2022_spire_sz_component_separation</span></code></dt><dd><p>Simulated Herschel SPIRE point-source and Sunyaev-Zeldovich component
+separation patterned after Butler et al. (2022).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">feder+2023_point_diffuse_spire</span></code></dt><dd><p>Simulated joint point-source and diffuse-emission inference patterned after
+Feder et al. (2023).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">hall+2026_herschel_dsfg_multiplicity</span></code></dt><dd><p>Simulated Herschel dusty star-forming galaxy multiplicity inference patterned
+after Hall et al. (2026).</p>
 </dd>
 </dl>
 </section>
 <section id="analysis-utilities">
 <h2>Analysis utilities<a class="headerlink" href="#analysis-utilities" title="Link to this heading"></a></h2>
 <dl>
-<dt><code class="docutils literal notranslate"><span class="pre">catalog_association</span></code></dt><dd><p>Seeded completeness and purity calculation for coordinate-and-value catalog
-matching across a range of association radii.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/catalog_association/catalog_association.py
+<dt><code class="docutils literal notranslate"><span class="pre">sampler_comparison_emcee_dynesty</span></code></dt><dd><p>Controlled simulated radial-velocity comparison of PCAT, emcee, and dynesty.
+The fixed-dimensional comparison uses the same likelihood and priors for all
+samplers. The variable-dimensional comparison contrasts one PCAT catalog run
+with separate dynesty evidence calculations for each planet count; emcee is
+excluded from that portion because it does not compare dimensions.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/sampler_comparison_emcee_dynesty/sampler_comparison_emcee_dynesty.py<span class="w"> </span>--part<span class="w"> </span>fixed
 </pre></div>
 </div>
-<a class="reference internal image-reference" href="_images/catalog_association.png"><img alt="Catalog completeness and purity across association radii" class="align-center" src="_images/catalog_association.png" style="width: 640px;" />
-</a>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">psf_subpixel</span></code></dt><dd><p>Reconstruction of an oversampled point-spread function with PCAT’s
-piecewise-cubic detector-pixel model, including interpolation residuals.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/psf_subpixel/psf_subpixel.py
+<dt><code class="docutils literal notranslate"><span class="pre">proposal_profiling</span></code></dt><dd><p>Simulated Voigt-line run reporting proposal attempts, acceptance fractions,
+time per sweep, and the recorded timing breakdown for major pipeline phases.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/proposal_profiling/proposal_profiling.py<span class="w"> </span>--numbswep<span class="w"> </span><span class="m">20000</span>
 </pre></div>
 </div>
-<a class="reference internal image-reference" href="_images/psf_subpixel.png"><img alt="Cubic subpixel point-spread-function reconstruction and residuals" class="align-center" src="_images/psf_subpixel.png" style="width: 640px;" />
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">proposal_state_animation</span></code></dt><dd><p>Short simulated Voigt-line run producing two complementary animations. The
+retained-state sequence follows the configured plotting cadence, while the
+candidate sequence shows every attempted move before acceptance or rejection.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/proposal_state_animation/proposal_state_animation.py<span class="w"> </span>--numbswep<span class="w"> </span><span class="m">24</span>
+</pre></div>
+</div>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">burn_in_strategies</span></code></dt><dd><p>Seeded comparison of fixed proposal scales, adaptive proposal scales, and
+likelihood-tempered plus adaptive burn-in on correlated-Gaussian and
+equal-weight bimodal posterior targets. The figures report retained samples,
+acceptance, effective sample rate, target-summary error, runtime, and the
+recorded inverse-temperature schedule.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/burn_in_strategies/burn_in_strategies.py<span class="w"> </span>--numbswep<span class="w"> </span><span class="m">1200</span>
+</pre></div>
+</div>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">population_grid</span></code></dt><dd><p>Seeded simulated populations used to demonstrate PCAT’s marginal and pairwise
+posterior plotting. These arrays are illustrative rather than observations.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">legacy_external_analysis_commands</span></code></dt><dd><p>Command-reference notebook for external analyses. It records commands but
+does not execute them.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">catalog_association_completeness_purity</span></code></dt><dd><p>Seeded completeness and purity calculation for coordinate-and-value catalog
+matching across a range of association radii.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/catalog_association_completeness_purity/catalog_association_completeness_purity.py
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/catalog_association_completeness_purity.png"><img alt="Catalog completeness and purity across association radii" class="align-center" src="_images/catalog_association_completeness_purity.png" style="width: 640px;" />
 </a>
 </dd>
 </dl>
@@ -179,7 +290,7 @@ piecewise-cubic detector-pixel model, including interpolation residuals.</p>
 <p>Generated examples are deterministic pipeline demonstrations unless their
 README explicitly states otherwise. Synthetic outputs validate computation and
 visualization but do not constitute measurements of real astrophysical systems.
-The Daylan+2017 README distinguishes its scaled simulation from the
+The daylan+2017_fermi_point_sources README distinguishes its scaled simulation from the
 archival Fermi-LAT analysis in the publication.</p>
 </section>
 </section>
@@ -188,7 +299,7 @@ archival Fermi-LAT analysis in the publication.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="capabilities.html" class="btn btn-neutral float-left" title="Capabilities" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sampling.html" class="btn btn-neutral float-left" title="Sampling, proposals, and convergence" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="outputs.html" class="btn btn-neutral float-right" title="Outputs and diagnostics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

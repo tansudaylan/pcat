@@ -57,7 +57,7 @@ For headless systems, set a writable Matplotlib cache before running:
 
 .. code-block:: bash
 
-   MPLCONFIGDIR=/tmp/pcat-mplconfig python examples/chan_demo/generate_demo.py
+   MPLCONFIGDIR=/tmp/pcat-mplconfig python examples/chandra_point_source_catalog/chandra_point_source_catalog.py
 
 Sampling configuration failures
 -------------------------------

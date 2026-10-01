@@ -27,6 +27,8 @@ A run with project root ``pathbase`` and tag ``strgcnfg`` writes:
                `-- post/
                    |-- fram/
                    |-- finl/
+                   |-- convergence/
+                   |-- operation/
                    `-- anim/
 
 Each run is a self-contained child of ``pathbase/pcat_runs``. PCAT also accepts
@@ -115,6 +117,13 @@ burn-in reaches the posterior target.
 Interpret these alongside chain movement and convergence rather than optimizing
 acceptance fraction alone. See :doc:`sampling` for the move-specific acceptance
 terms, tunable settings, burn-in, and stopping rules.
+
+When final plots are enabled, ``post/convergence`` holds the figures of
+:func:`pcat.plotting.plot_posterior_convergence` and ``post/operation`` those
+of :func:`pcat.plotting.plot_sampler_overview`: the proposal ledger, the
+acceptance-term decomposition, the compute budget, the catalog trace, and, for
+one-dimensional data, the posterior predictive check. The :doc:`gallery` shows
+examples of each.
 
 Reproducibility checklist
 -------------------------

@@ -61,6 +61,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gallery.html">Plotting gallery</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
 </ul>
@@ -186,18 +187,35 @@ density, leaving the likelihood change plus any Hastings correction for a
 data-informed draw.</p>
 <p>The final state stores per-sweep proposal IDs in <code class="docutils literal notranslate"><span class="pre">listpostindxproptype</span></code>,
 accept/reject flags in <code class="docutils literal notranslate"><span class="pre">listpostboolpropaccp</span></code>, and acceptance probabilities in
-<code class="docutils literal notranslate"><span class="pre">listpostaccpprob</span></code>. Final processing also computes <code class="docutils literal notranslate"><span class="pre">accpwith</span></code>, <code class="docutils literal notranslate"><span class="pre">accpbrth</span></code>,
+<code class="docutils literal notranslate"><span class="pre">listpostaccpprob</span></code>. The unclipped log acceptance ratio is stored in
+<code class="docutils literal notranslate"><span class="pre">listpostaccplprb</span></code> so it remains available when exponentiation underflows.
+Final processing also computes <code class="docutils literal notranslate"><span class="pre">accpwith</span></code>, <code class="docutils literal notranslate"><span class="pre">accpbrth</span></code>,
 <code class="docutils literal notranslate"><span class="pre">accpdeth</span></code>, <code class="docutils literal notranslate"><span class="pre">accpsplt</span></code>, <code class="docutils literal notranslate"><span class="pre">accpmerg</span></code>, and <code class="docutils literal notranslate"><span class="pre">accpjump</span></code> from attempted moves.
 An acceptance fraction is accepted attempts divided by attempts of that type.
 It is a tuning diagnostic, not a target to maximize. Very small steps can have
 high acceptance but explore the posterior slowly; large steps can have low
 acceptance and waste evaluations.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">proposal_state_animation</span></code> example uses the native split/merge moves to
+show the Jacobian correction. Splitting parent amplitude <code class="docutils literal notranslate"><span class="pre">F</span></code> into <code class="docutils literal notranslate"><span class="pre">r</span> <span class="pre">F</span></code> and
+<code class="docutils literal notranslate"><span class="pre">(1-r)</span> <span class="pre">F</span></code> contributes <code class="docutils literal notranslate"><span class="pre">log|J|</span> <span class="pre">=</span> <span class="pre">log(F)</span></code>; merging applies its negative. The
+figure compares each valid proposal’s acceptance probability with a
+counterfactual that holds every other term fixed and removes only <code class="docutils literal notranslate"><span class="pre">log|J|</span></code>.
+This is an algebraic comparison of the same proposals, not a second MCMC chain.</p>
 <figure class="align-center" id="id2">
+<a class="reference internal image-reference" href="_images/jacobian_acceptance_effect.png"><img alt="Split and merge acceptance changes from the Jacobian correction" src="_images/jacobian_acceptance_effect.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The left panel shows the log-acceptance-ratio shift for each valid proposal.
+The right panel shows the acceptance curve with the median Jacobian from the
+run and its no-Jacobian counterfactual.</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<figure class="align-center" id="id3">
 <a class="reference internal image-reference" href="_images/proposal_acceptance_and_cost.png"><img alt="Acceptance fraction and computational cost by PCAT proposal type" src="_images/proposal_acceptance_and_cost.png" style="width: 100%;" />
 </a>
 <figcaption>
 <p><span class="caption-text">Proposal acceptance and evaluation cost in the simulated Voigt-line
-profiling example. The values depend on the model, prior, data, and tuning.</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
+profiling example. The values depend on the model, prior, data, and tuning.</span><a class="headerlink" href="#id3" title="Link to this image"></a></p>
 </figcaption>
 </figure>
 </section>
@@ -243,6 +261,23 @@ The sampler uses a target acceptance of 0.44 for one-dimensional updates and
 0.234 for multivariate updates. Adaptation stops once burn-in ends. Report the
 burn-in length and proposal settings with scientific results, and check that
 posterior summaries are stable to a longer run or a different seed.</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">boolburntmpr=True</span></code> to temper the likelihood during the first
+<code class="docutils literal notranslate"><span class="pre">factburntmpr</span></code> fraction of burn-in. The default fraction is 0.75. At tempered
+sweep <code class="docutils literal notranslate"><span class="pre">s</span></code> out of <code class="docutils literal notranslate"><span class="pre">N</span></code> tempered sweeps, PCAT uses</p>
+<div class="math notranslate nohighlight">
+\[\beta_s = \left(\frac{s + 1}{N}\right)^4\]</div>
+<p>and evaluates the target as <code class="docutils literal notranslate"><span class="pre">log_prior</span> <span class="pre">+</span> <span class="pre">beta_s</span> <span class="pre">*</span> <span class="pre">log_likelihood</span></code>. The prior
+is not tempered. <code class="docutils literal notranslate"><span class="pre">beta_s</span></code> is stored for every sweep in
+<code class="docutils literal notranslate"><span class="pre">listpostfacttmpr</span></code> and equals one before retained sampling begins. Tempering
+can help a chain cross likelihood barriers during burn-in, but it can reduce
+local effective sample size and does not guarantee discovery of every mode.</p>
+<p><code class="docutils literal notranslate"><span class="pre">typeopti=&quot;hess&quot;</span></code> is a separate experimental option. It estimates local
+finite-difference curvature to initialize proposal scales; it does not perform
+gradient descent or optimize the initial state. PCAT currently provides no
+gradient-descent burn-in mode.</p>
+<p>The <a class="reference internal" href="examples.html"><span class="doc">Examples</span></a> page links <code class="docutils literal notranslate"><span class="pre">burn_in_strategies</span></code>, which compares fixed,
+adaptive, and tempered plus adaptive burn-in on correlated and bimodal
+simulated targets.</p>
 </section>
 <section id="automatic-convergence-monitoring">
 <h2>Automatic convergence monitoring<a class="headerlink" href="#automatic-convergence-monitoring" title="Link to this heading"></a></h2>
@@ -259,6 +294,20 @@ parameters, or modeled data pixels when no persistent element parameter is
 available. Inspect the values saved in <code class="docutils literal notranslate"><span class="pre">gdatfinlpost</span></code> and the convergence
 plots. Automatic stopping does not establish that the likelihood, model, or
 priors are scientifically adequate.</p>
+<p>With posterior plotting enabled, completed runs write separate figures under
+<code class="docutils literal notranslate"><span class="pre">visuals/post/convergence/</span></code>. Fixed-parameter figures show per-worker traces,
+autocorrelation, approximate effective sample size, and cross-worker R-hat.
+For transdimensional populations, the figures show catalog-size traces,
+autocorrelation, occupancy, within-worker size transitions, and mixing metrics.
+Early-versus-late distributions compare each sampled one-dimensional element
+feature without assigning identities to elements across birth or death moves.
+The approximate effective sample size uses a bounded autocorrelation window;
+short runs can yield unstable estimates. A single worker has no cross-worker
+R-hat, which is shown as unavailable rather than assigned a value.</p>
+<p>To create the figures from a saved posterior without rerunning inference, call
+<code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_posterior_convergence(state,</span> <span class="pre">output_directory)</span></code> after
+loading <code class="docutils literal notranslate"><span class="pre">gdatfinlpost</span></code> with <code class="docutils literal notranslate"><span class="pre">pcat.main.readfile</span></code>. The figures support
+inspection and do not replace checks for multiple modes or model mismatch.</p>
 </section>
 <section id="animations-and-saved-diagnostics">
 <h2>Animations and saved diagnostics<a class="headerlink" href="#animations-and-saved-diagnostics" title="Link to this heading"></a></h2>
@@ -269,7 +318,21 @@ which shows cumulative proposal attempts and acceptances, and
 <code class="docutils literal notranslate"><span class="pre">proposal_sequence.gif</span></code>, which labels each saved state frame with its sweep,
 proposal type, and acceptance result. The sequence animation uses saved frame
 intervals rather than every sweep. A rejected proposal remains represented by
-the retained chain state; the rejected candidate image is not separately saved.</p>
+the retained chain state.</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">boolmakeanimprop=True</span></code> to additionally write one candidate frame for
+every sweep of worker zero. PCAT renders the frame after evaluating the
+candidate and acceptance probability but before an accepted candidate replaces
+the current state. <code class="docutils literal notranslate"><span class="pre">proposal_candidates.gif</span></code> therefore shows accepted and
+rejected candidates, including moves outside prior support. Each frame compares
+current and candidate predictions and unit-prior coordinates and reports the
+proposal type, acceptance probability, decision, log posterior values,
+proposal-density ratio, and Jacobian.</p>
+<p>Candidate frames are proposal diagnostics, not posterior samples. The option is
+off by default because it performs plotting and writes one PNG per sweep. Its
+runtime and storage scale linearly with <code class="docutils literal notranslate"><span class="pre">numbswep</span></code>. Use short runs for proposal
+inspection, then disable it for production inference. The
+<code class="docutils literal notranslate"><span class="pre">proposal_state_animation</span></code> example produces both retained-state and
+every-candidate animations from the same simulated Voigt-line run.</p>
 <p>The proposal-profiling example includes a visual comparison of acceptance and
 cost above and writes proposal activity with its run. See <a class="reference internal" href="outputs.html"><span class="doc">Outputs and diagnostics</span></a> for
 the output directory and persisted diagnostics, and <a class="reference internal" href="capabilities.html"><span class="doc">Capabilities</span></a> for

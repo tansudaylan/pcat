@@ -11,6 +11,7 @@
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
+    <link rel="shortcut icon" href="_static/pcat_icon.png"/>
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
@@ -26,12 +27,13 @@
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search"  style="background: #000000" >
 
           
           
           <a href="#" class="icon icon-home">
             PCAT
+              <img src="_static/pcat_icon.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -44,9 +46,13 @@
               <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">How PCAT works</a></li>
 <li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="likelihoods.html">Likelihood configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sampling.html">Sampling, proposals, and convergence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gallery.html">Plotting gallery</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
 </ul>
@@ -55,7 +61,7 @@
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #000000" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="#">PCAT</a>
       </nav>
@@ -77,22 +83,30 @@
              
   <section id="pcat-documentation">
 <h1>PCAT documentation<a class="headerlink" href="#pcat-documentation" title="Link to this heading"></a></h1>
-<p>The Probabilistic Cataloger (PCAT) is a hierarchical, transdimensional Bayesian
-inference framework for datasets whose number of sources or other model elements
-is unknown. It samples an ensemble of catalogs rather than returning only one
-best-fit catalog. The framework was introduced by <a class="reference external" href="https://doi.org/10.3847/1538-4357/aa679e">Daylan, Portillo, and
-Finkbeiner (2017)</a> in ApJ 839, 4.</p>
-<p>PCAT supports arbitrary user-supplied likelihood functions, point-source and
-strong-lens models for imaging data, lensed source emission, and spectral-line
-models for spectral data. Its transdimensional models infer the number and
-parameters of catalog elements jointly. Simulated and supplied data,
-population-level priors, posterior catalog summaries, convergence diagnostics,
-static figures, and posterior animations use a shared pipeline.</p>
+<p>The Probabilistic Cataloger (PCAT) is a hierarchical Bayesian inference
+framework for Poisson-distributed images, spectra, photon events, and other
+data. It supports both fixed-dimensional inference and transdimensional
+inference over metamodels whose candidate models can have different numbers of
+elements. The sampler and maintained examples are available in the <a class="reference external" href="https://github.com/tansudaylan/pcat">PCAT GitHub
+repository</a>.</p>
+<p>PCAT was introduced by <a class="reference external" href="https://doi.org/10.3847/1538-4357/aa679e">Daylan, Portillo, and Finkbeiner (2017)</a> in <em>ApJ</em>, 839, 4. A later
+application to strongly lensed systems is <a class="reference external" href="https://doi.org/10.3847/1538-4357/aaaa1e">Daylan et al. (2018)</a>, <em>ApJ</em>, 854, 141. Other published
+applications include <a class="reference external" href="https://doi.org/10.3847/1538-3881/aa8565">Portillo et al. (2017)</a>, <a class="reference external" href="https://doi.org/10.3847/1538-3881/ab74cf">Feder et al. (2020)</a>, <a class="reference external" href="https://doi.org/10.3847/1538-4357/ac6c04">Butler et al. (2022)</a>, <a class="reference external" href="https://doi.org/10.3847/1538-3881/ace69b">Feder et al. (2023)</a>, and <a class="reference external" href="https://doi.org/10.3847/1538-4357/ae1e7a">Hall et al. (2026)</a>.</p>
+<p>PCAT supports arbitrary user-supplied likelihood functions, a unified Poisson
+image likelihood with point, extended, and lensed components, spectral-line
+models, time-series flare catalogs, and Keplerian radial-velocity catalogs. It
+also runs fixed-dimensional models through the same sampler and persistence
+pipeline. Its transdimensional models infer the number and parameters of
+catalog elements jointly. Simulated and supplied data, population-level priors,
+posterior catalog summaries, convergence diagnostics, static figures, and
+posterior animations use a shared pipeline.</p>
 <a class="reference internal image-reference" href="_images/pcat_posterior_samples.gif"><img alt="Posterior samples for Gaussian mixtures, point sources, strong lenses, and spectral lines" class="align-center" src="_images/pcat_posterior_samples.gif" style="width: 760px;" />
 </a>
-<p>The animation shows posterior draws from four simulated example problems. Each
-panel is generated by PCAT’s maintained example pipeline rather than from
-observed data.</p>
+<p>The animation shows nine changing inference views, including unbinned mixtures,
+simulated gamma-ray point sources, Roman strong-lens arcs, observed JWST/MIRI
+line catalogs, radial velocities, transit timings, and stellar-flare photometry.
+Time-series and histogram axes remain fixed across frames, and the GIF uses one
+shared color palette. Only the JWST/MIRI spectrum uses observed data.</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul>
@@ -103,16 +117,38 @@ observed data.</p>
 <li class="toctree-l2"><a class="reference internal" href="getting_started.html#configuration-principles">Configuration principles</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">How PCAT works</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#pipeline">Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#likelihoods">Likelihoods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#custom-parts">Custom parts</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="capabilities.html#functionality-overview">Functionality overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="capabilities.html#inference-and-proposal-engine">Inference and proposal engine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="capabilities.html#user-supplied-likelihoods">User-supplied likelihoods</a></li>
-<li class="toctree-l2"><a class="reference internal" href="capabilities.html#point-sources-in-imaging-data">Point sources in imaging data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="capabilities.html#lenses-and-lensed-emission-in-imaging-data">Lenses and lensed emission in imaging data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="capabilities.html#spectral-lines-in-spectral-data">Spectral lines in spectral data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="capabilities.html#poisson-image-likelihood">Poisson image likelihood</a></li>
+<li class="toctree-l2"><a class="reference internal" href="capabilities.html#spectral-and-time-series-catalogs">Spectral and time-series catalogs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="capabilities.html#shared-inference-products">Shared inference products</a></li>
 <li class="toctree-l2"><a class="reference internal" href="capabilities.html#catalog-summaries-and-diagnostics">Catalog summaries and diagnostics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="capabilities.html#persistence-plotting-and-reproducibility">Persistence, plotting, and reproducibility</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="likelihoods.html">Likelihood configurations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="likelihoods.html#poisson-image-likelihood">Poisson image likelihood</a></li>
+<li class="toctree-l2"><a class="reference internal" href="likelihoods.html#unbinned-gaussian-mixture-likelihood">Unbinned Gaussian-mixture likelihood</a></li>
+<li class="toctree-l2"><a class="reference internal" href="likelihoods.html#spectral-and-time-series-likelihood">Spectral and time-series likelihood</a></li>
+<li class="toctree-l2"><a class="reference internal" href="likelihoods.html#transit-timing-likelihood">Transit-timing likelihood</a></li>
+<li class="toctree-l2"><a class="reference internal" href="likelihoods.html#user-supplied-likelihood">User-supplied likelihood</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sampling.html">Sampling, proposals, and convergence</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sampling.html#proposal-types">Proposal types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sampling.html#acceptance-probability">Acceptance probability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sampling.html#tuning-proposals">Tuning proposals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sampling.html#burn-in-and-scale-adaptation">Burn-in and scale adaptation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sampling.html#automatic-convergence-monitoring">Automatic convergence monitoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sampling.html#animations-and-saved-diagnostics">Animations and saved diagnostics</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
@@ -127,8 +163,17 @@ observed data.</p>
 <li class="toctree-l2"><a class="reference internal" href="outputs.html#state-files">State files</a></li>
 <li class="toctree-l2"><a class="reference internal" href="outputs.html#completion-markers">Completion markers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="outputs.html#visual-products">Visual products</a></li>
+<li class="toctree-l2"><a class="reference internal" href="outputs.html#condensed-catalogs-and-association">Condensed catalogs and association</a></li>
 <li class="toctree-l2"><a class="reference internal" href="outputs.html#convergence-and-interpretation">Convergence and interpretation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="outputs.html#reproducibility-checklist">Reproducibility checklist</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gallery.html">Plotting gallery</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gallery.html#sampler-operation">Sampler operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery.html#catalogs-and-fits">Catalogs and fits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery.html#convergence">Convergence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery.html#posterior-projections">Posterior projections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery.html#animations">Animations</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a><ul>
@@ -143,6 +188,7 @@ observed data.</p>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api.html#sampling">Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#image-formation">Image formation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#plotting">Plotting</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#instrument-response">Instrument response</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#example-analyses">Example analyses</a></li>

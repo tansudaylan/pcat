@@ -4,7 +4,11 @@ Public API
 Sampling
 --------
 
-.. py:function:: pcat.main.sample(**configuration)
+New integrations should use ``pcat.sampling``. The implementation currently
+remains in ``pcat.main`` for backward compatibility while the sampler engine is
+decomposed into smaller modules.
+
+.. py:function:: pcat.sampling.sample(**configuration)
 
    Dispatch an image, catalog, or fixed-dimensional PCAT configuration, execute
    sampling and final processing, and return the final global state object.
@@ -19,12 +23,17 @@ Sampling
      filesystem-safe run under its common ``pcat_runs`` directory.
    * ``typeelem`` for the element types in each population.
    * ``numbswep`` and ``numbsamp`` for sampler sweeps and retained posterior
-     samples.
+       samples. ``numbburn`` sets discarded initial sweeps,
+       ``booladaptstdp`` enables burn-in-only proposal adaptation, and
+       ``boolburntmpr`` with ``factburntmpr`` enables likelihood-tempered burn-in.
    * ``probtran`` and ``probspmr`` for transdimensional and split/merge proposal
        probabilities. The listed image configurations disable split/merge where
        that proposal is unsupported.
    * ``boolmakeplotinit``, ``boolmakeplotfram``, ``boolmakeplotfinlpost``, and
-     ``makeanim`` for visual-output controls.
+       ``makeanim`` for visual-output controls. Set ``boolmakeanimprop=True`` to
+       render every proposed candidate before its accept/reject decision and
+       assemble ``proposal_candidates.gif``. This expensive diagnostic is
+       disabled by default.
 
    ``typeexpr="gener"`` registers ``parameter_names`` as ordinary base
    parameters. ``prior_types`` accepts ``"self"`` for bounded uniform priors
@@ -43,36 +52,249 @@ Sampling
    See :doc:`capabilities` for a complete example and the image and spectral
    model families.
 
-.. py:function:: pcat.main.init(configuration)
+.. py:function:: pcat.sampling.init(dictglob, **options)
 
-   Lower-level initialization and execution engine. New image-analysis code
-   should normally call :func:`pcat.main.sample`, which performs experiment
-   dispatch before invoking this function.
+   Lower-level initialization and execution engine. ``dictglob`` contains
+   model and data configuration overrides, while keyword options control
+   sampling, diagnostics, persistence, and plotting. Most analyses should call
+   :func:`pcat.sampling.sample`, which dispatches the experiment before
+   invoking this function.
 
-.. py:function:: pcat.main.sample_parallel(dictargsvari, listnamecnfgextn, dictpcatinpt=None, **options)
+.. py:function:: pcat.sampling.init_image(**configuration)
+
+   Initialize built-in image, spectral, or time-series configuration and
+   construct the populated state passed to :func:`pcat.sampling.init`. The
+   historical function name predates the one-dimensional workflows.
+
+.. py:function:: pcat.sampling.sample_parallel(dictpcatinptvari, listlablcnfg, dictpcatinpt=None, **options)
 
    Execute a family of related configurations, optionally in separate
-   processes. ``dictpcatinpt`` contains shared settings and ``dictargsvari``
-   contains per-configuration overrides keyed by configuration name.
+   processes. ``dictpcatinpt`` contains shared settings,
+   ``dictpcatinptvari`` contains per-configuration overrides, and
+   ``listlablcnfg`` supplies the configuration labels.
+
+.. py:function:: pcat.sampling.sample_fixed(**configuration)
+
+   Run a fixed-dimensional likelihood through the same native PCAT sampling
+   and persistence pipeline.
+
+.. py:function:: pcat.sampling.sample_fixed_chains(state, log_likelihood, log_prior, names, scales, minima, maxima, means, stdvs, initial, chain_count, sample_count, burn_count, **options)
+
+   Run ``chain_count`` independent native PCAT chains of a fixed-dimensional
+   likelihood ``log_likelihood(values, state)`` and return them as arrays of
+   shape (chains, samples, parameters) with their log posteriors. Extra
+   options, such as ``booladaptstdp``, pass through to PCAT.
+
+.. py:function:: pcat.sampling.sample_posterior(gdat, numbsampwalk, retr_llik, listnamepara, listlablpara, scalpara, minmpara, maxmpara, **options)
+
+   Sample a fixed-dimensional posterior with PCAT chains and return a
+   dictionary of post-burn-in samples keyed by parameter name. Options add
+   Gaussian priors, derived variables, trace and corner plots, and a saved
+   posterior summary that later runs reuse.
+
+.. py:function:: pcat.sampling.sample_allesfitter_pcat(datadir)
+
+   Run the PCAT-backed fixed-dimensional adapter for an allesfitter data
+   directory. This compatibility entry point is specialized for that external
+   package; new likelihood integrations should use
+   :func:`pcat.sampling.sample_fixed` or
+   :func:`pcat.sampling.sample_fixed_chains`.
 
 .. py:function:: pcat.main.retr_listgdat(liststrgcnfg, typegdat="finlpost")
 
    Load the requested persisted state for each run tag in a configuration
    family.
 
+Image formation
+---------------
+
+.. py:function:: pcat.image.forward_model_image(source_image, psf_sigma_pixels, background=0.0)
+
+   Convolve a finite two-dimensional source scene with a normalized circular
+   Gaussian point-spread function and add a finite uniform background. The
+   returned dictionary contains ``source_image``, ``psf_kernel``, and
+   ``observed_image`` arrays. This deterministic utility does not run the
+   sampler or draw Poisson noise.
+
+   ``psf_sigma_pixels`` is the Gaussian standard deviation in pixels. The
+   source scene and background use the same image units.
+
+.. code-block:: python
+
+   from pcat.image import forward_model_image
+
+   products = forward_model_image(source_image, psf_sigma_pixels=1.5, background=5.0)
+
 Plotting
 --------
 
-.. py:function:: pcat.plotting.plot_grid(path, name, listpara, listlablparatotl, truepara=None, listvarbdraw=None, typefileplot="pdf")
+Every routine below writes PNG (300 dpi) or PDF files, logs ``Writing to
+PATH...``, and returns the written path or a dictionary of paths. The
+:doc:`gallery` shows an example output of each one, produced by
+``docs/make_plot_gallery.py`` from real PCAT runs.
+
+The ``state`` argument of the sampler views is the final posterior object
+returned by :func:`pcat.sampling.sample` or read with
+:func:`pcat.main.readfile` from ``gdatfinlpost``. Per-proposal arrays such as
+``listpostindxproptype`` hold every sweep including burn-in, ordered
+sweep-major across chains; per-sample arrays such as ``listpostnumbelem`` hold
+retained samples ordered sample-major across chains.
+
+Sampler operation
+~~~~~~~~~~~~~~~~~
+
+.. py:function:: pcat.plotting.plot_sampler_overview(state, output_directory, typefileplot="png", **catalog_options)
+
+   Write every operation, catalog, and predictive view that applies to
+   ``state`` and return a dictionary from view name to path. :func:`pcat.sampling.sample`
+   calls it for each run with final plots enabled and writes to
+   ``visuals/post/operation``. ``catalog_options`` are passed to
+   :func:`pcat.plotting.plot_catalog_trace`.
+
+.. py:function:: pcat.plotting.plot_proposal_ledger(state, output_path, typefileplot="png", number_windows=120)
+
+   Plot the accepted fraction of each move type (within-model, birth, death,
+   split, merge, jump) in ``number_windows`` sweep windows pooled over chains,
+   the burn-in interval, and the likelihood inverse temperature when tempered
+   burn-in is active. A second panel shows each move's share of proposals, its
+   acceptance after burn-in with 1-sigma Wilson intervals, and the fraction
+   rejected before the likelihood is evaluated.
+
+.. py:function:: pcat.plotting.plot_acceptance_decomposition(state, output_path, typefileplot="png")
+
+   Split each evaluated post-burn-in log acceptance ratio [nat] into the
+   posterior and auxiliary-density change, the move-selection ratio, and the
+   split/merge Jacobian, and draw their distributions per move type on a signed
+   logarithmic axis. This shows whether a move fails because of the data or
+   because of the proposal bookkeeping.
+
+.. py:function:: pcat.plotting.plot_compute_budget(state, output_path, typefileplot="png")
+
+   Map the mean wall time [ms] of each timed sampler stage for each move type.
+   Stages nest, so their times do not add to each move's total; stages timed
+   once per sweep, such as frame plotting, are omitted.
+
+Catalogs and fits
+~~~~~~~~~~~~~~~~~
+
+.. py:function:: pcat.plotting.plot_catalog_trace(state, output_path, position="elin", amplitude="flux", population=0, chain=0, position_label=None, amplitude_label=None, typefileplot="png")
+
+   Draw every element of every retained catalog of one chain at its
+   ``position`` parameter, colored by ``amplitude``, so births, deaths, splits,
+   and merges appear as tracks that start, stop, fork, or join. A lower strip
+   shows the catalog size and a side panel the expected number of elements per
+   position bin over all chains. Use ``position="xpos"`` or ``"ypos"`` for
+   image catalogs.
+
+.. py:function:: pcat.plotting.plot_posterior_predictive(state, output_path, axis_values=None, axis_label="Data axis", data_label="Counts per bin", typefileplot="png", seed=0)
+
+   For one-dimensional data, draw replicated data from every retained model
+   with the run's Poisson or Gaussian noise and plot the data against the 68%
+   and 95% replicated bands, the standardized residual, and the posterior
+   predictive tail probability P(replicated > data) per bin.
+   :func:`pcat.plotting.has_one_dimensional_prediction` reports whether a
+   state qualifies.
+
+.. py:function:: pcat.plotting.plot_lens_image_fit(output_path, observed, model, variance, pixel_scale_arcsec, typefileplot="png")
+
+   Plot an observed lens image, a model image, and the standardized residual
+   on a shared angular grid [arcsec].
+
+.. py:function:: pcat.plotting.plot_lens_parameter_recovery(output_path, draws, true_parameters, typefileplot="png")
+
+   Plot posterior histograms of the Einstein radius and source position
+   [arcsec] with the injected values and posterior medians.
+
+.. py:function:: pcat.plotting.plot_detection_diagnostic(records, output_path, examples=None)
+
+   Plot representative detector, macro-model, and residual images with the
+   per-lens posterior perturber probability against injected signal-to-noise
+   and Wilson intervals on the detection rates. ``records`` and ``examples``
+   come from :func:`pcat.roman_lens.simulate_population`.
+
+Convergence
+~~~~~~~~~~~
+
+.. py:function:: pcat.plotting.plot_posterior_convergence(state, output_directory, typefileplot="png")
+
+   Write traces, autocorrelations, effective sample sizes, and multi-chain
+   R-hat for the fixed-dimensional parameters, and catalog-size traces,
+   occupancy, and transition matrices for each population. Element parameter
+   distributions are compared between the first and second halves of the
+   retained samples. Returns a dictionary from figure name to path.
+
+.. py:function:: pcat.plotting.plot_gelman_rubin(path, statistics, typefileplot="pdf", typeplotback="norm")
+
+   Plot the distribution of potential scale reduction factors, for example
+   ``state.gmrbstat`` over every data bin, to ``path + "gmrb"``.
+
+.. py:function:: pcat.plotting.plot_autocorrelation(path, autocorrelation, correlation_time, strgextn="", typefileplot="pdf", typeplotback="norm")
+
+   Plot one autocorrelation sequence and its integrated time to
+   ``path + "atcr" + strgextn``. :func:`pcat.diagnostics.autocorrelation_time`
+   returns both inputs.
+
+Posterior projections
+~~~~~~~~~~~~~~~~~~~~~
+
+.. py:function:: pcat.plotting.plot_grid(path, name, listpara, listlablparatotl, scalpara=None, truepara=None, join=False, listvarbdraw=None, typefileplot="pdf", **kwargs)
 
    Render the diagonal marginal distributions and every lower-triangle pairwise
    posterior projection. ``listpara`` contains one row per sample and one
    column per parameter. ``truepara`` marks injected values and
    ``listvarbdraw`` can mark maximum-likelihood or other reference vectors.
-   The output path is ``path_name.pdf`` or ``path_name.png``.
+   The output path is ``path_name.pdf`` or ``path_name.png``. ``scalpara``,
+   ``join``, and extra keyword arguments are accepted for compatibility with
+   earlier callers but do not alter the current native grid rendering.
+
+.. py:function:: pcat.plot_population_grid(listlablpara, listpara=None, dictpara=None, pathbase=None, strgextn=None, typefileplot="png", **options)
+
+   Plot marginal distributions and pairwise projections for one or more
+   populations supplied either as arrays or a parameter dictionary. Optional
+   settings control triangular grids, histograms, pair plots, population
+   labels, markers, limits, and annotations. The
+   ``examples/population_grid`` workflow demonstrates the maintained interface.
+
+Animations
+~~~~~~~~~~
+
+.. py:function:: pcat.plotting.make_image_sequence_animation(images, labels, output_path, duration_ms=800, image_size=640, title="Rubin DP1 lens cutouts")
+
+   Write a GIF with one frame per two-dimensional image, a shared intensity
+   stretch (1st to 99.5th percentile of all finite pixels), ``title`` above
+   and each label below its image.
+
+.. py:function:: pcat.plotting.make_posterior_animation_collage(output_path=DEFAULT_POSTERIOR_COLLAGE, examples_root=EXAMPLES_ROOT, panels=POSTERIOR_ANIMATION_PANELS, frame_count=16, duration_ms=120, panel_size=560)
+
+   Combine posterior frame sequences of several examples into one synchronized
+   GIF, as in ``examples/pcat_posterior_samples.gif``. Each
+   :class:`pcat.plotting.PosteriorAnimationPanel` names a label and either a
+   glob ``pattern`` of frames or a ``static_image``; a sequence whose frames do
+   not change raises an error.
 
 Instrument response
 -------------------
+
+.. py:function:: pcat.spectral.evaluate_line_profile(axis, profile, flux, center, gaussian_width=None, lorentz_width=None, mixing_fraction=None, skewness=None)
+
+   Evaluate integrated-flux-normalized Gaussian, Lorentzian, Voigt,
+   pseudo-Voigt, sinc-squared, skew-Gaussian, top-hat, or configured
+   energy-dispersion line profiles.
+
+.. py:function:: pcat.spectral.apply_gaussian_resolving_power(axis, spectrum, centers, resolving_power)
+
+   Convolve each line column with a Gaussian line-spread function at constant
+   resolving power while preserving sampled flux.
+
+.. py:function:: pcat.spectral.apply_line_spread_function(spectrum, kernel)
+
+   Convolve one or more spectra with an odd-length tabulated kernel while
+   preserving each column's sampled flux.
+
+.. py:function:: pcat.time_series.evaluate_flare_profile(time, profile, amplitude, peak_time, rise_time=None, decay_time=None, fwhm=None)
+
+   Evaluate peak-normalized Gaussian, one-sided exponential-decay, FRED, or
+   Davenport empirical flare profiles.
 
 .. py:function:: pcat.psf_poly_fit(gdat, psfnusam, factusam)
 
@@ -86,7 +308,7 @@ Example analyses
 .. py:function:: pcat.demo.run_pipeline_demo(output_root, **configuration)
 
    Apply the reduced sampling and plotting settings used by the simulated image
-   analyses, set ``pathbase``, and call :func:`pcat.main.sample`.
+   analyses, set ``pathbase``, and call :func:`pcat.sampling.sample`.
 
 .. py:function:: pcat.demo.run_example_script(relative_path, *arguments)
 
@@ -95,6 +317,11 @@ Example analyses
 
 Catalog analysis
 ----------------
+
+.. py:function:: pcat.binomial_wilson_interval(successes, trials, z_score=1.0)
+
+   Return the lower and upper Wilson interval for a binomial fraction. Counts
+   must satisfy ``0 <= successes <= trials`` and ``z_score`` must be positive.
 
 .. py:function:: pcat.associate_catalogs(coordinates_source, values_source, coordinates_target, values_target, distance_maximum, value_difference_maximum, confidence_target=None, significance_target=None)
 
@@ -123,12 +350,8 @@ Roman lens benchmark
 .. py:function:: pcat.roman_lens.summarize_population(records, detection_threshold=0.5)
 
    Report detection, false-positive, and localization rates with Wilson
-   intervals for the simulated population.
-
-.. py:function:: pcat.roman_lens.plot_detection_diagnostic(records, output_path, examples=None)
-
-   Plot representative detector, macro-model, and residual images together
-   with the population catalog probabilities.
+   intervals for the simulated population. Plot the population with
+   :func:`pcat.plotting.plot_detection_diagnostic`.
 
 Persistence
 -----------
@@ -145,7 +368,7 @@ Persistence
 .. py:function:: pcat.main.proc_finl(gdat=None, strgcnfg=None, strgpdfn="post", listnamevarbproc=None, forcplot=False)
 
    Aggregate worker states and create final posterior products. Normal calls to
-   :func:`pcat.main.sample` invoke this automatically.
+   :func:`pcat.sampling.sample` invoke this automatically.
 
 .. py:function:: pcat.main.proc_anim(strgcnfg, pathbase=None)
 

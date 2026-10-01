@@ -13,7 +13,7 @@ import numpy as np
 # scipy
 import scipy as sp
 import scipy.interpolate
-from scipy.special import erfinv, erf
+from scipy.special import erfinv, erf, logsumexp
 from scipy.stats import poisson as pss
 import scipy.fftpack
 import scipy.sparse
@@ -993,6 +993,9 @@ def cdfn_trap(gdat, gdatmodi, strgmodl, icdf, indxpoplthis):
             else:
                 maxm = getattr(gdat.fitt.maxmpara, nameparagenrelem)
                 cdfn[k] = tdpy.cdfn_self(icdf[k], minm, maxm)
+        if scaltemp[k] == 'logt':
+            cdfn[k] = tdpy.cdfn_logt(icdf[k], getattr(gdat.fitt.minmpara, nameparagenrelem),
+                                     getattr(gdat.fitt.maxmpara, nameparagenrelem))
         if scaltemp[k] == 'lnormeanstdv':
             distmean = gdatmodi.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'distmean')[indxpoplthis]]
             diststdv = gdatmodi.paragenrscalfull[getattr(gdat.fitt.indxpara, 'genrbase' + nameparagenrelem + 'diststdv')[indxpoplthis]]
@@ -2113,9 +2116,9 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
                 gdatmodi.compseco[g] = gdatmodi.this.auxipara[g]
        
         # place the new parameters into the sample vector
-        gmodnext.paragenrscalfull[gdatmodi.indxsamptran[0]] = cdfn_trap(gdat, gdatmodi, strgmodl, gdatmodi.compfrst, gdatmodi.indxpopltran)
+        gmodnext.paragenrunitfull[gdatmodi.indxsamptran[0]] = cdfn_trap(gdat, gdatmodi, strgmodl, gdatmodi.compfrst, gdatmodi.indxpopltran)
         gmodnext.paragenrscalfull[gdatmodi.indxsamptran[0]] = gdatmodi.compfrst
-        gmodnext.paragenrscalfull[gdatmodi.indxsamptran[1]] = cdfn_trap(gdat, gdatmodi, strgmodl, gdatmodi.compseco, gdatmodi.indxpopltran)
+        gmodnext.paragenrunitfull[gdatmodi.indxsamptran[1]] = cdfn_trap(gdat, gdatmodi, strgmodl, gdatmodi.compseco, gdatmodi.indxpopltran)
         gmodnext.paragenrscalfull[gdatmodi.indxsamptran[1]] = gdatmodi.compseco
         
         # check for prior boundaries of the positional components (spatial positions default to the data half-width)
@@ -2220,7 +2223,7 @@ def prop_stat(gdat, gdatmodi, strgmodl, thisindxelem=None, thisindxpopl=None, br
             else:
                 gdatmodi.comppare[g] = gdatmodi.compfrst[g]
 
-        gmodnext.paragenrscalfull[gdatmodi.indxsamptran[0]] = cdfn_trap(gdat, gdatmodi, strgmodl, gdatmodi.comppare, gdatmodi.indxpopltran)
+        gmodnext.paragenrunitfull[gdatmodi.indxsamptran[0]] = cdfn_trap(gdat, gdatmodi, strgmodl, gdatmodi.comppare, gdatmodi.indxpopltran)
         gmodnext.paragenrscalfull[gdatmodi.indxsamptran[0]] = gdatmodi.comppare
 
         # calculate the proposed list of pairs
@@ -2403,17 +2406,19 @@ def calc_probprop(gdat, gdatmodi):
         gdatmodi.this.lpau += getattr(gdatmodi.this, 'lpdfpropelem', 0.)
 
     if gdatmodi.this.indxproptype in (3, 4) and gdatmodi.this.boolpropfilt:
+        # gdatmodi.this.numbelem is not refreshed for every model type, so read the size from the state vector
+        numbelemthis = int(np.rint(gdatmodi.this.paragenrscalfull[gmod.indxpara.numbelem[gdatmodi.indxpopltran]]))
         ## the ratio of the probability of the reverse and forward proposals, and
         if gdatmodi.this.indxproptype == 3:
             gdatmodi.this.probmergtotl = retr_probmerg(gdat, gdatmodi, gdatmodi.next.paragenrscalfull, gdatmodi.next.indxparagenrelemfull, gdatmodi.indxpopltran, 'pair', \
                                                                                typeelem=gmod.typeelem)
-            gdatmodi.this.ltrp = np.log(gdatmodi.this.numbelem[gdatmodi.indxpopltran] + 1) + np.log(gdatmodi.this.probmergtotl)
+            gdatmodi.this.ltrp = np.log(numbelemthis + 1) + np.log(gdatmodi.this.probmergtotl)
 
         else:
             gdatmodi.this.probmergtotl = retr_probmerg(gdat, gdatmodi, gdatmodi.this.paragenrscalfull, gdatmodi.this.indxparagenrelemfull, gdatmodi.indxpopltran, 'pair', \
                                                                                typeelem=gmod.typeelem)
             
-            gdatmodi.this.ltrp = -np.log(gdatmodi.this.numbelem[gdatmodi.indxpopltran]) - np.log(gdatmodi.this.probmergtotl)
+            gdatmodi.this.ltrp = -np.log(numbelemthis) - np.log(gdatmodi.this.probmergtotl)
         
         ## Jacobian of the amplitude-fraction split, i.e., the parent amplitude
         gdatmodi.this.ljcb = np.log(gdatmodi.comppare[gmod.indxpara.genrelemampl[gdatmodi.indxpopltran]])
@@ -2606,20 +2611,6 @@ def retr_indxparagenrelemfull(gdat, indxelemfull, strgmodl):
     return indxparagenrfullelem
     
 
-def retr_weigmergodim(gdat, elin, elinothr):
-    
-    weigmerg = np.exp(-0.5 * ((elin - elinothr) / gdat.radispmr)**2)
-    
-    return weigmerg
-
-
-def retr_weigmergtdim(gdat, xpos, xposothr, ypos, yposothr):
-    
-    weigmerg = np.exp(-0.5 * (((xpos - xposothr) / gdat.radispmr)**2 + ((ypos - yposothr) / gdat.radispmr)**2))
-    
-    return weigmerg
-
-
 def retr_probmerg(gdat, gdatmodi, paragenrscalfull, indxparagenrfullelem, indxpopltran, strgtype, typeelem=None):
     
     # calculate the weights
@@ -2632,34 +2623,31 @@ def retr_probmerg(gdat, gdatmodi, paragenrscalfull, indxparagenrfullelem, indxpo
             return np.array([1.])
         return 1.
     listweigmerg = []
+    listlogwpair = []
     for a in range(numb):
         indxelemfullreff = gdatmodi.indxelemfullmodi[a]
         if typeelem[indxpopltran].startswith('lghtline'):
             elintotl = paragenrscalfull[indxparagenrfullelem[indxpopltran]['elin']]
-            elin = elintotl[indxelemfullreff]
-            elinothr = np.concatenate((elintotl[:indxelemfullreff], elintotl[indxelemfullreff+1:]))
-            weigmerg = retr_weigmergodim(gdat, elin, elinothr)
+            distsqrd = ((elintotl - elintotl[indxelemfullreff]) / gdat.radispmr)**2
         else:
             xpostotl = paragenrscalfull[indxparagenrfullelem[indxpopltran]['xpos']]
             ypostotl = paragenrscalfull[indxparagenrfullelem[indxpopltran]['ypos']]
-            xpos = xpostotl[indxelemfullreff]
-            ypos = ypostotl[indxelemfullreff]
-            xposothr = np.concatenate((xpostotl[:indxelemfullreff], xpostotl[indxelemfullreff+1:]))
-            yposothr = np.concatenate((ypostotl[:indxelemfullreff], ypostotl[indxelemfullreff+1:]))
-            weigmerg = retr_weigmergtdim(gdat, xpos, xposothr, ypos, yposothr)
-        listweigmerg.append(weigmerg) 
+            distsqrd = ((xpostotl - xpostotl[indxelemfullreff])**2 + (ypostotl - ypostotl[indxelemfullreff])**2) / gdat.radispmr**2
+        # normalize in log space so that distant pairs keep a finite, nonzero merge probability
+        logweig = np.delete(-0.5 * distsqrd, indxelemfullreff)
+        logweig -= logsumexp(logweig)
+        listweigmerg.append(np.exp(logweig))
+        if strgtype == 'pair':
+            indxothr = gdatmodi.indxelemfullmodi[1 - a]
+            listlogwpair.append(logweig[indxothr - (indxothr > indxelemfullreff)])
 
     # determine the probability of merging the second element given the first element
     if strgtype == 'seco':
-        probmerg = listweigmerg[0] / np.sum(listweigmerg[0])
+        probmerg = listweigmerg[0]
     
     # determine the probability of merging the pair
     if strgtype == 'pair':
-        if typeelem[indxpopltran].startswith('lghtline'):
-            weigpair = retr_weigmergodim(gdat, elintotl[gdatmodi.indxelemfullmodi[0]], elintotl[gdatmodi.indxelemfullmodi[1]])
-        else:
-            weigpair = retr_weigmergtdim(gdat, xpostotl[gdatmodi.indxelemfullmodi[0]], xpostotl[gdatmodi.indxelemfullmodi[1]], ypostotl[gdatmodi.indxelemfullmodi[0]], ypostotl[gdatmodi.indxelemfullmodi[1]])
-        probmerg = weigpair / np.sum(listweigmerg[0]) + weigpair / np.sum(listweigmerg[1])
+        probmerg = np.exp(listlogwpair[0]) + np.exp(listlogwpair[1])
         
     if gdat.booldiag:
         if not np.isfinite(probmerg).all():
@@ -11766,7 +11754,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
                         timeinit = gdatfinl.functime()
                     gdatfinl.gmrbparagenrscalbase = np.zeros(gdatfinl.fitt.numbparagenrbase)
                     gdatfinl.gmrbstat = np.zeros((gdatfinl.numbener, gdatfinl.numbpixl, gdatfinl.numbdqlt))
-                    for k in gdatfinl.fitt.indxpara.genr.base:
+                    for k in range(gdatfinl.fitt.numbparagenrbase):
                         gdatfinl.gmrbparagenrscalbase[k] = _PCATMCMCCompat.gmrb_test(listparagenrscalfull[:, :, k])
                     listcntpmodl = getattr(gdatfinl, 'list' + strgpdfn + 'cntpmodl')
                     for i in gdatfinl.indxener:
@@ -14481,8 +14469,8 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
                 minm = min(np.amin(gdat.gmrbstat), np.amin(gdat.gmrbparagenrscalbase))
                 maxm = max(np.amax(gdat.gmrbstat), np.amax(gdat.gmrbparagenrscalbase))
                 blim = np.linspace(minm, maxm, 40)
-                axis.hist(gdat.gmrbstat.flatten(), blim=blim, label='Data proj.')
-                axis.hist(gdat.gmrbparagenrscalbase, blim=blim, label='Fixed dim.')
+                axis.hist(gdat.gmrbstat.flatten(), bins=blim, label='Data proj.')
+                axis.hist(gdat.gmrbparagenrscalbase, bins=blim, label='Fixed dim.')
                 axis.set_xlabel('PSRF')
                 axis.set_ylabel('$N_{stat}$')
                 plt.tight_layout()
@@ -14492,8 +14480,9 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
                 plt.close(figr)
                 
                 figr, axis = plt.subplots(figsize=(gdat.plotsize, gdat.plotsize))
-                axis.plot(gmod.indxpara.genrbase, gdat.gmrbparagenrscalbase)
-                axis.set_xticklabels(gmod.labltotlpara.genr.base)
+                axis.plot(np.arange(gdat.gmrbparagenrscalbase.size), gdat.gmrbparagenrscalbase)
+                axis.set_xticks(np.arange(gdat.gmrbparagenrscalbase.size))
+                axis.set_xticklabels(np.asarray(gmod.namepara.genrbase)[:gdat.gmrbparagenrscalbase.size], rotation=90)
                 axis.set_ylabel('PSRF')
                 plt.tight_layout()
                 path = pathdiag + 'gmrbparagenrscalbase.%s' % gdat.typefileplot
@@ -14501,7 +14490,7 @@ def plot_finl(gdat=None, gdatprio=None, strgcnfg=None, strgpdfn='post', gdatsimu
                 figr.savefig(path)
                 plt.close(figr)
                 
-                for i in gdat.indxener:
+                for i in gdat.indxener if gdat.numbpixlfull > 1 else []:
                     for m in gdat.indxdqlt:
                         maps = gdat.gmrbstat[i, :, m]
                         path = pathdiag + 'gmrbdataen%02devt%d.%s' % (i, m, gdat.typefileplot)
@@ -18620,7 +18609,7 @@ def sample(**kwargs):
     if (getattr(result, 'boolmakeplot', False)
             and getattr(result, 'boolmakeplotfinlpost', False)
             and hasattr(result, 'listpostparagenrscalbase')):
-        from .plotting import plot_posterior_convergence
+        from .plotting import plot_posterior_convergence, plot_sampler_overview
 
         output_root = retr_pathplotcnfg(
             kwargs.get('pathbase') or result.pathbase,
@@ -18628,6 +18617,10 @@ def sample(**kwargs):
         )
         plot_posterior_convergence(
             result, Path(output_root) / 'post' / 'convergence',
+            typefileplot=getattr(result, 'typefileplot', 'png'),
+        )
+        plot_sampler_overview(
+            result, Path(output_root) / 'post' / 'operation',
             typefileplot=getattr(result, 'typefileplot', 'png'),
         )
     return result

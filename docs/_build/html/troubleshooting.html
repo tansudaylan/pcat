@@ -11,6 +11,7 @@
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
+    <link rel="shortcut icon" href="_static/pcat_icon.png"/>
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
@@ -20,19 +21,20 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Public API" href="api.html" />
-    <link rel="prev" title="Outputs and diagnostics" href="outputs.html" /> 
+    <link rel="prev" title="Plotting gallery" href="gallery.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search"  style="background: #000000" >
 
           
           
           <a href="index.html" class="icon icon-home">
             PCAT
+              <img src="_static/pcat_icon.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -46,8 +48,11 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="likelihoods.html">Likelihood configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sampling.html">Sampling, proposals, and convergence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gallery.html">Plotting gallery</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshooting</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#output-path-errors">Output path errors</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#incomplete-runs">Incomplete runs</a></li>
@@ -65,7 +70,7 @@
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #000000" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">PCAT</a>
       </nav>
@@ -132,7 +137,7 @@ plots, controlled by chain length and <code class="docutils literal notranslate"
 identical may collapse to a single-frame GIF; such a file is a static image and
 should not be reported as an animation.</p>
 <p>For headless systems, set a writable Matplotlib cache before running:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">MPLCONFIGDIR</span><span class="o">=</span>/tmp/pcat-mplconfig<span class="w"> </span>python<span class="w"> </span>examples/chan_demo/generate_demo.py
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">MPLCONFIGDIR</span><span class="o">=</span>/tmp/pcat-mplconfig<span class="w"> </span>python<span class="w"> </span>examples/chandra_point_source_catalog/chandra_point_source_catalog.py
 </pre></div>
 </div>
 </section>
@@ -173,7 +178,7 @@ run.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="outputs.html" class="btn btn-neutral float-left" title="Outputs and diagnostics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="gallery.html" class="btn btn-neutral float-left" title="Plotting gallery" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="api.html" class="btn btn-neutral float-right" title="Public API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

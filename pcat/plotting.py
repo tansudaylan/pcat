@@ -10,7 +10,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from tdpy.util import save_figure
 
-from .diagnostics import autocorrelation_time, catalog_count_transitions, gelman_rubin
+from .diagnostics import (
+    autocorrelation_time, binomial_wilson_interval, catalog_count_transitions, gelman_rubin,
+)
 
 
 EXAMPLES_ROOT = Path(__file__).resolve().parents[1] / "examples"
@@ -484,8 +486,13 @@ def make_image_sequence_animation(
     output_path: Path,
     duration_ms: int = 800,
     image_size: int = 640,
+    title: str = "Rubin DP1 lens cutouts",
 ) -> Path:
-    """Write one labeled GIF frame for every image using shared intensity limits."""
+    """Write one labeled GIF frame for every image using shared intensity limits.
+
+    ``title`` is drawn above every frame and each label below its image. The
+    stretch spans the 1st to 99.5th percentile of all finite pixels.
+    """
     if len(images) == 0 or len(images) != len(labels):
         raise ValueError("images and labels must have the same nonzero length.")
     if duration_ms < 1 or image_size < 1:
@@ -519,7 +526,7 @@ def make_image_sequence_animation(
         rendered.thumbnail((image_size, image_size), Image.Resampling.LANCZOS)
         canvas = Image.new("RGB", (image_size, image_size + header_height + footer_height), "white")
         draw = ImageDraw.Draw(canvas)
-        draw.text((16, 16), "Rubin DP1 lens cutouts", fill="black", font=_animation_font(22, bold=True))
+        draw.text((16, 16), title, fill="black", font=_animation_font(22, bold=True))
         caption = f"{index:03d}/{len(images):03d}  {label}"
         label_size = max(12, min(22, int((image_size - 32) * 1.6 / max(len(caption), 1))))
         draw.text(
@@ -813,3 +820,397 @@ def plot_grid(
     )
     plt.close(figure)
     return output_path
+
+
+MOVE_LABELS = {"with": "Within-model", "brth": "Birth", "deth": "Death", "splt": "Split",
+               "merg": "Merge", "jump": "Jump"}
+MOVE_COLORS = {"with": "#4D4D4D", "brth": "#1B7837", "deth": "#A50026", "splt": "#2166AC",
+               "merg": "#B35806", "jump": "#762A83"}
+LEGEND_STYLE = dict(frameon=True, fancybox=True, framealpha=1.0, facecolor="white", edgecolor="black")
+
+
+def _save_view(figure, output_path, typefileplot):
+    """Write one sampler view at the workspace resolution and close it."""
+    if typefileplot not in ("png", "pdf"):
+        raise ValueError("typefileplot must be 'png' or 'pdf'")
+    output_path = Path(output_path).with_suffix(f".{typefileplot}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Writing to {output_path}...")
+    figure.savefig(output_path, dpi=300 if typefileplot == "png" else None,
+                   bbox_inches="tight", facecolor="white")
+    plt.close(figure)
+    return output_path
+
+
+def _proposal_record(state):
+    """Return per-proposal move names, flags, and sweep indices pooled over chains."""
+    move_index = np.asarray(state.listpostindxproptype, dtype=int).ravel()
+    accepted = np.asarray(state.listpostboolpropaccp, dtype=bool).ravel()
+    evaluated = np.asarray(getattr(state, "listpostboolpropfilt", np.ones_like(accepted)), dtype=bool).ravel()
+    if not move_index.size == accepted.size == evaluated.size:
+        raise ValueError("Proposal arrays must have one entry per proposal")
+    names = np.asarray(getattr(state, "nameproptype", ["with"]))
+    if move_index.max(initial=0) >= names.size:
+        raise ValueError("A proposal type index exceeds the configured move names")
+    chain_count = max(int(getattr(state, "numbproc", 1)), 1)
+    # proposals are stored sweep-major across chains
+    sweep = np.arange(move_index.size) // chain_count
+    return names, move_index, accepted, evaluated, sweep, chain_count
+
+
+def has_proposal_record(state):
+    """Return whether a state stores the per-proposal arrays the operation views need."""
+    return all(np.size(getattr(state, name, [])) > 0
+               for name in ("listpostindxproptype", "listpostboolpropaccp"))
+
+
+def plot_proposal_ledger(state, output_path, typefileplot="png", number_windows=120):
+    """Plot acceptance by move type through burn-in and sampling, with per-move totals.
+
+    The left panel shows the accepted fraction of each move type in sweep windows
+    pooled over chains, the burn-in interval, and the likelihood inverse
+    temperature when tempering is active. The right panel shows each move's
+    share of all proposals, its acceptance with 1-sigma Wilson intervals after
+    burn-in, and the fraction rejected before the likelihood is evaluated.
+    """
+    names, move_index, accepted, evaluated, sweep, _ = _proposal_record(state)
+    burn_count = int(getattr(state, "numbburn", 0) or 0)
+    edges = np.linspace(0, sweep[-1] + 1, number_windows + 1)
+    window = np.clip(np.searchsorted(edges, sweep, side="right") - 1, 0, number_windows - 1)
+    centers = 0.5 * (edges[1:] + edges[:-1])
+    present = [index for index in range(names.size) if np.any(move_index == index)]
+
+    figure, axes = plt.subplots(1, 2, figsize=(11, 4.2), facecolor="white",
+                                gridspec_kw={"width_ratios": (2.2, 1.0)})
+    floor = 1e-4
+    axis = axes[0]
+    if burn_count > 0:
+        axis.axvspan(0, burn_count, color="0.92", label="Burn-in")
+    for index in present:
+        chosen = move_index == index
+        attempts = np.bincount(window[chosen], minlength=number_windows)
+        successes = np.bincount(window[chosen], weights=accepted[chosen], minlength=number_windows)
+        rate = np.where(attempts >= 5, np.maximum(successes / np.maximum(attempts, 1), floor), np.nan)
+        name = str(names[index])
+        axis.plot(centers, rate, color=MOVE_COLORS.get(name, "black"), lw=1.4,
+                  label=MOVE_LABELS.get(name, name))
+    temperature = np.asarray(getattr(state, "listpostfacttmpr", []), dtype=float).ravel()
+    if temperature.size == sweep.size and np.ptp(temperature) > 0:
+        inverse = np.bincount(window, weights=temperature, minlength=number_windows) / \
+            np.maximum(np.bincount(window, minlength=number_windows), 1)
+        axis.plot(centers, np.maximum(inverse, floor), color="black", ls="--", lw=1.2,
+                  label=r"Likelihood inverse temperature $\beta$")
+    axis.set_yscale("log")
+    axis.set(xlabel="Sweep", ylabel=f"Accepted fraction (floor {floor:g})", ylim=(0.7 * floor, 1.5),
+             xlim=(0, edges[-1]), title="Proposal acceptance through the run")
+    axis.grid(False)
+    axis.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=4, **LEGEND_STYLE)
+
+    axis = axes[1]
+    sampled = sweep >= burn_count
+    positions = np.arange(len(present))
+    labeled = set()
+    for row, index in enumerate(present):
+        chosen = (move_index == index) & sampled
+        name = str(names[index])
+        share = chosen.sum() / max(sampled.sum(), 1)
+        axis.barh(row + 0.2, share, height=0.35, color="0.75",
+                  label="Share of proposals" if row == 0 else None)
+        if chosen.sum() == 0:
+            continue
+        rate = max(accepted[chosen].mean(), floor)
+        lower, upper = binomial_wilson_interval(int(accepted[chosen].sum()), int(chosen.sum()))
+        axis.barh(row - 0.2, rate, height=0.35, color=MOVE_COLORS.get(name, "black"),
+                  xerr=[[rate - max(lower, floor)], [max(upper - rate, 0.0)]], capsize=3,
+                  label="Accepted fraction" if row == 0 else None)
+        filtered = 1.0 - evaluated[chosen].mean()
+        if filtered > 0:
+            axis.plot(filtered, row - 0.2, marker="D", markersize=5, color="black", linestyle="none",
+                      label=None if "filtered" in labeled else "Rejected before likelihood")
+            labeled.add("filtered")
+    axis.set_yticks(positions, [MOVE_LABELS.get(str(names[index]), str(names[index])) for index in present])
+    axis.set_xscale("log")
+    axis.set(xlabel="Fraction after burn-in", xlim=(floor, 1.5), title="Move totals")
+    axis.invert_yaxis()
+    axis.grid(False)
+    axis.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=1, **LEGEND_STYLE)
+    figure.tight_layout()
+    return _save_view(figure, output_path, typefileplot)
+
+
+def _signed_log(values):
+    """Compress values spanning many decades while keeping their sign."""
+    return np.sign(values) * np.log10(1.0 + np.abs(values))
+
+
+def plot_acceptance_decomposition(state, output_path, typefileplot="png"):
+    """Show which terms of the Metropolis-Hastings log ratio drive each move's decision.
+
+    For every evaluated proposal after burn-in, the log acceptance ratio is split
+    into the posterior and auxiliary-density change, the move-selection ratio,
+    and the split/merge Jacobian. Each is drawn per move type on a signed
+    logarithmic axis, so a reader can see whether, for example, deaths fail
+    because of the likelihood or because of the proposal bookkeeping.
+    """
+    names, move_index, _, evaluated, sweep, _ = _proposal_record(state)
+    total = np.asarray(state.listpostaccplprb, dtype=float).ravel()
+    selection = np.asarray(getattr(state, "listpostltrp", np.zeros_like(total)), dtype=float).ravel()
+    jacobian = np.asarray(getattr(state, "listpostljcb", np.zeros_like(total)), dtype=float).ravel()
+    keep = evaluated & (sweep >= int(getattr(state, "numbburn", 0) or 0)) & np.isfinite(total)
+    terms = (
+        ("Posterior and auxiliary\ndensity change [nat]", total - selection - jacobian),
+        ("Move-selection\nlog ratio [nat]", selection),
+        ("Split/merge log\nJacobian [nat]", jacobian),
+        ("Log acceptance\nratio [nat]", total),
+    )
+    present = [index for index in range(names.size) if np.sum(keep & (move_index == index)) >= 5]
+    if not present:
+        raise ValueError("No move type has at least five evaluated proposals after burn-in")
+    figure, axes = plt.subplots(1, len(terms), figsize=(12, 0.55 * len(present) + 2.4),
+                                sharey=True, facecolor="white")
+    decades = np.arange(0, 6)
+    for axis, (label, values) in zip(axes, terms):
+        data = [_signed_log(values[keep & (move_index == index)]) for index in present]
+        limit = max(1.0, np.ceil(max(np.max(np.abs(values)) for values in data)))
+        jitter = [values + 1e-9 * np.arange(values.size) for values in data]
+        violins = axis.violinplot(jitter, positions=np.arange(len(present)), orientation="horizontal",
+                                  showmedians=True, showextrema=False, widths=0.8)
+        violins["cmedians"].set_color("black")
+        for body, index in zip(violins["bodies"], present):
+            body.set_facecolor(MOVE_COLORS.get(str(names[index]), "black"))
+            body.set_alpha(0.65)
+        axis.axvline(0.0, color="black", lw=0.8, ls="--")
+        shown = decades[decades <= limit]
+        if shown.size > 4:
+            shown = shown[::2]
+        ticks = np.concatenate((-shown[::-1][:-1], shown))
+        axis.set_xticks(_signed_log(np.sign(ticks) * (10.0 ** np.abs(ticks) - (ticks == 0))),
+                        ["0" if tick == 0 else ("-" if tick < 0 else "") + f"$10^{{{abs(tick)}}}$"
+                         for tick in ticks])
+        axis.set(xlabel=label, xlim=(-limit - 0.3, limit + 0.3))
+        axis.grid(False)
+    axes[0].set_yticks(np.arange(len(present)),
+                       [MOVE_LABELS.get(str(names[index]), str(names[index])) for index in present])
+    axes[0].invert_yaxis()
+    figure.suptitle("Metropolis-Hastings terms per move type after burn-in")
+    figure.tight_layout()
+    return _save_view(figure, output_path, typefileplot)
+
+
+STAGE_LABELS = {
+    "prop": "Proposal", "diag": "Diagnostics", "save": "Saving", "plot": "Plotting",
+    "proc": "State processing", "elem": "Element evaluation", "modl": "Model assembly",
+    "llik": "Likelihood", "sbrtmodl": "Surface brightness", "spec": "Element spectra",
+    "elemsbrtdfnc": "Element brightness", "psfnconv": "PSF convolution", "expo": "Exposure",
+    "lpri": "Prior", "tert": "Tertiary products", "deflzero": "Zero deflection",
+    "deflhost": "Host deflection", "deflextr": "External shear", "sbrtlens": "Lensed source",
+    "sbrthost": "Host light", "elemdeflsubh": "Subhalo deflection",
+    "elemsbrtextsbgrd": "Extended background",
+}
+
+
+def plot_compute_budget(state, output_path, typefileplot="png"):
+    """Map the mean wall time of each sampler stage for every move type.
+
+    PCAT times each stage of every proposal (proposal construction, element
+    evaluation, model and likelihood evaluation, prior, saving, plotting). The
+    heat map shows the mean time [ms] per stage and move on a logarithmic color
+    scale. Stages nest inside one another, so their times do not add up to the
+    total shown beside each move; stages timed once per sweep are omitted.
+    """
+    names, move_index, _, _, _, _ = _proposal_record(state)
+    stages = [name for name in getattr(state, "listnamechro", []) if name != "totl"
+              and np.size(getattr(state, "listpostchro" + name, [])) == move_index.size]
+    if not stages:
+        raise ValueError("The state stores no per-proposal stage timings")
+    present = [index for index in range(names.size) if np.any(move_index == index)]
+    total = np.asarray(getattr(state, "listpostchrototl"), dtype=float).ravel()
+    budget = np.zeros((len(present), len(stages)))  # [ms]
+    for row, index in enumerate(present):
+        chosen = move_index == index
+        for column, stage in enumerate(stages):
+            budget[row, column] = 1e3 * np.nanmean(np.asarray(getattr(state, "listpostchro" + stage)).ravel()[chosen])
+    # stages timed across a whole sweep, such as frame plotting, exceed every proposal's total
+    active = (budget.max(axis=0) > 0) & (budget.max(axis=0) <= 1e3 * np.nanmax(
+        [np.nanmean(total[move_index == index]) for index in present]))
+    budget = budget[:, active]
+    stages = [stage for stage, keep in zip(stages, active) if keep]
+    figure, axis = plt.subplots(figsize=(1.0 * len(stages) + 3.0, 0.6 * len(present) + 2.0),
+                                facecolor="white")
+    image = axis.imshow(budget, cmap="magma_r", aspect="auto", norm=plt.matplotlib.colors.LogNorm(
+        max(budget[budget > 0].min(), 1e-4), budget.max()))
+    threshold = np.sqrt(budget[budget > 0].min() * budget.max())
+    for row in range(len(present)):
+        for column in range(len(stages)):
+            axis.text(column, row, f"{budget[row, column]:.2g}", ha="center", va="center",
+                      color="white" if budget[row, column] > threshold else "black")
+    axis.set_xticks(np.arange(len(stages)), [STAGE_LABELS.get(stage, stage) for stage in stages],
+                    rotation=35, ha="right")
+    axis.set_yticks(np.arange(len(present)),
+                    [f"{MOVE_LABELS.get(str(names[index]), str(names[index]))} "
+                     f"({1e3 * np.nanmean(total[move_index == index]):.2f} ms)" for index in present])
+    axis.set(xlabel="Sampler stage (nested)", title="Mean wall time per proposal stage [ms]")
+    axis.grid(False)
+    figure.colorbar(image, ax=axis, label="Mean time [ms]")
+    figure.tight_layout()
+    return _save_view(figure, output_path, typefileplot)
+
+
+def plot_catalog_trace(state, output_path, position="elin", amplitude="flux", population=0,
+                       chain=0, position_label=None, amplitude_label=None, typefileplot="png"):
+    """Draw a transdimensional trace: every element of every retained catalog of one chain.
+
+    Each column is one retained catalog, each marker is one element at its
+    ``position`` and colored by ``amplitude``, so births, deaths, splits, and
+    merges appear as tracks that start, stop, fork, or join. The lower strip
+    shows the catalog size, and the right panel shows the expected number of
+    elements per position bin pooled over all chains.
+    """
+    catalogs = getattr(state, "listpostdictelem", None)
+    if not catalogs:
+        raise ValueError("The state stores no posterior element catalogs")
+    chain_count = max(int(getattr(state, "numbproc", 1)), 1)
+    if not 0 <= chain < chain_count:
+        raise ValueError("chain must index one of the sampled chains")
+
+    def element_values(sample, name):
+        if len(sample) <= population or name not in sample[population]:
+            return np.empty(0)
+        return np.asarray(sample[population][name], dtype=float).ravel()
+
+    chain_catalogs = catalogs[chain::chain_count]
+    rows = [(index, element_values(sample, position), element_values(sample, amplitude))
+            for index, sample in enumerate(chain_catalogs)]
+    sample_index = np.concatenate([np.full(values.size, index) for index, values, _ in rows])
+    positions = np.concatenate([values for _, values, _ in rows])
+    amplitudes = np.concatenate([values for _, _, values in rows])
+    sizes = np.array([values.size for _, values, _ in rows])
+    pooled = np.concatenate([element_values(sample, position) for sample in catalogs])
+    if pooled.size == 0:
+        raise ValueError(f"No retained catalog contains the element parameter {position!r}")
+
+    figure = plt.figure(figsize=(10, 5.6), facecolor="white")
+    grid = figure.add_gridspec(2, 2, width_ratios=(4.0, 1.0), height_ratios=(3.2, 1.0),
+                               hspace=0.08, wspace=0.05)
+    axis = figure.add_subplot(grid[0, 0])
+    positive = amplitudes[amplitudes > 0]
+    norm = plt.matplotlib.colors.LogNorm(positive.min(), positive.max()) \
+        if positive.size and positive.max() > positive.min() else None
+    shown = axis.scatter(sample_index, positions, c=amplitudes, s=6, cmap="viridis", norm=norm,
+                         linewidths=0, rasterized=True)
+    axis.set(ylabel=position_label or position, title=f"Catalog trace of chain {chain + 1}")
+    axis.tick_params(labelbottom=False)
+    axis.grid(False)
+    colorbar_axis = axis.inset_axes((1.30, 0.0, 0.03, 1.0))
+    figure.colorbar(shown, cax=colorbar_axis, label=amplitude_label or amplitude)
+
+    side = figure.add_subplot(grid[0, 1], sharey=axis)
+    bins = np.histogram_bin_edges(pooled, bins=60)
+    counts, _ = np.histogram(pooled, bins=bins)
+    side.barh(0.5 * (bins[1:] + bins[:-1]), counts / len(catalogs), height=np.diff(bins),
+              color="#2166AC")
+    side.set(xlabel="Expected elements\nper bin")
+    side.tick_params(labelleft=False)
+    side.grid(False)
+
+    strip = figure.add_subplot(grid[1, 0], sharex=axis)
+    strip.step(np.arange(sizes.size), sizes, where="mid", color="black", lw=1.0)
+    strip.set(xlabel="Retained sample index", ylabel="Elements",
+              xlim=(-0.5, sizes.size - 0.5))
+    strip.yaxis.get_major_locator().set_params(integer=True)
+    strip.grid(False)
+    return _save_view(figure, output_path, typefileplot)
+
+
+def has_one_dimensional_prediction(state):
+    """Return whether a state stores data and model counts along a single axis."""
+    data = np.asarray(getattr(state, "cntpdata", []))
+    models = np.asarray(getattr(state, "listpostcntpmodl", []))
+    return data.size > 1 and models.ndim >= 2 and models.shape[1:] == data.shape \
+        and sum(length > 1 for length in data.shape) == 1
+
+
+def plot_posterior_predictive(state, output_path, axis_values=None, axis_label="Data axis",
+                              data_label="Counts per bin", typefileplot="png", seed=0):
+    """Compare one-dimensional data to replicated data drawn from the posterior.
+
+    For every retained sample, PCAT's model is turned into a replicated data set
+    with the run's likelihood noise (Poisson counts, or Gaussian with the data
+    variance). The upper panel shows the data, the posterior median model, and
+    the 68% and 95% bands of the replicated data. The lower panels show the
+    residual in units of the replicated scatter and the posterior predictive
+    tail probability P(replicated > data), which should be spread over the unit
+    interval when the model describes the data.
+    """
+    if not has_one_dimensional_prediction(state):
+        raise ValueError("Posterior predictive view requires data and models along one axis")
+    data = np.asarray(state.cntpdata, dtype=float).ravel()
+    models = np.asarray(state.listpostcntpmodl, dtype=float).reshape(-1, data.size)
+    if axis_values is None:
+        energy = np.asarray(getattr(getattr(state, "bctrpara", None), "ener", []), dtype=float)
+        axis_values = energy if energy.size == data.size else np.arange(data.size)
+    axis_values = np.asarray(axis_values, dtype=float)
+    random = np.random.default_rng(seed)
+    if getattr(state, "liketype", "pois") == "gaus":
+        scatter = np.sqrt(np.asarray(state.varidata, dtype=float).ravel())
+        replicated = models + random.normal(size=models.shape) * scatter[None, :]
+    else:
+        replicated = random.poisson(np.maximum(models, 0.0)).astype(float)
+    model_median = np.median(models, axis=0)
+    quantiles = np.percentile(replicated, [2.5, 16.0, 84.0, 97.5], axis=0)
+    residual = (data - model_median) / np.maximum(np.std(replicated, axis=0), 1e-12)
+    exceedance = np.mean(replicated > data[None, :], axis=0) + 0.5 * np.mean(replicated == data[None, :], axis=0)
+
+    figure, axes = plt.subplots(3, 1, figsize=(9, 6.4), sharex=True, facecolor="white",
+                                gridspec_kw={"height_ratios": (3.0, 1.2, 1.2)})
+    axes[0].fill_between(axis_values, quantiles[0], quantiles[3], color="#C6DBEF", lw=0,
+                         label="95% replicated-data band")
+    axes[0].fill_between(axis_values, quantiles[1], quantiles[2], color="#6BAED6", lw=0,
+                         label="68% replicated-data band")
+    axes[0].plot(axis_values, model_median, color="#08306B", lw=1.2, label="Posterior median model")
+    axes[0].plot(axis_values, data, ".", color="black", markersize=3, label="Data")
+    axes[0].set(ylabel=data_label, title="Posterior predictive check")
+    axes[0].legend(loc="lower left", ncol=2, **LEGEND_STYLE)
+    axes[1].axhspan(-2, 2, color="0.9", label=r"$\pm 2\sigma$")
+    axes[1].plot(axis_values, residual, ".", color="black", markersize=3)
+    axes[1].axhline(0.0, color="black", lw=0.8)
+    axes[1].set(ylabel=r"Residual [$\sigma$]")
+    axes[1].legend(loc="upper right", **LEGEND_STYLE)
+    axes[2].axhspan(0.025, 0.975, color="0.9", label="Central 95%")
+    axes[2].plot(axis_values, exceedance, ".", color="#A50026", markersize=3)
+    axes[2].set(xlabel=axis_label, ylabel="P(replicated > data)", ylim=(-0.03, 1.03))
+    axes[2].legend(loc="upper right", **LEGEND_STYLE)
+    for axis in axes:
+        axis.grid(False)
+    figure.tight_layout()
+    return _save_view(figure, output_path, typefileplot)
+
+
+def plot_sampler_overview(state, output_directory, typefileplot="png", **catalog_options):
+    """Write every operation, catalog, and predictive view that applies to a state.
+
+    Returns a dictionary from view name to the written path. ``catalog_options``
+    are passed to :func:`plot_catalog_trace`.
+    """
+    output_directory = Path(output_directory)
+    paths = {}
+    if has_proposal_record(state):
+        paths["proposal_ledger"] = plot_proposal_ledger(
+            state, output_directory / "proposal_ledger", typefileplot)
+        if np.size(getattr(state, "listpostaccplprb", [])) == np.size(state.listpostindxproptype):
+            paths["acceptance_decomposition"] = plot_acceptance_decomposition(
+                state, output_directory / "acceptance_decomposition", typefileplot)
+        if np.size(getattr(state, "listpostchrototl", [])) == np.size(state.listpostindxproptype):
+            paths["compute_budget"] = plot_compute_budget(
+                state, output_directory / "compute_budget", typefileplot)
+    catalogs = getattr(state, "listpostdictelem", None)
+    position = catalog_options.get("position", "elin")
+    if catalogs and any(len(sample) > catalog_options.get("population", 0)
+                        and position in sample[catalog_options.get("population", 0)]
+                        for sample in catalogs[:50]):
+        paths["catalog_trace"] = plot_catalog_trace(
+            state, output_directory / "catalog_trace", typefileplot=typefileplot, **catalog_options)
+    if has_one_dimensional_prediction(state):
+        paths["posterior_predictive"] = plot_posterior_predictive(
+            state, output_directory / "posterior_predictive", typefileplot=typefileplot)
+    return paths

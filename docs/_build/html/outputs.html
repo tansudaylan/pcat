@@ -11,6 +11,7 @@
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
+    <link rel="shortcut icon" href="_static/pcat_icon.png"/>
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=01f34227"></script>
@@ -19,7 +20,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
+    <link rel="next" title="Plotting gallery" href="gallery.html" />
     <link rel="prev" title="Examples" href="examples.html" /> 
 </head>
 
@@ -27,12 +28,13 @@
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search"  style="background: #000000" >
 
           
           
           <a href="index.html" class="icon icon-home">
             PCAT
+              <img src="_static/pcat_icon.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -45,17 +47,22 @@
               <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">How PCAT works</a></li>
 <li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="likelihoods.html">Likelihood configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sampling.html">Sampling, proposals, and convergence</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Outputs and diagnostics</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#directory-layout">Directory layout</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#state-files">State files</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#completion-markers">Completion markers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#visual-products">Visual products</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#condensed-catalogs-and-association">Condensed catalogs and association</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#convergence-and-interpretation">Convergence and interpretation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#reproducibility-checklist">Reproducibility checklist</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="gallery.html">Plotting gallery</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
 </ul>
@@ -64,7 +71,7 @@
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #000000" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">PCAT</a>
       </nav>
@@ -108,6 +115,8 @@
             `-- post/
                 |-- fram/
                 |-- finl/
+                |-- convergence/
+                |-- operation/
                 `-- anim/
 </pre></div>
 </div>
@@ -126,12 +135,12 @@ the object from the extension-free path:</p>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pcat.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">readfile</span>
 
- <span class="n">project_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;examples&quot;</span><span class="p">)</span>
- <span class="n">run_root</span> <span class="o">=</span> <span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;pcat_runs&quot;</span> <span class="o">/</span> <span class="s2">&quot;gmix_demo&quot;</span>
+<span class="n">project_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;examples&quot;</span><span class="p">)</span>
+<span class="n">run_root</span> <span class="o">=</span> <span class="n">project_root</span> <span class="o">/</span> <span class="s2">&quot;pcat_runs&quot;</span> <span class="o">/</span> <span class="s2">&quot;gaussian_mixture_catalog&quot;</span>
 <span class="n">state</span> <span class="o">=</span> <span class="n">readfile</span><span class="p">(</span>
-    <span class="nb">str</span><span class="p">(</span><span class="n">run_root</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span> <span class="o">/</span> <span class="s2">&quot;outp&quot;</span> <span class="o">/</span> <span class="s2">&quot;gmix_demo&quot;</span> <span class="o">/</span> <span class="s2">&quot;gdatfinlpost&quot;</span><span class="p">)</span>
+    <span class="nb">str</span><span class="p">(</span><span class="n">run_root</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span> <span class="o">/</span> <span class="s2">&quot;outp&quot;</span> <span class="o">/</span> <span class="s2">&quot;gaussian_mixture_catalog&quot;</span> <span class="o">/</span> <span class="s2">&quot;gdatfinlpost&quot;</span><span class="p">)</span>
 <span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">numbsamp</span><span class="p">)</span>
+<span class="n">retained_sample_count</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">numbsamp</span>
 </pre></div>
 </div>
 </section>
@@ -147,7 +156,31 @@ files as well as the markers before treating a run as complete.</p>
 <p><code class="docutils literal notranslate"><span class="pre">init</span></code> contains simulated data, reference-model, and initial diagnostics.
 <code class="docutils literal notranslate"><span class="pre">post/fram</span></code> contains snapshots across the chain. <code class="docutils literal notranslate"><span class="pre">post/finl</span></code> contains final
 posterior summaries and diagnostics. <code class="docutils literal notranslate"><span class="pre">post/anim</span></code> contains GIFs assembled from
-frame plots. Empty optional directories are removed at successful completion.</p>
+frame plots. When proposal metadata is present, it also contains
+<code class="docutils literal notranslate"><span class="pre">proposal_activity.gif</span></code> with cumulative attempts and acceptances and
+<code class="docutils literal notranslate"><span class="pre">proposal_sequence.gif</span></code> with proposal labels on saved chain-state frames.
+With <code class="docutils literal notranslate"><span class="pre">boolmakeanimprop=True</span></code>, <code class="docutils literal notranslate"><span class="pre">post/fram</span></code> also contains one
+<code class="docutils literal notranslate"><span class="pre">proposal_candidates_swep#########.png</span></code> per sweep of worker zero and
+<code class="docutils literal notranslate"><span class="pre">post/anim/proposal_candidates.gif</span></code> contains all of those attempted states,
+including rejected candidates. Candidate frames are not posterior samples.
+Empty optional directories are removed at successful completion.</p>
+</section>
+<section id="condensed-catalogs-and-association">
+<h2>Condensed catalogs and association<a class="headerlink" href="#condensed-catalogs-and-association" title="Link to this heading"></a></h2>
+<p>Transdimensional runs always retain the sampled catalogs in
+<code class="docutils literal notranslate"><span class="pre">listpostdictelem</span></code>, <code class="docutils literal notranslate"><span class="pre">listpostindxelemfull</span></code>, and related final-state arrays.
+With <code class="docutils literal notranslate"><span class="pre">boolcondcatl=True</span></code> and supported two-dimensional spatial elements,
+final processing groups samples by <code class="docutils literal notranslate"><span class="pre">xpos</span></code> and <code class="docutils literal notranslate"><span class="pre">ypos</span></code> into a condensed
+catalog. <code class="docutils literal notranslate"><span class="pre">dictglob[&quot;liststkscond&quot;]</span></code> stores the grouped samples,
+<code class="docutils literal notranslate"><span class="pre">dictglob[&quot;poststkscond&quot;]</span></code> stores their median and 16th/84th percentiles, and
+<code class="docutils literal notranslate"><span class="pre">prvl</span></code> stores the prevalence of each condensed element across retained
+catalogs. Reference-catalog association and completeness products use this
+post-sampling representation. They are not likelihood terms.</p>
+<p>The current condensation algorithm is spatial. Spectral lines, stellar flares,
+and Keplerian radial-velocity elements do not expose the required <code class="docutils literal notranslate"><span class="pre">xpos</span></code> and
+<code class="docutils literal notranslate"><span class="pre">ypos</span></code> pair, so those workflows retain the sampled catalogs without a
+condensed summary. Set <code class="docutils literal notranslate"><span class="pre">boolcondcatl=False</span></code> to skip condensation explicitly,
+as the lightweight demo defaults do.</p>
 </section>
 <section id="convergence-and-interpretation">
 <h2>Convergence and interpretation<a class="headerlink" href="#convergence-and-interpretation" title="Link to this heading"></a></h2>
@@ -157,6 +190,20 @@ predictive residuals. A completed process is not necessarily a converged or
 scientifically adequate inference. Transdimensional parameters also require
 population-level or association-aware summaries because raw element labels are
 not persistent.</p>
+<p>The final state stores per-sweep proposal IDs, accept/reject flags, and
+acceptance probabilities, together with acceptance fractions by proposal type.
+It also stores the per-sweep inverse likelihood temperature in
+<code class="docutils literal notranslate"><span class="pre">listpostfacttmpr</span></code>. This value is one for ordinary sampling and after tempered
+burn-in reaches the posterior target.
+Interpret these alongside chain movement and convergence rather than optimizing
+acceptance fraction alone. See <a class="reference internal" href="sampling.html"><span class="doc">Sampling, proposals, and convergence</span></a> for the move-specific acceptance
+terms, tunable settings, burn-in, and stopping rules.</p>
+<p>When final plots are enabled, <code class="docutils literal notranslate"><span class="pre">post/convergence</span></code> holds the figures of
+<a class="reference internal" href="api.html#pcat.plotting.plot_posterior_convergence" title="pcat.plotting.plot_posterior_convergence"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_posterior_convergence()</span></code></a> and <code class="docutils literal notranslate"><span class="pre">post/operation</span></code> those
+of <a class="reference internal" href="api.html#pcat.plotting.plot_sampler_overview" title="pcat.plotting.plot_sampler_overview"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_sampler_overview()</span></code></a>: the proposal ledger, the
+acceptance-term decomposition, the compute budget, the catalog trace, and, for
+one-dimensional data, the posterior predictive check. The <a class="reference internal" href="gallery.html"><span class="doc">Plotting gallery</span></a> shows
+examples of each.</p>
 </section>
 <section id="reproducibility-checklist">
 <h2>Reproducibility checklist<a class="headerlink" href="#reproducibility-checklist" title="Link to this heading"></a></h2>
@@ -186,7 +233,7 @@ tag; use a new <code class="docutils literal notranslate"><span class="pre">strg
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="examples.html" class="btn btn-neutral float-left" title="Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="troubleshooting.html" class="btn btn-neutral float-right" title="Troubleshooting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="gallery.html" class="btn btn-neutral float-right" title="Plotting gallery" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

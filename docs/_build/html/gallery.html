@@ -1,0 +1,219 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plotting gallery &mdash; PCAT 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+    <link rel="shortcut icon" href="_static/pcat_icon.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
+    <link rel="prev" title="Outputs and diagnostics" href="outputs.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #000000" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            PCAT
+              <img src="_static/pcat_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">How PCAT works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="capabilities.html">Capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="likelihoods.html">Likelihood configurations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sampling.html">Sampling, proposals, and convergence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Plotting gallery</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#sampler-operation">Sampler operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#catalogs-and-fits">Catalogs and fits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#convergence">Convergence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#posterior-projections">Posterior projections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#animations">Animations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Public API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #000000" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PCAT</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Plotting gallery</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/gallery.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="plotting-gallery">
+<h1>Plotting gallery<a class="headerlink" href="#plotting-gallery" title="Link to this heading"></a></h1>
+<p>Each figure below is an unedited output of one public plotting routine. Run
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">docs/make_plot_gallery.py</span></code> to regenerate all of them. The
+transdimensional figures come from a four-chain PCAT run on the simulated
+two-line Voigt spectrum of <code class="docutils literal notranslate"><span class="pre">examples/voigt_spectral_line_catalog</span></code> (20,000
+sweeps per chain, half discarded as burn-in), the fixed-dimensional figures from
+a four-chain run on a correlated bivariate Gaussian, and the lens figures from
+the simulated Roman/WFI strong-lens benchmark. All data are simulated.</p>
+<section id="sampler-operation">
+<h2>Sampler operation<a class="headerlink" href="#sampler-operation" title="Link to this heading"></a></h2>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_sampler_overview" title="pcat.plotting.plot_sampler_overview"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_sampler_overview()</span></code></a> writes every view in this section
+and the next that applies to a run; <a class="reference internal" href="api.html#pcat.sampling.sample" title="pcat.sampling.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.sampling.sample()</span></code></a> calls it for
+each run with final plots enabled.</p>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_proposal_ledger" title="pcat.plotting.plot_proposal_ledger"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_proposal_ledger()</span></code></a> follows each move type through
+burn-in and sampling and summarizes its acceptance after burn-in.</p>
+<a class="reference internal image-reference" href="_images/proposal_ledger.png"><img alt="Acceptance fraction per move type through the run and per-move totals" src="_images/proposal_ledger.png" style="width: 100%;" />
+</a>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_acceptance_decomposition" title="pcat.plotting.plot_acceptance_decomposition"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_acceptance_decomposition()</span></code></a> splits each log
+acceptance ratio into the posterior change, the move-selection ratio, and the
+split/merge Jacobian.</p>
+<a class="reference internal image-reference" href="_images/acceptance_decomposition.png"><img alt="Distributions of Metropolis-Hastings terms per move type" src="_images/acceptance_decomposition.png" style="width: 100%;" />
+</a>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_compute_budget" title="pcat.plotting.plot_compute_budget"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_compute_budget()</span></code></a> locates where each move spends its
+wall time.</p>
+<a class="reference internal image-reference" href="_images/compute_budget.png"><img alt="Mean wall time per sampler stage and move type" src="_images/compute_budget.png" style="width: 100%;" />
+</a>
+</section>
+<section id="catalogs-and-fits">
+<h2>Catalogs and fits<a class="headerlink" href="#catalogs-and-fits" title="Link to this heading"></a></h2>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_catalog_trace" title="pcat.plotting.plot_catalog_trace"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_catalog_trace()</span></code></a> draws every element of every retained
+catalog of one chain, so births, deaths, splits, and merges appear as tracks.</p>
+<a class="reference internal image-reference" href="_images/catalog_trace.png"><img alt="Element positions of every retained catalog with catalog size" src="_images/catalog_trace.png" style="width: 100%;" />
+</a>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_posterior_predictive" title="pcat.plotting.plot_posterior_predictive"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_posterior_predictive()</span></code></a> compares the data with data
+replicated from the posterior.</p>
+<a class="reference internal image-reference" href="_images/posterior_predictive.png"><img alt="Data, replicated-data bands, residuals, and tail probabilities" src="_images/posterior_predictive.png" style="width: 100%;" />
+</a>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_lens_image_fit" title="pcat.plotting.plot_lens_image_fit"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_lens_image_fit()</span></code></a> and
+<a class="reference internal" href="api.html#pcat.plotting.plot_lens_parameter_recovery" title="pcat.plotting.plot_lens_parameter_recovery"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_lens_parameter_recovery()</span></code></a> summarize one simulated
+Roman/WFI lens fit.</p>
+<a class="reference internal image-reference" href="_images/lens_image_fit.png"><img alt="Observed lens image, model, and standardized residual" src="_images/lens_image_fit.png" style="width: 100%;" />
+</a>
+<a class="reference internal image-reference" href="_images/lens_parameter_recovery.png"><img alt="Posterior histograms of the lens parameters with injected values" src="_images/lens_parameter_recovery.png" style="width: 100%;" />
+</a>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_detection_diagnostic" title="pcat.plotting.plot_detection_diagnostic"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_detection_diagnostic()</span></code></a> summarizes perturber detection
+over a simulated lens population.</p>
+<a class="reference internal image-reference" href="_images/detection_diagnostic.png"><img alt="Lens images and perturber probability against signal-to-noise" src="_images/detection_diagnostic.png" style="width: 80%;" />
+</a>
+</section>
+<section id="convergence">
+<h2>Convergence<a class="headerlink" href="#convergence" title="Link to this heading"></a></h2>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_posterior_convergence" title="pcat.plotting.plot_posterior_convergence"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_posterior_convergence()</span></code></a> writes one set of figures per
+run. The transdimensional run adds catalog-size diagnostics.</p>
+<a class="reference internal image-reference" href="_images/element_count_trace.png"><img alt="Catalog-size trace per chain" src="_images/element_count_trace.png" style="width: 100%;" />
+</a>
+<a class="reference internal image-reference" href="_images/element_count_transitions.png"><img alt="Catalog-size transition matrix" src="_images/element_count_transitions.png" style="width: 60%;" />
+</a>
+<a class="reference internal image-reference" href="_images/element_parameter_pop0_elin_stability.png"><img alt="Line-energy distribution in the first and second halves of the samples" src="_images/element_parameter_pop0_elin_stability.png" style="width: 70%;" />
+</a>
+<a class="reference internal image-reference" href="_images/fixed_parameter_trace.png"><img alt="Parameter traces of four chains" src="_images/fixed_parameter_trace.png" style="width: 100%;" />
+</a>
+<a class="reference internal image-reference" href="_images/fixed_parameter_mixing.png"><img alt="Effective sample size and R-hat per parameter" src="_images/fixed_parameter_mixing.png" style="width: 70%;" />
+</a>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_gelman_rubin" title="pcat.plotting.plot_gelman_rubin"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_gelman_rubin()</span></code></a> histograms the potential scale
+reduction factor of the model in every data bin, and
+<a class="reference internal" href="api.html#pcat.plotting.plot_autocorrelation" title="pcat.plotting.plot_autocorrelation"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_autocorrelation()</span></code></a> plots one autocorrelation sequence.</p>
+<a class="reference internal image-reference" href="_images/transdimensional_gmrb.png"><img alt="Distribution of potential scale reduction factors" src="_images/transdimensional_gmrb.png" style="width: 60%;" />
+</a>
+<a class="reference internal image-reference" href="_images/fixed_atcr.png"><img alt="Autocorrelation of one parameter" src="_images/fixed_atcr.png" style="width: 60%;" />
+</a>
+</section>
+<section id="posterior-projections">
+<h2>Posterior projections<a class="headerlink" href="#posterior-projections" title="Link to this heading"></a></h2>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_grid" title="pcat.plotting.plot_grid"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_grid()</span></code></a> draws all one- and two-parameter projections,
+here with the injected values marked.</p>
+<a class="reference internal image-reference" href="_images/posterior_grid.png"><img alt="Corner plot of a correlated bivariate Gaussian posterior" src="_images/posterior_grid.png" style="width: 60%;" />
+</a>
+<p><a class="reference internal" href="api.html#pcat.plot_population_grid" title="pcat.plot_population_grid"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plot_population_grid()</span></code></a> compares labeled sample populations.</p>
+<a class="reference internal image-reference" href="_images/pmar_gallery_scatscat.png"><img alt="Corner plot comparing two simulated populations" src="_images/pmar_gallery_scatscat.png" style="width: 80%;" />
+</a>
+</section>
+<section id="animations">
+<h2>Animations<a class="headerlink" href="#animations" title="Link to this heading"></a></h2>
+<p><a class="reference internal" href="api.html#pcat.plotting.make_image_sequence_animation" title="pcat.plotting.make_image_sequence_animation"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.make_image_sequence_animation()</span></code></a> animates images with a
+shared stretch, here lensed arcs from six posterior draws.</p>
+<a class="reference internal image-reference" href="_images/image_sequence_animation.gif"><img alt="Lensed arcs of posterior draws" src="_images/image_sequence_animation.gif" style="width: 50%;" />
+</a>
+<p><a class="reference internal" href="api.html#pcat.plotting.make_posterior_animation_collage" title="pcat.plotting.make_posterior_animation_collage"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.make_posterior_animation_collage()</span></code></a> combines the posterior
+frames of several examples; <code class="docutils literal notranslate"><span class="pre">examples/run_all_examples.py</span></code> writes the
+collage shown on the <a class="reference internal" href="index.html"><span class="doc">PCAT documentation</span></a> page.</p>
+<a class="reference internal image-reference" href="_images/pcat_posterior_samples.gif"><img alt="Collage of posterior frames from several examples" src="_images/pcat_posterior_samples.gif" style="width: 100%;" />
+</a>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="outputs.html" class="btn btn-neutral float-left" title="Outputs and diagnostics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="troubleshooting.html" class="btn btn-neutral float-right" title="Troubleshooting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Tansu Daylan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

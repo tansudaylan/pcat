@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pcat import sampling
-from pcat.time_series import evaluate_rotating_spot_profile
+from pcat.time_series import evaluate_rotating_spot_profile, retr_dictpropelemtmpl
 
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
@@ -21,12 +21,19 @@ TIME_OFFSET_DAYS = 1.0  # [day]
 DURATION_DAYS = 25.6  # [day]
 CADENCE_DAYS = 0.1  # [day]
 ROTATION_PERIOD_DAYS = 3.2  # [day], fixed for this illustration
-BASELINE_COUNTS = 4000.0  # [counts per cadence bin]
+BASELINE_COUNTS = 20000.0  # [counts per cadence bin]
 INJECTED_SPOTS = {
-    "depth_counts": np.array([420.0, 330.0, 280.0]),
+    "depth_counts": np.array([2100.0, 1650.0, 1400.0]),
     "phase_epoch_days": np.array([0.28, 1.35, 2.42]),
     "fwhm_days": np.array([0.16, 0.22, 0.18]),
 }
+LIMITS = {
+    # a minimum depth above half the deepest spot keeps one spot from being fit as two overlapping halves
+    "flux": (1100.0, 3250.0),  # [counts per cadence bin]
+    "elin": (0.05, ROTATION_PERIOD_DAYS - 0.05),  # [day]
+    "fwhm": (0.10, 0.28),  # [day]
+}
+NUMBER_CHAINS = 8
 
 
 def simulate_light_curve(seed=12):
@@ -65,7 +72,23 @@ def write_pcat_inputs(edges, observed_counts):
     return np.full((edges.size - 1, 1, 1), BASELINE_COUNTS)
 
 
-def run_pcat(edges, baseline_template, number_sweeps):
+def build_birth_proposal(time_days, observed_counts):
+    """Return a matched-filter spot birth density on PCAT's log-uniform epoch grid."""
+
+    minimum, maximum = LIMITS["elin"]  # [day]
+    unit = (np.arange(400) + 0.5) / 400
+    epochs = minimum * (maximum / minimum) ** unit  # [day]
+    templates = evaluate_rotating_spot_profile(
+        time_days, np.ones_like(epochs), epochs, np.full(epochs.size, 0.18),
+        period_days=ROTATION_PERIOD_DAYS, reference_time_days=TIME_OFFSET_DAYS,
+    ).T
+    return retr_dictpropelemtmpl(
+        observed_counts - BASELINE_COUNTS, np.maximum(observed_counts, 1.0), templates,
+        *LIMITS["flux"], index_position=1, index_flux=0, number_parameters=3,
+    )
+
+
+def run_pcat(edges, baseline_template, number_sweeps, proposal):
     """Fit a zero-to-five-spot catalog with a shared known rotation period."""
 
     cached_output = EXAMPLE_PATH / "data" / "outp" / RUN_NAME
@@ -92,22 +115,23 @@ def run_pcat(edges, baseline_template, number_sweeps):
         spot_reference_time_days=TIME_OFFSET_DAYS,
         fittminmnumbelempop0=0,
         fittmaxmnumbelempop0=5,
-        limtparaelem={
-            "flux": (100.0, 650.0),  # [counts per cadence bin]
-            "elin": (0.05, ROTATION_PERIOD_DAYS - 0.05),  # [day]
-            "fwhm": (0.08, 0.45),  # [day]
-        },
-        stdvpropelemfire=[0.04, 0.04, 0.04],
+        limtparaelem=LIMITS,
+        stdvpropelemfire=[0.02, 0.02, 0.05],
+        booladaptstdp=True,
         anlytype="spec",
         maxmgangdata=1e-4,
         inittype="rand",
         typeseed=17,
-        probtran=0.8,
-        probspmr=0.4,
+        numbproc=NUMBER_CHAINS,
+        probtran=0.5,
+        probspmr=0.3,
+        probjump=0.3,
+        radispmr=0.15,  # [day]
         numbswep=number_sweeps,
-        numbburn=number_sweeps // 3,
-        numbsamp=max(number_sweeps // 20, 16),
+        numbburn=number_sweeps // 2,
+        numbsamp=min(max(number_sweeps // 40, 16), 2000),
         numbswepplot=max(number_sweeps // 20, 1),
+        **proposal,
         boolmakeplot=True,
         boolmakeplotinit=False,
         boolmakeplotfram=True,
@@ -180,12 +204,12 @@ def render_spot_posterior_frames(time_days, observed_counts, posterior):
     return output_paths
 
 
-def run_example(number_sweeps=3000, seed=12):
+def run_example(number_sweeps=100000, seed=12):
     """Simulate rotating dark spots and fit a variable-size spot catalog."""
 
     edges, time_days, observed_counts, _ = simulate_light_curve(seed)
     template = write_pcat_inputs(edges, observed_counts)
-    run_pcat(edges, template, number_sweeps)
+    run_pcat(edges, template, number_sweeps, build_birth_proposal(time_days, observed_counts))
     posterior = read_posterior()
     frames = render_spot_posterior_frames(time_days, observed_counts, posterior)
     return {"frames": frames, "posterior": posterior}
@@ -193,10 +217,10 @@ def run_example(number_sweeps=3000, seed=12):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--numbswep", type=int, default=3000)
+    parser.add_argument("--numbswep", type=int, default=100000)
     parser.add_argument("--smoke", action="store_true")
     arguments = parser.parse_args()
-    run_example(600 if arguments.smoke else arguments.numbswep)
+    run_example(4000 if arguments.smoke else arguments.numbswep)
 
 
 if __name__ == "__main__":

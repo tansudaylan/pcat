@@ -4,8 +4,13 @@ Likelihood configurations
 PCAT separates the likelihood for the data from the transdimensional catalog
 summary. Choose the likelihood family to match the data representation, then
 configure its geometry, response, background, and source model. In particular,
-catalog association is a post-sampling summary of transdimensional catalogs;
-it is not a separate likelihood.
+every transdimensional likelihood produces samples of catalogs. With the
+default ``boolcondcatl=True``, final processing condenses those samples into a
+posterior catalog and can then associate its elements with a reference catalog
+when the element model has supported ``xpos`` and ``ypos`` coordinates. Set
+``boolcondcatl=False`` to skip condensation. The current implementation does
+not condense one-dimensional line, flare, or Keplerian catalogs. Neither
+condensation nor catalog association is a likelihood.
 
 Poisson image likelihood
 ------------------------
@@ -101,20 +106,21 @@ fit. Fermi-LAT can also use its energy- and event-class-dependent PSF scale
 ``fermscalfact``. PSF and source-kernel options depend on pixelization and
 element type; unsupported combinations should use ``typeevalpsfn="none"``.
 
-Gaussian-mixture image model
-----------------------------
+Unbinned Gaussian-mixture likelihood
+------------------------------------
 
-The current ``typeexpr="gmix"`` example uses variable-width Gaussian elements
-(``typeelem=["clusvari"]``) on a spatial pixel grid. Although it sets
-``boolbinsener=False`` because it has no energy axis, its spatial data remain
-binned; the maintained 8-by-8 example uses the Poisson image likelihood. It is
-therefore a Gaussian-mixture image model, not an unbinned spatial likelihood.
+An unbinned Gaussian-mixture likelihood evaluates the mixture density at every
+observed coordinate. Its data are a list of events rather than an image, and
+its transdimensional elements are Gaussian components with inferred positions,
+widths, amplitudes, and population size. This likelihood is distinct from the
+Poisson image likelihood because it does not accumulate events into pixels.
 
-A genuinely unbinned mixture likelihood would evaluate a point-process density
-at each observed coordinate rather than first accumulating coordinates into
-pixels. That likelihood is not currently exposed by this PCAT configuration.
-The current simulated example is in
-``examples/gaussian_mixture_catalog/gaussian_mixture_catalog.py``.
+The public ``typeexpr="gmix"`` example currently uses variable-width Gaussian
+elements (``typeelem=["clusvari"]``) on an 8-by-8 spatial grid and evaluates
+binned Poisson counts. ``boolbinsener=False`` only indicates that the example
+has no energy axis. It does not make the spatial likelihood unbinned. The
+unbinned Gaussian-mixture dispatcher must be completed and tested before this
+example can represent the unbinned likelihood described above.
 
 Spectral and time-series likelihood
 -----------------------------------
@@ -130,24 +136,52 @@ The ``spectype`` setting selects an analytic spectral shape:
 
 * ``"powr"`` for a power law.
 * ``"gaus"`` for a Gaussian profile.
+* ``"lore"`` for a Lorentzian profile.
 * ``"voig"`` for a Voigt profile.
+* ``"pvoi"`` for a pseudo-Voigt profile with mixing fraction ``frac``.
+* ``"sinc"`` for a sinc-squared profile.
+* ``"skew"`` for a skew-Gaussian profile with shape parameter ``skew``.
+* ``"toph"`` for a top-hat profile.
 * ``"edis"`` for an energy-dispersion profile using the configured
   ``edisintp`` response.
 * ``"colr"``, ``"curv"``, or ``"expc"`` for color-index, curved, or
   exponential-cutoff continua.
 
-``lghtlinevoig`` elements use integrated line flux ``flux``, line center
-``elin``, Gaussian width ``sigm``, and Lorentz width ``gamm``. Set parameter
-bounds with ``limtparaelem`` and proposal scales with ``stdvpropelemfire``.
-The current public configuration does not expose a general instrument-specific
-line-spread-function convolution; the profile parameters or configured energy
-dispersion must represent the spectral response used in a run.
+Line elements use integrated flux ``flux`` and line center ``elin``. Gaussian,
+sinc-squared, skew-Gaussian, and top-hat profiles add ``sigm``. Lorentzian
+profiles add ``gamm``. Voigt profiles use both widths. Pseudo-Voigt profiles
+also use ``frac``. Set parameter bounds with ``limtparaelem`` and proposal
+scales with ``stdvpropelemfire``.
+
+Set ``lsftype="gaus"`` and ``lsfresolvingpower`` to convolve each line at a
+constant instrument resolving power. Set ``lsftype="tabu"`` and pass an
+odd-length, nonnegative ``lsfkernel`` for a measured line-spread function.
+Both paths preserve sampled line flux. The default ``lsftype="none"`` leaves
+the intrinsic profiles unchanged.
 
 The same one-dimensional machinery can model time-binned data by treating time
-as the axis. The maintained stellar-flare example uses ``lghtlinevoig`` as a
-convenient flare profile and labels its asymmetric injected flare shapes as
-simulated. Radial-velocity models use Keplerian ``lghtlinekepl`` elements and
-their dedicated likelihood in :mod:`pcat.radial_velocity`.
+as the axis. ``flargauss`` uses peak amplitude ``flux``, peak time ``elin``,
+and full width at half maximum ``fwhm``. ``flarexpd`` adds a one-sided decay
+time ``scalfall``. ``flarfred`` uses independent ``scalrise`` and ``scalfall``
+for a fast-rise, exponential-decay profile. ``flardav`` uses ``fwhm`` for the
+empirical Davenport flare template. The maintained stellar-flare example fits
+native ``flarfred`` elements. Radial-velocity models use Keplerian
+``lghtlinekepl`` elements and their dedicated likelihood in
+:mod:`pcat.radial_velocity`.
+
+Transit-timing likelihood
+-------------------------
+
+For transit-time data, use ``pcat.time_series.log_likelihood_transit_times``
+inside a fixed-dimensional PCAT likelihood callback. Pass observed transit
+times, predicted transit times from Ephesos, and positive timing errors in the
+same units. The function returns the uncertainty-weighted Gaussian log
+likelihood up to a parameter-independent normalization constant; it returns
+negative infinity for nonfinite model times. Ephesos supplies linear,
+sinusoidal-residual, and optional N-body time predictions. PCAT handles the
+parameter priors and posterior sampling through ``sample_fixed`` or
+``sample_fixed_chains``. The predictor must align observed transit epochs with
+model epochs before evaluating this likelihood.
 
 User-supplied likelihood
 ------------------------

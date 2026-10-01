@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tdpy
 from nicomedia import retr_lcurmodl_flarsing
+from pcat.time_series import evaluate_flare_profile, retr_dictpropelemtmpl
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
 RUN_NAME = EXAMPLE_PATH.name
@@ -36,10 +37,19 @@ CADENCE_MINUTES = 2.0  # [minute], TESS-like short cadence
 TIME_OFFSET_DAYS = 1.0  # [day], keeps the time axis away from zero for PCAT's geometric plot binning
 BASELINE_COUNT_RATE = 5000.0  # [counts per bin], arbitrary but plausible quiescent level
 MINM_NUMB_FLAR, MAXM_NUMB_FLAR = 3, 6
-MINM_AMPL_FLAR, MAXM_AMPL_FLAR = 0.05, 1.0  # [relative flux above baseline]
+MINM_AMPL_FLAR, MAXM_AMPL_FLAR = 0.30, 0.38  # [relative flux above baseline]
 SLOP_AMPL_FLAR = 2.0  # power-law index of the illustrative flare amplitude distribution
 MINM_SCAL_RISE, MAXM_SCAL_RISE = 3.0, 10.0  # [minute]
 MINM_RATI_FALL_RISE, MAXM_RATI_FALL_RISE = 3.0, 8.0  # fall/rise time-scale ratio
+LIMITS = {
+    # a floor above half the brightest flare keeps one flare from being fit as two stacked halves
+    "flux": (1300.0, 1.0e4),  # [counts per bin], peak excess
+    # the simulated rise and fall time-scale ranges, so births propose plausible flare shapes
+    "scalrise": (MINM_SCAL_RISE / 1440.0, MAXM_SCAL_RISE / 1440.0),  # [day]
+    "scalfall": (MINM_RATI_FALL_RISE * MINM_SCAL_RISE / 1440.0,
+                 MAXM_RATI_FALL_RISE * MAXM_SCAL_RISE / 1440.0),  # [day]
+}
+NUMBER_CHAINS = 12
 
 
 def simulate_flare_catalog(rng):
@@ -83,7 +93,23 @@ def write_pcat_inputs(edges, obsvcnts):
     return template
 
 
-def run_pcat(edges, template, numbswep):
+def build_birth_proposal(edges, observed_counts):
+    """Return a matched-filter flare birth density on PCAT's log-uniform peak-time grid."""
+    meantime = 0.5 * (edges[1:] + edges[:-1])  # [day]
+    minimum, maximum = edges[0], edges[-1]  # [day]
+    peak_times = minimum * (maximum / minimum) ** ((np.arange(1000) + 0.5) / 1000)  # [day]
+    ones = np.ones(peak_times.size)
+    templates = evaluate_flare_profile(
+        meantime, "flarfred", ones, peak_times, rise_time=6.0 / 1440.0 * ones,
+        decay_time=30.0 / 1440.0 * ones,
+    ).T
+    return retr_dictpropelemtmpl(
+        observed_counts - BASELINE_COUNT_RATE, np.maximum(observed_counts, 1.0), templates,
+        *LIMITS["flux"], index_position=1, index_flux=0, number_parameters=4,
+    )
+
+
+def run_pcat(edges, template, numbswep, proposal):
     from pcat import sampling
 
     path_cache = EXAMPLE_PATH / "data" / "outp" / RUN_NAME
@@ -103,20 +129,27 @@ def run_pcat(edges, template, numbswep):
         dictfitt={"typeelem": ["lghtlinevoig"], "spectype": ["flarfred"], "sbrtbacknorm": [template],
                   "listnamediff": ["back0000"]},
         # peak excess counts [counts per bin] and rise/fall time scales [day]
-        limtparaelem={"flux": (10.0, 1.0e4), "scalrise": (1.0e-3, 2.0e-2), "scalfall": (2.0e-3, 8.0e-2)},
+        limtparaelem=LIMITS,
         maxmgangdata=100.0 / (3600.0 * 180.0 / np.pi),  # [rad], unused for non-spatial data
         anlytype="spec",
         fittminmnumbelempop0=0,
-        fittmaxmnumbelempop0=15,
+        fittmaxmnumbelempop0=10,
         inittype="rand",
         typeseed=0,
-        probtran=0.7,
-        probspmr=0.4,
-        stdvpropelemfire=[5.0e-5, 1.0e-5, 5.0e-4, 5.0e-4],
+        numbproc=NUMBER_CHAINS,
+        probtran=0.5,
+        probspmr=0.3,
+        probjump=0.3,
+        radispmr=0.01,  # [day]
+        stdvpropelemfire=[0.01, 1.0e-3, 0.02, 0.02],
         booladaptstdp=True,
+        boolburntmpr=True,
+        factburntmpr=0.9,
         numbswep=numbswep,
-        numbsamp=numbswep // 50,
+        numbburn=3 * numbswep // 4,
+        numbsamp=min(max(numbswep // 40, 16), 2000),
         numbswepplot=max(numbswep // 20, 1),
+        **proposal,
         makeanim=True,
         boolmakeplotinit=False,
         booldiag=False,
@@ -236,20 +269,20 @@ def plot_flare_count_posterior(catalog, posterior, typefileplot, colrfore):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--numbswep", type=int, default=30_000)
+    parser.add_argument("--numbswep", type=int, default=100_000)
     parser.add_argument("--smoke", action="store_true", help="Run a short pipeline check.")
     add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--skip-sampling", action="store_true", help="Replot an existing chain.")
     arguments = parser.parse_args()
-    numbswep = 400 if arguments.smoke else arguments.numbswep
+    numbswep = 4000 if arguments.smoke else arguments.numbswep
 
     rng = np.random.default_rng(0)
     catalog = simulate_flare_catalog(rng)
     edges, meantime, obsvcnts, expcnts = simulate_light_curve(catalog, rng)
     template = write_pcat_inputs(edges, obsvcnts)
     if not arguments.skip_sampling:
-        run_pcat(edges, template, numbswep)
+        run_pcat(edges, template, numbswep, build_birth_proposal(edges, obsvcnts))
     posterior = read_posterior()
     colrfore = configure_style(arguments.typeplotback)
     render_flare_posterior_frames(meantime, obsvcnts, posterior)

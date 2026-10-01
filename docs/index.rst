@@ -44,11 +44,13 @@ shared color palette. Only the JWST/MIRI spectrum uses observed data.
    :caption: User guide
 
    getting_started
+   architecture
    capabilities
    likelihoods
    sampling
    examples
    outputs
+   gallery
    troubleshooting
    api
 

@@ -29,8 +29,10 @@ def test_documentation_pages_are_in_the_toctree():
 
     assert pages == {
         "api",
+        "architecture",
         "capabilities",
         "examples",
+        "gallery",
         "getting_started",
         "likelihoods",
         "outputs",

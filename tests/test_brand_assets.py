@@ -56,24 +56,31 @@ def test_only_the_primary_circular_logo_assets_remain():
 
 
 def test_logo_contains_wordmark_within_circle_and_uniform_cube_edges():
-    figure, axis = plt.subplots(figsize=(3.0, 3.0))
+    figure = plt.figure(figsize=(3.0, 3.0))
+    axis = figure.add_axes((0.0, 0.0, 1.0, 1.0))
     axis.set(xlim=(-1.02, 1.02), ylim=(-1.02, 1.02), aspect="equal")
     logo.draw_icon(axis)
     figure.canvas.draw()
-    assert [text.get_text() for text in axis.texts] == ["PCAT"]
-    text_bounds = axis.texts[0].get_window_extent(figure.canvas.get_renderer())
-    text_corners = axis.transData.inverted().transform(
-        ((text_bounds.x0, text_bounds.y0), (text_bounds.x1, text_bounds.y1))
-    )
-    assert np.max(np.hypot(text_corners[:, 0], text_corners[:, 1])) < logo.DISC_RADIUS
-    assert axis.texts[0].get_fontsize() >= 40
-    symbol_bottom = np.min(logo.CENTERS[:, 1]) - logo.SIZE / 2.0 - logo.DEPTH[1] / 2.0
-    assert text_corners[:, 1].max() < symbol_bottom
-    assert np.allclose(logo.CENTERS[:, 1], logo.CENTERS[0, 1])
-    assert np.ptp(logo.CENTERS[:, 0]) >= 1.2
+    wordmarks = [patch for patch in axis.patches if patch.get_gid() == "pcat-wordmark"]
+    assert len(wordmarks) == 1
+    text = wordmarks[0].get_path().vertices
+    assert np.max(np.hypot(*text.T)) < logo.CONTENT_RADIUS
+
+    glyphs = [line.get_xydata() for line in axis.lines]
+    glyphs += [collection.get_offsets() for collection in axis.collections]
+    glyphs = np.concatenate(glyphs)
+    assert text[:, 1].max() < glyphs[:, 1].min()
+    assert np.max(np.hypot(*glyphs.T)) < logo.CONTENT_RADIUS
+    assert np.max(np.hypot(*np.concatenate([text, glyphs]).T)) > 0.9 * logo.CONTENT_RADIUS
+
+    centers = logo.CENTERS
+    assert centers["point"][1] == centers["segment"][1] > centers["square"][1] == centers["cube"][1]
+    assert centers["point"][0] < centers["segment"][0] and centers["square"][0] < centers["cube"][0]
+    assert len([patch for patch in axis.patches if type(patch).__name__ == "FancyArrowPatch"]) == 3
+
     cube_edges = [line for line in axis.lines if line.get_gid() == "pcat-cube-edge"]
     assert len(cube_edges) == 12
-    assert {line.get_linewidth() for line in cube_edges} == {logo.CUBE_EDGE_WIDTH}
+    assert len({line.get_linewidth() for line in cube_edges}) == 1
     plt.close(figure)
 
     image = _read_rgba("pcat_logo")

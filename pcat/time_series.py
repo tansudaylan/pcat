@@ -135,6 +135,82 @@ def evaluate_flare_profile(
     return amplitude[None, :] * shape
 
 
+def retr_dictpropelemtmpl(residual, variance, templates, flux_minimum, flux_maximum,
+                          index_position, index_flux, number_parameters, fraction_uniform=0.1,
+                          fraction_gaussian=0.5, stdv_log_flux=0.5, exponent=1.0):
+    """Return PCAT keywords for a data-informed birth, death, and jump density.
+
+    ``templates`` holds one unit-amplitude element profile per cell of a grid
+    uniform in the position unit interval. Positions are drawn with weight
+    proportional to the matched-filter chi-squared reduction mixed with a
+    uniform fraction; log fluxes [same unit as ``residual``] are drawn around
+    the matched-filter amplitude, mixed with the prior. Other element
+    parameters are drawn from the prior. The density does not depend on the
+    sampler state, so PCAT's Hastings term keeps the chain exact.
+    """
+    residual = np.asarray(residual, dtype=float).ravel()
+    weight = 1.0 / np.asarray(variance, dtype=float).ravel()
+    templates = np.asarray(templates, dtype=float)
+    if templates.ndim != 2 or templates.shape[1] != residual.size or weight.size != residual.size:
+        raise ValueError("templates must have shape (grid, data) matching residual and variance")
+    if not 0.0 < fraction_uniform <= 1.0 or not 0.0 <= fraction_gaussian <= 1.0:
+        raise ValueError("proposal mixture fractions must lie in the unit interval")
+    norm = templates**2 @ weight
+    amplitude = (templates @ (weight * residual)) / norm  # [same unit as residual]
+    delta_chi2 = np.maximum(amplitude, 0.0) ** 2 * norm
+    score = delta_chi2**exponent
+    density = fraction_uniform + (1.0 - fraction_uniform) * score / max(np.mean(score), 1e-300)
+    log_range = np.log(flux_maximum / flux_minimum)
+    unit_flux = np.log(np.clip(amplitude, flux_minimum, flux_maximum) / flux_minimum) / log_range
+    return dict(
+        pdfnposipropelem=density,
+        cdfnposipropelem=np.cumsum(density) / np.sum(density),
+        numbposipropelem=density.size,
+        unitfluxpropelem=unit_flux,
+        stdvunitfluxpropelem=stdv_log_flux / log_range,
+        fracgauspropelem=fraction_gaussian,
+        indxposipropelem=int(index_position),
+        indxfluxpropelem=int(index_flux),
+        numbparapropelem=int(number_parameters),
+        retr_drawpropelem=retr_drawpropelemtmpl,
+        retr_lpdfpropelem=retr_lpdfpropelemtmpl,
+    )
+
+
+def _retr_pdfntruncunit(unit, mean, stdv):
+    """Normal density truncated to the unit interval."""
+    from scipy.stats import norm
+
+    mass = norm.cdf((1.0 - mean) / stdv) - norm.cdf(-mean / stdv)
+    return np.exp(-0.5 * ((unit - mean) / stdv) ** 2) / (np.sqrt(2.0 * np.pi) * stdv * mass)
+
+
+def retr_drawpropelemtmpl(gdat):
+    """Draw unit-cube element parameters from the template-matched density."""
+    from scipy.stats import truncnorm
+
+    index = min(int(np.searchsorted(gdat.cdfnposipropelem, np.random.rand())),
+                gdat.numbposipropelem - 1)
+    unit = np.random.rand(gdat.numbparapropelem)
+    unit[gdat.indxposipropelem] = (index + np.random.rand()) / gdat.numbposipropelem
+    if np.random.rand() < gdat.fracgauspropelem:
+        mean = gdat.unitfluxpropelem[index]
+        stdv = gdat.stdvunitfluxpropelem
+        unit[gdat.indxfluxpropelem] = truncnorm.rvs(-mean / stdv, (1.0 - mean) / stdv, loc=mean, scale=stdv)
+    return unit
+
+
+def retr_lpdfpropelemtmpl(gdat, unit):
+    """Return the log density [unit cube] of the template-matched element proposal."""
+    index = min(int(unit[gdat.indxposipropelem] * gdat.numbposipropelem), gdat.numbposipropelem - 1)
+    density_position = gdat.pdfnposipropelem[index] / np.mean(gdat.pdfnposipropelem)
+    fraction = gdat.fracgauspropelem
+    density_flux = 1.0 - fraction + fraction * _retr_pdfntruncunit(
+        unit[gdat.indxfluxpropelem], gdat.unitfluxpropelem[index], gdat.stdvunitfluxpropelem
+    )
+    return float(np.log(density_position) + np.log(density_flux))
+
+
 __all__ = [
     "FLARE_PROFILE_PARAMETERS",
     "ROTATING_SPOT_PARAMETERS",
@@ -143,4 +219,7 @@ __all__ = [
     "flare_profile_parameters",
     "rotating_spot_parameters",
     "log_likelihood_transit_times",
+    "retr_dictpropelemtmpl",
+    "retr_drawpropelemtmpl",
+    "retr_lpdfpropelemtmpl",
 ]

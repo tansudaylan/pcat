@@ -128,6 +128,115 @@ Image formation
 Plotting
 --------
 
+Every routine below writes PNG (300 dpi) or PDF files, logs ``Writing to
+PATH...``, and returns the written path or a dictionary of paths. The
+:doc:`gallery` shows an example output of each one, produced by
+``docs/make_plot_gallery.py`` from real PCAT runs.
+
+The ``state`` argument of the sampler views is the final posterior object
+returned by :func:`pcat.sampling.sample` or read with
+:func:`pcat.main.readfile` from ``gdatfinlpost``. Per-proposal arrays such as
+``listpostindxproptype`` hold every sweep including burn-in, ordered
+sweep-major across chains; per-sample arrays such as ``listpostnumbelem`` hold
+retained samples ordered sample-major across chains.
+
+Sampler operation
+~~~~~~~~~~~~~~~~~
+
+.. py:function:: pcat.plotting.plot_sampler_overview(state, output_directory, typefileplot="png", **catalog_options)
+
+   Write every operation, catalog, and predictive view that applies to
+   ``state`` and return a dictionary from view name to path. :func:`pcat.sampling.sample`
+   calls it for each run with final plots enabled and writes to
+   ``visuals/post/operation``. ``catalog_options`` are passed to
+   :func:`pcat.plotting.plot_catalog_trace`.
+
+.. py:function:: pcat.plotting.plot_proposal_ledger(state, output_path, typefileplot="png", number_windows=120)
+
+   Plot the accepted fraction of each move type (within-model, birth, death,
+   split, merge, jump) in ``number_windows`` sweep windows pooled over chains,
+   the burn-in interval, and the likelihood inverse temperature when tempered
+   burn-in is active. A second panel shows each move's share of proposals, its
+   acceptance after burn-in with 1-sigma Wilson intervals, and the fraction
+   rejected before the likelihood is evaluated.
+
+.. py:function:: pcat.plotting.plot_acceptance_decomposition(state, output_path, typefileplot="png")
+
+   Split each evaluated post-burn-in log acceptance ratio [nat] into the
+   posterior and auxiliary-density change, the move-selection ratio, and the
+   split/merge Jacobian, and draw their distributions per move type on a signed
+   logarithmic axis. This shows whether a move fails because of the data or
+   because of the proposal bookkeeping.
+
+.. py:function:: pcat.plotting.plot_compute_budget(state, output_path, typefileplot="png")
+
+   Map the mean wall time [ms] of each timed sampler stage for each move type.
+   Stages nest, so their times do not add to each move's total; stages timed
+   once per sweep, such as frame plotting, are omitted.
+
+Catalogs and fits
+~~~~~~~~~~~~~~~~~
+
+.. py:function:: pcat.plotting.plot_catalog_trace(state, output_path, position="elin", amplitude="flux", population=0, chain=0, position_label=None, amplitude_label=None, typefileplot="png")
+
+   Draw every element of every retained catalog of one chain at its
+   ``position`` parameter, colored by ``amplitude``, so births, deaths, splits,
+   and merges appear as tracks that start, stop, fork, or join. A lower strip
+   shows the catalog size and a side panel the expected number of elements per
+   position bin over all chains. Use ``position="xpos"`` or ``"ypos"`` for
+   image catalogs.
+
+.. py:function:: pcat.plotting.plot_posterior_predictive(state, output_path, axis_values=None, axis_label="Data axis", data_label="Counts per bin", typefileplot="png", seed=0)
+
+   For one-dimensional data, draw replicated data from every retained model
+   with the run's Poisson or Gaussian noise and plot the data against the 68%
+   and 95% replicated bands, the standardized residual, and the posterior
+   predictive tail probability P(replicated > data) per bin.
+   :func:`pcat.plotting.has_one_dimensional_prediction` reports whether a
+   state qualifies.
+
+.. py:function:: pcat.plotting.plot_lens_image_fit(output_path, observed, model, variance, pixel_scale_arcsec, typefileplot="png")
+
+   Plot an observed lens image, a model image, and the standardized residual
+   on a shared angular grid [arcsec].
+
+.. py:function:: pcat.plotting.plot_lens_parameter_recovery(output_path, draws, true_parameters, typefileplot="png")
+
+   Plot posterior histograms of the Einstein radius and source position
+   [arcsec] with the injected values and posterior medians.
+
+.. py:function:: pcat.plotting.plot_detection_diagnostic(records, output_path, examples=None)
+
+   Plot representative detector, macro-model, and residual images with the
+   per-lens posterior perturber probability against injected signal-to-noise
+   and Wilson intervals on the detection rates. ``records`` and ``examples``
+   come from :func:`pcat.roman_lens.simulate_population`.
+
+Convergence
+~~~~~~~~~~~
+
+.. py:function:: pcat.plotting.plot_posterior_convergence(state, output_directory, typefileplot="png")
+
+   Write traces, autocorrelations, effective sample sizes, and multi-chain
+   R-hat for the fixed-dimensional parameters, and catalog-size traces,
+   occupancy, and transition matrices for each population. Element parameter
+   distributions are compared between the first and second halves of the
+   retained samples. Returns a dictionary from figure name to path.
+
+.. py:function:: pcat.plotting.plot_gelman_rubin(path, statistics, typefileplot="pdf", typeplotback="norm")
+
+   Plot the distribution of potential scale reduction factors, for example
+   ``state.gmrbstat`` over every data bin, to ``path + "gmrb"``.
+
+.. py:function:: pcat.plotting.plot_autocorrelation(path, autocorrelation, correlation_time, strgextn="", typefileplot="pdf", typeplotback="norm")
+
+   Plot one autocorrelation sequence and its integrated time to
+   ``path + "atcr" + strgextn``. :func:`pcat.diagnostics.autocorrelation_time`
+   returns both inputs.
+
+Posterior projections
+~~~~~~~~~~~~~~~~~~~~~
+
 .. py:function:: pcat.plotting.plot_grid(path, name, listpara, listlablparatotl, scalpara=None, truepara=None, join=False, listvarbdraw=None, typefileplot="pdf", **kwargs)
 
    Render the diagonal marginal distributions and every lower-triangle pairwise
@@ -145,6 +254,23 @@ Plotting
    settings control triangular grids, histograms, pair plots, population
    labels, markers, limits, and annotations. The
    ``examples/population_grid`` workflow demonstrates the maintained interface.
+
+Animations
+~~~~~~~~~~
+
+.. py:function:: pcat.plotting.make_image_sequence_animation(images, labels, output_path, duration_ms=800, image_size=640, title="Rubin DP1 lens cutouts")
+
+   Write a GIF with one frame per two-dimensional image, a shared intensity
+   stretch (1st to 99.5th percentile of all finite pixels), ``title`` above
+   and each label below its image.
+
+.. py:function:: pcat.plotting.make_posterior_animation_collage(output_path=DEFAULT_POSTERIOR_COLLAGE, examples_root=EXAMPLES_ROOT, panels=POSTERIOR_ANIMATION_PANELS, frame_count=16, duration_ms=120, panel_size=560)
+
+   Combine posterior frame sequences of several examples into one synchronized
+   GIF, as in ``examples/pcat_posterior_samples.gif``. Each
+   :class:`pcat.plotting.PosteriorAnimationPanel` names a label and either a
+   glob ``pattern`` of frames or a ``static_image``; a sequence whose frames do
+   not change raises an error.
 
 Instrument response
 -------------------
@@ -224,12 +350,8 @@ Roman lens benchmark
 .. py:function:: pcat.roman_lens.summarize_population(records, detection_threshold=0.5)
 
    Report detection, false-positive, and localization rates with Wilson
-   intervals for the simulated population.
-
-.. py:function:: pcat.roman_lens.plot_detection_diagnostic(records, output_path, examples=None)
-
-   Plot representative detector, macro-model, and residual images together
-   with the population catalog probabilities.
+   intervals for the simulated population. Plot the population with
+   :func:`pcat.plotting.plot_detection_diagnostic`.
 
 Persistence
 -----------
