@@ -306,9 +306,9 @@ def test_documentation_lists_stable_public_helpers():
 def test_documented_posterior_collage_matches_generator():
     examples = (DOCS_ROOT / "examples.rst").read_text()
 
-    assert len(POSTERIOR_ANIMATION_PANELS) == 12
-    assert "Twelve genuinely changing inference views from seven maintained workflows" in examples
-    for domain in ("strong lenses", "stellar flares", "simulated spectral lines"):
+    assert len(POSTERIOR_ANIMATION_PANELS) == 9
+    assert "Nine changing inference views are synchronized below" in examples
+    for domain in ("strong lenses", "stellar-flare photometry", "radial velocities", "transit times"):
         assert domain in examples
 
 

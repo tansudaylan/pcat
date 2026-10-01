@@ -148,6 +148,7 @@ def run_lens_image_pipeline(
     from .plotting import plot_lens_image_fit, plot_lens_parameter_recovery
 
     output_root = Path(output_root)
+    half_width = (config.number_side - 1) * config.pixel_scale / 2.0  # [arcsec]
     posterior = sample(
         typeexpr="gener",
         retr_llik=poisson_lens_log_likelihood,
@@ -158,9 +159,9 @@ def run_lens_image_pipeline(
         lens_source_angle=source_angle,
         parameter_names=("einstein_radius", "source_x", "source_y"),
         prior_types=("self", "self", "self"),
-        prior_minima=(8.0, -2.0, -2.0),  # [arcsec]
-        prior_maxima=(13.0, 2.0, 2.0),  # [arcsec]
-        initial_values=(10.0, 0.0, 0.0),  # [arcsec]
+        prior_minima=(0.1, -0.3 * half_width, -0.3 * half_width),  # [arcsec]
+        prior_maxima=(0.9 * half_width, 0.3 * half_width, 0.3 * half_width),  # [arcsec]
+        initial_values=(0.5 * half_width, 0.0, 0.0),  # [arcsec]
         proposal_scales=(0.08, 0.03, 0.03),  # [arcsec]
         propwithsing=True,
         probpropblock=0.0,

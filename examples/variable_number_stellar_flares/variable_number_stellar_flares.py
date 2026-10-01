@@ -176,6 +176,34 @@ def plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, typefileplot, c
     save(figure, "variable_number_stellar_flares_light_curve_fit", typefileplot)
 
 
+def render_flare_posterior_frames(meantime, observed_counts, posterior):
+    """Render simulated photometry and changing PCAT flare models on fixed axes."""
+    models = np.asarray(posterior.listpostcntpmodl, dtype=float)[:, :, 0, 0]
+    indices = np.linspace(0, len(models) - 1, min(12, len(models)), dtype=int)
+    lower = 0.85 * min(BASELINE_COUNT_RATE, observed_counts.min(), models[indices].min())  # [counts per bin]
+    upper = 1.08 * max(observed_counts.max(), models[indices].max())  # [counts per bin]
+    visual_root = EXAMPLE_PATH / "visuals"
+    visual_root.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for index in indices:
+        figure, axis = plt.subplots(figsize=(6.0, 4.3), facecolor="white")
+        hours = (meantime - TIME_OFFSET_DAYS) * 24.0  # [hour]
+        axis.plot(hours, observed_counts, color="#555D61", lw=0.7, alpha=0.75,
+                  label="Simulated 2-min photometry")
+        axis.plot(hours, models[index], color="#B04435", lw=1.6,
+                  label="PCAT flare-catalog model")
+        axis.set(xlim=(0, 24), ylim=(lower, upper), xlabel="Time [hour]",
+                 ylabel="Counts per 2 min bin", title="Simulated stellar-flare time series")
+        axis.grid(False)
+        axis.legend(loc="upper right", framealpha=1, facecolor="white")
+        path = visual_root / f"flare_photometry_swep{index:09d}.png"
+        print(f"Writing to {path}...")
+        figure.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
+        plt.close(figure)
+        paths.append(path)
+    return paths
+
+
 def plot_flare_catalog_samples(catalog, posterior, typefileplot, colrfore):
     """Posterior samples of flare time and peak excess counts, with the injected flares marked."""
     listelin = np.concatenate([np.asarray(sample[0]["elin"]) for sample in posterior.listpostdictelem])  # [day]
@@ -224,6 +252,7 @@ def main():
         run_pcat(edges, template, numbswep)
     posterior = read_posterior()
     colrfore = configure_style(arguments.typeplotback)
+    render_flare_posterior_frames(meantime, obsvcnts, posterior)
     plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, arguments.typefileplot, colrfore)
     plot_flare_catalog_samples(catalog, posterior, arguments.typefileplot, colrfore)
     plot_flare_count_posterior(catalog, posterior, arguments.typefileplot, colrfore)

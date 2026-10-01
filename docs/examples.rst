@@ -17,6 +17,16 @@ Pipeline demonstrations
    Two-dimensional variable-width Gaussian-mixture inference with genuine
    birth and death transitions.
 
+``unbinned_gaussian_mixture``
+   PCAT fits the coordinates of 140 individually simulated events directly,
+   without spatial count bins. Its notebook runs the sampler, reads the saved
+   center posterior, and displays the generated event-catalog frames.
+
+``transit_timing_variations``
+   PCAT fits a sinusoidal timing perturbation to 24 individually simulated
+   mid-transit times. Its notebook reads the timing posterior and displays
+   the sampled model against the simulated timing residuals.
+
 ``simulated_hst_strong_lens``
    Hubble Space Telescope Wide Field Camera 3 image inference with lens mass,
    foreground lens-galaxy emission, source emission, and lensed emission.
@@ -45,20 +55,21 @@ Run the maintained local smoke suite with:
    python examples/run_all_examples.py
 
 The suite runs the compact image and publication-inspired simulations, the
-stellar-flare and Voigt smoke configurations, the Roman and catalog-association
-utilities, the proposal profiler, and the sampler comparison. It regenerates
-their outputs. It intentionally excludes workflows requiring authenticated
-services or mission downloads, the long radial-velocity analysis, and notebooks
-whose role is interactive inspection.
+stellar-flare and Voigt smoke configurations, an unbinned Gaussian mixture,
+simulated Roman strong-lens posterior images, simulated radial-velocity and
+transit-timing series, the public JWST/MIRI spectrum, the proposal profiler,
+and the sampler comparison. The JWST example may retrieve public MAST data.
+Notebooks requiring authenticated services or interactive inspection are excluded.
 
-Twelve genuinely changing inference views from seven maintained workflows are
-synchronized below. The panels span Gaussian mixtures, Fermi-LAT point sources,
-strong lenses, Hubble Space Telescope imaging, the public JWST MIRI spectrum,
-stellar flares, and simulated spectral lines. Every source plot uses fixed
-limits across its sequence, and the final GIF uses one shared color palette.
+Nine changing inference views are synchronized below. The panels show a genuinely
+unbinned Gaussian mixture, point sources in a simulated Daylan et al. (2017)
+Fermi-LAT northern Galactic cap, strong lenses including Roman/WFI lensed arcs,
+line catalogs from the public JWST/MIRI spectrum, simulated spectral lines, and
+simulated stellar-flare photometry, radial velocities, and transit times. The
+time-series and histogram axes remain fixed; the GIF uses one shared color palette.
 
 .. image:: ../examples/pcat_posterior_samples.gif
-   :alt: Twelve dynamic PCAT posterior inference views
+   :alt: Nine PCAT posterior views across unbinned, image, spectral, and time-series inference
    :width: 760px
    :align: center
 

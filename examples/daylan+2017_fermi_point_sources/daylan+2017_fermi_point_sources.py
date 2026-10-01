@@ -152,6 +152,42 @@ def read_posterior(run: object) -> object:
     return readfile(run.pathoutpcnfg + "gdatfinlpost")
 
 
+def render_source_frames(posterior: object) -> list[Path]:
+    """Overlay changing PCAT source catalogs on one fixed simulated NG-cap count map."""
+    import matplotlib.pyplot as plt
+
+    counts = np.asarray(posterior.cntpdata, dtype=float)[0].sum(axis=-1)
+    side = int(np.sqrt(counts.size))
+    if side * side != counts.size:
+        raise ValueError("Fermi source frames require a square count map")
+    counts = counts.reshape(side, side)
+    maximum = float(np.arcsinh(counts.max()))
+    output_directory = OUTPUT_ROOT / "visuals"
+    output_directory.mkdir(parents=True, exist_ok=True)
+    paths = []
+    catalogs = posterior.listpostdictelem
+    for sample_index in np.linspace(0, len(catalogs) - 1, min(12, len(catalogs)), dtype=int):
+        sources = catalogs[sample_index][0]
+        figure, axis = plt.subplots(figsize=(5.2, 5.2), facecolor="white")
+        axis.imshow(np.arcsinh(counts).T, origin="lower", cmap="Greys", vmin=0,
+                    vmax=max(maximum, 1.0), extent=[-FIELD_HALF_WIDTH_DEG, FIELD_HALF_WIDTH_DEG] * 2)
+        axis.scatter(np.rad2deg(sources["xpos"]), np.rad2deg(sources["ypos"]), s=58,
+                     facecolors="none", edgecolors="#c13d31", linewidths=1.5,
+                     label=f"PCAT sources ({len(sources['xpos'])})")
+        axis.set(xlim=(-FIELD_HALF_WIDTH_DEG, FIELD_HALF_WIDTH_DEG),
+                 ylim=(-FIELD_HALF_WIDTH_DEG, FIELD_HALF_WIDTH_DEG),
+                 xlabel="Field offset 1 [deg]", ylabel="Field offset 2 [deg]",
+                 title="Simulated Fermi-LAT northern Galactic cap (0.3-1 GeV)")
+        axis.legend(loc="upper right", facecolor="white", framealpha=1)
+        axis.grid(False)
+        path = output_directory / f"fermi_ngpc_sources_swep{sample_index:09d}.png"
+        print(f"Writing to {path}...")
+        figure.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
+        plt.close(figure)
+        paths.append(path)
+    return paths
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--smoke", action="store_true", help="Run a small pipeline check.")
@@ -167,7 +203,8 @@ def main() -> int:
             if path.exists():
                 print(f"Removing cached output {path}...")
                 shutil.rmtree(path)
-    run_reproduction(arguments.smoke, arguments.typefileplot, arguments.quick)
+    run = run_reproduction(arguments.smoke, arguments.typefileplot, arguments.quick)
+    render_source_frames(read_posterior(run))
     print(f"PCAT wrote outputs under {OUTPUT_ROOT}")
     return 0
 

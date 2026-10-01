@@ -64,21 +64,30 @@ def render_posterior_frames(events, chain, output_directory: Path):
     return paths
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--smoke", action="store_true")
-    options = parser.parse_args()
+def run_example(smoke: bool = False):
+    """Run PCAT on simulated individual events and return its plotted posterior."""
     events = simulate_events()
     chain, _ = sample_fixed_chains(
         events, event_log_likelihood, None,
         ("center_x_1", "center_y_1", "center_x_2", "center_y_2"), ("self",) * 4,
         np.full(4, -1.6), np.full(4, 1.6), None, None,
         np.array([[-0.8, -0.3, 0.7, 0.6]]), 1,
-        20 if options.smoke else 80, 5 if options.smoke else 20,
+        20 if smoke else 80, 5 if smoke else 20,
         pathbase=str(ROOT), typeverb=0, boolmakeplot=False,
         boolmakeplotinit=False, boolmakeplotfram=False, makeanim=False,
     )
-    render_posterior_frames(events, chain.reshape(-1, 4), ROOT / "visuals")
+    posterior_path = ROOT / "data" / "unbinned_gmm_posterior.npz"
+    posterior_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Writing to {posterior_path}...")
+    np.savez_compressed(posterior_path, events=events, chain=chain)
+    return events, chain, render_posterior_frames(events, chain.reshape(-1, 4), ROOT / "visuals")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--smoke", action="store_true")
+    options = parser.parse_args()
+    run_example(smoke=options.smoke)
 
 
 if __name__ == "__main__":

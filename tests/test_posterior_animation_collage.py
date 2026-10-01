@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 import pytest
 
+from pcat.demo import load_example_namespace
 from pcat.plotting import (
     DEFAULT_POSTERIOR_COLLAGE,
     EXAMPLES_ROOT,
@@ -43,7 +44,7 @@ def test_make_collage_combines_posterior_sequences(tmp_path):
 
     with Image.open(output_path) as animation:
         assert animation.n_frames == 4
-        assert animation.size == (440, 814)
+        assert animation.size == (440, 632)
         assert animation.info["duration"] == 100
 
 
@@ -73,6 +74,24 @@ def test_histogram_frame_limits_cover_full_fitted_catalog():
     lower, upper = histogram_frame_limits(reference_count=40, maximum_model_count=600)
     assert lower > 0
     assert upper > 600
+    assert histogram_frame_limits(reference_count=2, maximum_model_count=3)[1] < 4
+
+
+def test_unbinned_mixture_scores_individual_events_without_bins():
+    example = load_example_namespace("unbinned_gaussian_mixture/unbinned_gaussian_mixture.py")
+    events = example["simulate_events"]()
+    likelihood = example["event_log_likelihood"]
+    assert events.shape == (140, 2)
+    assert likelihood([-0.9, -0.35, 0.8, 0.65], events) > likelihood([1.4, 1.4, 1.5, 1.5], events)
+
+
+def test_ttv_example_scores_simulated_transit_times():
+    example = load_example_namespace("transit_timing_variations/transit_timing_variations.py")
+    data = example["simulate_transits"]()
+    likelihood = example["timing_likelihood"]
+    parameters = (0.2, 3.0, 4.0 / 1440.0, 0.3)
+    assert data[0].size == 24
+    assert likelihood(parameters, data) > likelihood((0.2, 3.0, 0.0, 0.3), data)
 
 
 def test_make_image_sequence_animation_includes_every_cutout(tmp_path):
@@ -99,7 +118,7 @@ def test_readme_embeds_multiframe_collage():
     readme_path = EXAMPLES_ROOT.parent / "README.md"
     readme = readme_path.read_text()
     assert DEFAULT_POSTERIOR_COLLAGE.is_file()
-    assert "![Twelve dynamic PCAT posterior inference views]" in readme
+    assert "![Nine PCAT posterior views across unbinned, image, spectral, and time-series inference]" in readme
     assert str(DEFAULT_POSTERIOR_COLLAGE.relative_to(EXAMPLES_ROOT.parent)) in readme
     with Image.open(DEFAULT_POSTERIOR_COLLAGE) as animation:
         assert animation.n_frames >= 16

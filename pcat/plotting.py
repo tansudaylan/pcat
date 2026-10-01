@@ -188,7 +188,7 @@ class PosteriorAnimationPanel:
 def histogram_frame_limits(reference_count: float, maximum_model_count: float) -> tuple[float, float]:
     """Keep all posterior histogram bars within one stable logarithmic y-range."""
 
-    maximum = max(100.0, float(np.max(np.atleast_1d(reference_count))),
+    maximum = max(1.0, float(np.max(np.atleast_1d(reference_count))),
                   float(np.max(np.atleast_1d(maximum_model_count))))
     return 0.5, 1.1 * maximum
 
@@ -196,47 +196,39 @@ def histogram_frame_limits(reference_count: float, maximum_model_count: float) -
 POSTERIOR_ANIMATION_PANELS = (
     PosteriorAnimationPanel(
         "Unbinned Gaussian mixture | event catalog",
-        "gaussian_mixture_catalog/visuals/post/fram/thisscatcntpen00evt0_swep*.png",
+        "unbinned_gaussian_mixture/visuals/gmix_events_swep*.png",
     ),
     PosteriorAnimationPanel(
-        "Fermi-LAT | low-energy source model",
-        "daylan+2017_fermi_point_sources/pcat_runs/daylan2017_mock/visuals/post/fram/thiscntpmodlen00evt0_*.png",
-    ),
-    PosteriorAnimationPanel(
-        "Fermi-LAT | mid-energy source model",
-        "daylan+2017_fermi_point_sources/pcat_runs/daylan2017_mock/visuals/post/fram/thiscntpmodlen01evt0_*.png",
-    ),
-    PosteriorAnimationPanel(
-        "Fermi-LAT | high-energy source model",
-        "daylan+2017_fermi_point_sources/pcat_runs/daylan2017_mock/visuals/post/fram/thiscntpmodlen02evt0_*.png",
-    ),
-    PosteriorAnimationPanel(
-        "Daylan+2018 | subhalo lens model",
-        "daylan+2018_strong_lens_subhalos/daylan2018_catalog/visuals/post/fram/thiscntpmodl_swep*.png",
+        "Daylan+2017 NG cap mock | Fermi-LAT point sources",
+        "daylan+2017_fermi_point_sources/visuals/fermi_ngpc_sources_swep*.png",
     ),
     PosteriorAnimationPanel(
         "Daylan+2018 | deflection residual",
         "daylan+2018_strong_lens_subhalos/daylan2018_catalog/visuals/post/fram/thisdeflresi_swep*.png",
     ),
     PosteriorAnimationPanel(
-        "HST | simulated strong-lens model",
-        "simulated_hst_strong_lens/visuals/post/fram/thiscntpmodl_*.png",
-    ),
-    PosteriorAnimationPanel(
-        "HST | subhalo deflection histogram",
-        "simulated_hst_strong_lens/visuals/post/fram/histodim/thishistdefspop0_swep*.png",
-    ),
-    PosteriorAnimationPanel(
         "JWST MIRI | line-center catalog",
-        "jwst_miri_ngc7027_line_catalog/visuals/post/fram/histodim/thishistelinpop0_swep*.png",
-    ),
-    PosteriorAnimationPanel(
-        "Stellar flares | variable time-series model",
-        "variable_number_stellar_flares/visuals/post/fram/thisscatcntpevt0_swep*.png",
+        "jwst_miri_ngc7027_line_catalog/visuals/jwst_line_hist_swep*.png",
     ),
     PosteriorAnimationPanel(
         "Voigt lines | spectral model",
         "voigt_spectral_line_catalog/pcat_runs/voigt_nomi/visuals/post/fram/thisscatcntpevt0_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Roman/WFI | simulated strong-lens arcs",
+        "roman_strong_lens_perturber_catalog/visuals/roman_wfi_lensed_posterior_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Simulated photometry | PCAT flare catalog",
+        "variable_number_stellar_flares/visuals/flare_photometry_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Simulated RV | variable-number exoplanets",
+        "variable_number_exoplanets_radial_velocity/visuals/rv_posterior_swep*.png",
+    ),
+    PosteriorAnimationPanel(
+        "Simulated TTV | transit-time series",
+        "transit_timing_variations/visuals/ttv_posterior_swep*.png",
     ),
 )
 

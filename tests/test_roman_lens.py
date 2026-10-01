@@ -24,7 +24,12 @@ def test_lens_image_pipeline_writes_fit_and_parameter_visuals(tmp_path, monkeypa
     observed = render_lens_counts(config, truth, 0.3, 0.7, 0.4)
     draws = np.tile(truth, (20, 1)) + np.linspace(-0.02, 0.02, 20)[:, None]
     posterior = SimpleNamespace(listpostparagenrscalbase=draws)
-    monkeypatch.setattr(main, "sample", lambda **configuration: posterior)
+    def sample_with_visible_ring(**configuration):
+        assert configuration["prior_minima"][0] < truth[0] < configuration["prior_maxima"][0]
+        assert configuration["prior_maxima"][0] < config.number_side * config.pixel_scale / 2
+        return posterior
+
+    monkeypatch.setattr(main, "sample", sample_with_visible_ring)
 
     result = run_lens_image_pipeline(
         config=config,
@@ -61,6 +66,14 @@ def test_cluster_poisson_likelihood_prefers_the_injected_lens():
         state, "fitt", np.array((1.6, 0.1, -0.2))
     )
     assert pickle.loads(pickle.dumps(poisson_lens_log_likelihood)) is poisson_lens_log_likelihood
+
+
+def test_simulated_roman_source_produces_bright_einstein_arc():
+    config = RomanLensConfig()
+    image = render_lens(config, 0.9, 0.06, -0.04, 0.09, 0.8, 0.35)
+    row, column = np.indices(image.shape)
+    radius = np.hypot(row - 15, column - 15) * config.pixel_scale  # [arcsec]
+    assert image[(radius > 0.8) & (radius < 1.2)].mean() > 3 * image[radius < 0.2].mean()
 
 
 def test_gaussian_lens_likelihood_uses_variance_and_ignores_invalid_pixels():

@@ -129,6 +129,37 @@ def retr_listplanpost(posterior, numbdraw=300):
             for k in indxdraw]
 
 
+def render_rv_posterior_frames(time, rvel, stdv, indxinst, timerefr, posterior):
+    """Show fixed-scale simulated RV data against evolving PCAT planet catalogs."""
+    indices = np.linspace(0, len(posterior.listpostdictelem) - 1,
+                          min(12, len(posterior.listpostdictelem)), dtype=int)
+    model_time = np.linspace(time.min(), time.max(), 450)  # [day]
+    catalogs = [np.column_stack([np.asarray(posterior.listpostdictelem[index][0][name])
+                                 for name in ('elin', 'flux', 'ecce', 'argp', 'phas')]) for index in indices]
+    curves = [retr_rvelplan(model_time, catalog, timerefr) for catalog in catalogs]
+    measured = rvel - np.asarray(OFFSET_INSTRUMENTS)[indxinst]  # [m/s]
+    scale = 1.1 * max(np.max(np.abs(measured) + stdv), *(np.max(np.abs(curve)) for curve in curves))  # [m/s]
+    output_directory = EXAMPLE_PATH / 'visuals'
+    output_directory.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for index, catalog, curve in zip(indices, catalogs, curves):
+        figure, axis = plt.subplots(figsize=(6.0, 4.5), facecolor='white')
+        axis.errorbar(time - TIME_START, measured, yerr=stdv, fmt='.', markersize=3,
+                      color='#47565E', alpha=0.65, label='Simulated RV')
+        axis.plot(model_time - TIME_START, curve, color='#A51C30', lw=1.8,
+                  label=f'PCAT model ({len(catalog)} planets)')
+        axis.set(xlim=(0, BASELINE), ylim=(-scale, scale), xlabel='Time since start [day]',
+                 ylabel='Radial velocity [m/s]', title='Simulated two-instrument RV time series')
+        axis.grid(False)
+        axis.legend(loc='upper right', facecolor='white', framealpha=1)
+        path = output_directory / f'rv_posterior_swep{index:09d}.png'
+        print(f'Writing to {path}...')
+        figure.savefig(path, dpi=200, bbox_inches='tight', facecolor='white')
+        plt.close(figure)
+        paths.append(path)
+    return paths
+
+
 def plot_phase_folded(time, rvel, stdv, indxinst, timerefr, posterior, typefileplot, colrfore):
     """Simulated RVs folded on each planet of the maximum-posterior catalog, with the other planets subtracted."""
     listplan = retr_listplanpost(posterior)
@@ -218,6 +249,7 @@ def main():
         run_pcat(time, rvel, stdv, indxinst, numbswep)
     posterior = read_posterior()
     colrfore = configure_style(arguments.typeplotback)
+    render_rv_posterior_frames(time, rvel, stdv, indxinst, timerefr, posterior)
     plot_phase_folded(time, rvel, stdv, indxinst, timerefr, posterior, arguments.typefileplot, colrfore)
     plot_catalog_samples(posterior, arguments.typefileplot, colrfore)
     plot_count_posterior(posterior, arguments.typefileplot, colrfore)

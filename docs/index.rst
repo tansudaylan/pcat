@@ -33,10 +33,11 @@ posterior animations use a shared pipeline.
    :width: 760px
    :align: center
 
-The animation shows twelve changing inference views from seven maintained
-example workflows. Each panel uses fixed source-plot limits and the GIF uses one
-shared color palette across all frames. The examples use simulated data except
-for the explicitly identified JWST MIRI spectrum.
+The animation shows nine changing inference views, including unbinned mixtures,
+simulated gamma-ray point sources, Roman strong-lens arcs, observed JWST/MIRI
+line catalogs, radial velocities, transit timings, and stellar-flare photometry.
+Time-series and histogram axes remain fixed across frames, and the GIF uses one
+shared color palette. Only the JWST/MIRI spectrum uses observed data.
 
 .. toctree::
    :maxdepth: 2

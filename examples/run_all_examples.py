@@ -121,6 +121,17 @@ PIPELINE_EXAMPLES = [
     ),
 ]
 
+COLLAGE_EXAMPLES = (
+    (ROOT / "unbinned_gaussian_mixture" / "unbinned_gaussian_mixture.py", ("--smoke",)),
+    (ROOT / "roman_strong_lens_perturber_catalog" / "roman_strong_lens_perturber_catalog.py",
+     ("--posterior-frames", "--smoke")),
+    (ROOT / "variable_number_exoplanets_radial_velocity" / "variable_number_exoplanets_radial_velocity.py",
+     ("--smoke",)),
+    (ROOT / "transit_timing_variations" / "transit_timing_variations.py", ("--smoke",)),
+    (ROOT / "jwst_miri_ngc7027_line_catalog" / "jwst_miri_ngc7027_line_catalog.py",
+     ("--numbswep", "400")),
+)
+
 UTILITY_EXAMPLES = [
     (
         ROOT / "catalog_association_completeness_purity" / "catalog_association_completeness_purity.py",
@@ -204,6 +215,9 @@ def main() -> None:
             require_initial=require_initial,
             require_multiframe=require_multiframe,
         )
+
+    for script, arguments in COLLAGE_EXAMPLES:
+        run_script(script, arguments)
 
     make_posterior_animation_collage(
         output_path=ROOT / "pcat_posterior_samples.gif",

@@ -143,6 +143,38 @@ def read_posterior():
     return readfile(str(EXAMPLE_PATH / "data" / "outp" / RUN_NAME / "gdatfinlpost"))
 
 
+def render_line_histogram_frames(posterior):
+    """Show changing PCAT line-center catalogs with shared bins and complete y-limits."""
+    indices = np.linspace(0, len(posterior.listpostdictelem) - 1,
+                          min(12, len(posterior.listpostdictelem)), dtype=int)
+    edges = np.linspace(*WAVELENGTH_RANGE, 25)  # [um]
+    histograms = []
+    for index in indices:
+        wavenumber = np.asarray(posterior.listpostdictelem[index][0]["elin"])
+        wavelengths = 1e6 / wavenumber  # [um]
+        histograms.append(np.histogram(wavelengths, bins=edges)[0])
+    upper = max(1, *(int(histogram.max()) for histogram in histograms)) * 1.15
+    visual_root = EXAMPLE_PATH / "visuals"
+    visual_root.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for index, histogram in zip(indices, histograms):
+        figure, axis = plt.subplots(figsize=(6.0, 4.3), facecolor="white")
+        axis.bar(edges[:-1], histogram, width=np.diff(edges), align="edge", color="#347F72",
+                 edgecolor="white", linewidth=0.5, label="PCAT line centers")
+        for label, wavelength in LINES_IDENTIFIED.items():
+            axis.axvline(wavelength, color="#A83D36", lw=1.1, ls="--", label=label)
+        axis.set(xlim=WAVELENGTH_RANGE, ylim=(0, upper), xlabel="Wavelength [micrometer]",
+                 ylabel="Number of spectral lines", title="JWST/MIRI NGC 7027 line catalog")
+        axis.grid(False)
+        axis.legend(loc="upper right", framealpha=1, facecolor="white", fontsize=8)
+        path = visual_root / f"jwst_line_hist_swep{index:09d}.png"
+        print(f"Writing to {path}...")
+        figure.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
+        plt.close(figure)
+        paths.append(path)
+    return paths
+
+
 def configure_style(typeplotback):
     colrfore = "white" if typeplotback == "dark" else "black"
     colrback = "black" if typeplotback == "dark" else "white"
@@ -237,6 +269,7 @@ def main():
         run_pcat(edges, template, arguments.numbswep)
     posterior = read_posterior()
     colrfore = configure_style(arguments.typeplotback)
+    render_line_histogram_frames(posterior)
     plot_spectrum_fit(wavelength, flux, error, continuum, posterior, arguments.typefileplot, colrfore)
     plot_line_catalog(wavelength, flux, posterior, arguments.typefileplot, colrfore)
     plot_line_count(posterior, arguments.typefileplot)

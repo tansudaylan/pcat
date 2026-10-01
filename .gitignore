@@ -5,6 +5,13 @@ build/
 dist/
 data/
 visuals/
+!examples/unbinned_gaussian_mixture/visuals/
+!examples/unbinned_gaussian_mixture/visuals/gmix_events_swep*.png
+!examples/daylan+2017_fermi_point_sources/visuals/
+examples/daylan+2017_fermi_point_sources/visuals/*
+!examples/daylan+2017_fermi_point_sources/visuals/fermi_ngpc_sources_swep*.png
+!examples/transit_timing_variations/visuals/
+!examples/transit_timing_variations/visuals/ttv_posterior_swep*.png
 !examples/catalog_association_completeness_purity/visuals/
 !examples/catalog_association_completeness_purity/visuals/*.png
 !examples/roman_strong_lens_perturber_catalog/visuals/
