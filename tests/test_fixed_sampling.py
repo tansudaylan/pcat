@@ -75,14 +75,15 @@ def test_fixed_chains_estimate_constant_likelihood_evidence(tmp_path):
     assert abs(evidence['log_evidence'] - np.log(3.)) < 4 * evidence['relative_error']
 
 
-def test_allesfitter_adapter_runs_native_pcat(tmp_path, monkeypatch):
+@pytest.mark.parametrize('initial_value', [0.0, 1.0])
+def test_allesfitter_adapter_runs_native_pcat(tmp_path, monkeypatch, initial_value):
     import sys
     import types
     import h5py
 
     config = types.ModuleType('allesfitter.config')
     config.init = lambda path: setattr(config, 'BASEMENT', types.SimpleNamespace(
-        datadir=path, bounds=[('uniform', 0., 1.)], theta_0=np.array([0.5]),
+        datadir=path, bounds=[('uniform', 0., 1.)], theta_0=np.array([initial_value]),
         outdir=str(tmp_path / 'results'),
         settings={'mcmc_nwalkers': 1, 'mcmc_total_steps': 8, 'mcmc_thin_by': 1},
     ))

@@ -6,6 +6,7 @@ import h5py
 import matplotlib.pyplot as pypl
 import numpy as nump
 import pcat
+from pcat.paths import get_data_path, get_repository_path, get_visuals_path
 import scipy as scip
 import shutil as shut
 import subprocess as subp
@@ -107,7 +108,7 @@ def _clear_forced_run_state(dictargs):
     if strgcnfg is None:
         return
 
-    pathbase = dictargs.get("pathbase") or oper.environ.get("PCAT_DATA_PATH") or oper.path.join(oper.getcwd(), "pcat-data")
+    pathbase = dictargs.get("pathbase") or str(get_repository_path())
     pathrun = pcat.main.retr_pathrun(pathbase, strgcnfg)
     if oper.path.exists(pathrun):
         shut.rmtree(pathrun)
@@ -1097,12 +1098,13 @@ def exec_ferm():
     if numbener < 1 or numbside < 1 or numbpixl != 12 * numbside**2 or numbevtt < 1:
         raise RuntimeError("Something has gone wrong..")
     fluxisot = 1e-06 * nump.ones((numbener, numbpixl, numbevtt))
-    path = oper.environ["PCAT_DATA_PATH"] + "/data/inpt/isottuto.fits"
+    path = get_data_path() / "inpt" / "isottuto.fits"
+    path.parent.mkdir(parents=True, exist_ok=True)
     fits.writeto(path, fluxisot, overwrite=True)
+    psf_path = path.parent / "psf_P7REP_SOURCE_V15_back.fits"
     cmnd = (
         "wget https://faun.rc.fas.harvard.edu/tansu/pcat/tuto/"
-        "psf_P7REP_SOURCE_V15_back.fits "
-        "$PCAT_DATA_PATH/data/inpt/psf_P7REP_SOURCE_V15_back.fits"
+        f"psf_P7REP_SOURCE_V15_back.fits {psf_path}"
     )
     dictoutp = pcat.init(
         forccart=True,
@@ -1613,7 +1615,7 @@ def test_lensmocksele(strgcnfgextnexec=None):
     '''
 
     dictoutp = None
-    pathbase = oper.environ["TDGU_DATA_PATH"] + "/" + "pcat_lens_mock_sele/"
+    pathbase = str(get_data_path() / "pcat_lens_mock_sele") + oper.sep
     pathdata = pathbase + "data/"
     pathvisu = pathbase + "visuals/"
     oper.system("mkdir -p %s" % pathdata)
@@ -1928,9 +1930,9 @@ def writ_data():
     dictoutp = None
     liststrgrade = []
     listrade = [[], []]
-    pathbase = oper.environ["TDGU_DATA_PATH"] + "/pcat_lens_inpt/"
+    pathbase = str(get_data_path() / "pcat_lens_inpt") + oper.sep
     pathdata = pathbase + "data/"
-    pathimag = pathbase + "imag/"
+    pathimag = str(get_visuals_path() / "pcat_lens_inpt") + oper.sep
     print("Reading SLACS tables...")
     pathslacpara = pathbase + "data/slacpara.fits"
     pathslacfull = pathbase + "data/slacfull.fits"
@@ -1984,7 +1986,7 @@ def writ_data():
         )
     numbside = 400
     numbsidehalf = numbside // 2
-    pathdatapcat = oper.environ["PCAT_DATA_PATH"] + "/data/inpt/"
+    pathdatapcat = str(get_data_path() / "inpt") + oper.sep
     strgradestar = "00 29 06.79 -00 54 07.5"
     liststrgrade.append(strgradestar)
     coorstar = astr.coordinates.SkyCoord(strgradestar, unit=(astr.units.hourangle, astr.units.deg))

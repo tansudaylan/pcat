@@ -41,7 +41,7 @@ def run_pipeline_demo(output_root: Path, **configuration: object) -> None:
     mpl.rcParams["text.usetex"] = False
     output_root = Path(output_root)
     output_root.mkdir(parents=True, exist_ok=True)
-    os.environ["PCAT_DATA_PATH"] = str(output_root)
+    os.environ["PCAT_PATH"] = str(output_root)
     sample_configuration = {**DEMO_DEFAULTS, **configuration, "pathbase": str(output_root)}
     pcat_main.sample(**sample_configuration)
     print(f"PCAT wrote outputs under {output_root}")

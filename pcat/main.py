@@ -65,6 +65,7 @@ import tdpy
 import tdpy.util as tdpy_util
 from tdpy.paths import make_directory, make_symlink, open_narr
 from tdpy.util import summgene
+from .paths import get_repository_path
 
 from .plotting import _pad_animation_text, histogram_frame_limits, plot_grid as plot_grid_native
 from .spectral import apply_gaussian_resolving_power, apply_line_spread_function, evaluate_line_profile, spectral_profile_parameters
@@ -3360,14 +3361,7 @@ def setup_pcat(gdat):
 
     # folders
     if gdat.pathbase is None:
-        for nameenv in ['PCAT_DATA_PATH', 'TDGU_DATA_PATH']:
-            if os.environ.get(nameenv):
-                gdat.pathbase = os.environ[nameenv]
-                break
-        if gdat.pathbase is None:
-            raise RuntimeError(
-                'No output data path is configured. Set PCAT_DATA_PATH or TDGU_DATA_PATH before running PCAT.'
-            )
+        gdat.pathbase = str(get_repository_path())
     gdat.pathbase = os.path.normpath(gdat.pathbase)
 
     gdat.pathrun = retr_pathrun(gdat.pathbase, gdat.strgcnfg) + '/'
@@ -11684,9 +11678,7 @@ def proc_finl(gdat=None, strgcnfg=None, strgpdfn='post', listnamevarbproc=None, 
     if gdat is not None and hasattr(gdat, 'pathbase') and gdat.pathbase is not None:
         pathbase = gdat.pathbase
     else:
-        pathbase = os.environ.get('PCAT_DATA_PATH')
-        if pathbase is None:
-            raise RuntimeError('PCAT_DATA_PATH is not set; cannot locate run outputs for final processing.')
+        pathbase = get_repository_path()
     pathbase = os.path.normpath(pathbase)
     
     print('Entering final post-processing stage (pdf: %s, meaning %s)...' % (strgpdfn, _explain_runtime_abbrev(strgpdfn)))
@@ -13537,9 +13529,7 @@ def _write_proposal_candidate_frame(gdat, gdatmodi, accepted, pathout):
 def proc_anim(strgcnfg, pathbase=None):
 
     if pathbase is None:
-        pathbase = os.environ.get('PCAT_DATA_PATH')
-    if pathbase is None:
-        raise RuntimeError('PCAT_DATA_PATH is not set; cannot locate frame plots for animation.')
+        pathbase = get_repository_path()
     pathoutpcnfg = retr_pathoutpcnfg(pathbase, strgcnfg)
     
     print('Making animations of frame plots for %s...' % strgcnfg)
@@ -14436,9 +14426,7 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
 
 def delete_strgcnfg(strgcnfg, pathbase=None):
     if pathbase is None:
-        pathbase = os.environ.get('PCAT_DATA_PATH')
-    if pathbase is None:
-        raise RuntimeError('PCAT_DATA_PATH is not set; cannot locate the run to delete.')
+        pathbase = get_repository_path()
     pathrun = retr_pathrun(pathbase, strgcnfg)
     print('Writing to %s...' % pathrun)
     shutil.rmtree(pathrun, ignore_errors=True)
@@ -18872,7 +18860,7 @@ def sample_parallel( \
     numbiter = len(dictpcatinptvari)
     indxiter = np.arange(numbiter) 
     
-    pathbase = os.path.normpath(os.environ["PCAT_DATA_PATH"])
+    pathbase = os.path.normpath(get_repository_path())
     
     cntrcomp = 0
     

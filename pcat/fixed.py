@@ -135,11 +135,16 @@ def sample_allesfitter_pcat(datadir):
     settings = basement.settings
     walker_count = int(settings['mcmc_nwalkers'])
     step_count = int(settings['mcmc_total_steps']) // int(settings['mcmc_thin_by'])
+    initial = np.asarray(basement.theta_0, dtype=float).copy()
+    for index, bound in enumerate(bounds):
+        if bound[0] == 'uniform':
+            initial[index] = np.clip(initial[index], np.nextafter(bound[1], bound[2]),
+                                     np.nextafter(bound[2], bound[1]))
     chain, logprob = sample_fixed_chains(
         datadir, _allesfitter_likelihood, None,
         ['parameter_%d' % index for index in range(len(bounds))], prior_types,
         np.asarray(minima), np.asarray(maxima), np.asarray(means), np.asarray(stdvs),
-        np.asarray(basement.theta_0)[None, :], walker_count, step_count,
+        initial[None, :], walker_count, step_count,
         0, datadir, 0,
     )
     path = Path(basement.outdir) / 'mcmc_save.h5'

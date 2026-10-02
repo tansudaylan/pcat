@@ -194,7 +194,7 @@ def test_documentation_excludes_obsolete_interface_terms():
     obsolete_terms = {
         "setup.py install",
         "pathbase/imag",
-        "PCAT_DATA_PATH/imag",
+        "PCAT_PATH/imag",
         "truenumbpnts",
         "Daylan+2016",
         "daylan2016",

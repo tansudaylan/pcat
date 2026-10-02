@@ -31,7 +31,7 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
 
     assert demo.mpl.rcParams["text.usetex"] is False
     assert output_root.is_dir()
-    assert os.environ["PCAT_DATA_PATH"] == str(output_root)
+    assert os.environ["PCAT_PATH"] == str(output_root)
     assert captured["typeexpr"] == "gmix"
     assert captured["typedata"] == "simu"
     assert captured["boolmakeplot"] is True
