@@ -4,13 +4,11 @@ Troubleshooting
 Output path errors
 ------------------
 
-``No output data path is configured`` means neither ``pathbase`` nor a supported
-environment variable was provided. Pass ``pathbase`` explicitly or set
-``PCAT_DATA_PATH``. ``PCAT_PATH`` identifies the repository for local utilities
-and does not select a sampler output directory.
+``No output data path is configured`` means neither ``pathbase`` nor
+``PCAT_PATH`` was provided. Pass ``pathbase`` explicitly or set ``PCAT_PATH``.
 
-If final processing or animation reports that ``PCAT_DATA_PATH`` is not set,
-pass the same ``pathbase`` used for sampling. A run cannot be reconstructed from
+If final processing or animation cannot find a run, pass the same ``pathbase``
+used for sampling. A run cannot be reconstructed from
 ``visuals/`` alone because final processing reads serialized states under
 ``pcat_runs/<run tag>/data/outp/<run tag>/``.
 

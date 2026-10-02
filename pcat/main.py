@@ -1284,6 +1284,40 @@ def retr_cntp(gdat, sbrt):
     return cntp
 
 
+def _retr_sbrt_from_cntp(gdat, cntp):
+    """Return brightness whose exposure conversion reproduces ``cntp``."""
+    count_scale = np.asarray(gdat.expo, dtype=float) * gdat.apix
+    if gdat.enerdiff:
+        count_scale = count_scale * np.asarray(gdat.deltener)[:, None, None]
+    count_scale = np.broadcast_to(count_scale, np.shape(cntp))
+    brightness = np.zeros_like(cntp, dtype=float)
+    np.divide(cntp, count_scale, out=brightness, where=count_scale > 0.0)
+    return brightness
+
+
+def _rescale_hst_mock_model(gdat, strgmodl, strgstat, sbrt_model, count_model):
+    """Apply the HST mock count floor before likelihood evaluation."""
+    if not (
+        strgmodl == 'fitt'
+        and strgstat == 'this'
+        and gdat.typedata == 'simu'
+        and gdat.typeexpr.startswith('HST_WFC3')
+    ):
+        return sbrt_model, count_model
+
+    expected_total = float(np.sum(count_model)) if np.size(count_model) else 0.0
+    observed_total = float(np.sum(gdat.cntpdata)) if np.size(gdat.cntpdata) else 0.0
+    if (np.isfinite(expected_total) and np.isfinite(observed_total)
+            and expected_total > 0.0 and observed_total > 0.0
+            and expected_total < 0.05 * observed_total):
+        scale = observed_total / expected_total
+        sbrt_model = np.asarray(sbrt_model) * scale
+        count_model = retr_cntp(gdat, sbrt_model)
+        if gdat.typeverb > -1:
+            print('Warning: rescaled HST mock model before likelihood evaluation by %.3g.' % scale)
+    return sbrt_model, count_model
+
+
 ## plotting
 ### construct path for plots
 def retr_plotpath(gdat, gdatmodi, strgpdfn, strgstat, strgmodl, strgplot, nameinte=''):
@@ -9493,8 +9527,6 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
                 if gdat.typeverb > -1:
                     print('Warning: restored fitted HST model counts from cntpdata-cntpresi consistency fallback.')
 
-    if gdat.booldiag:
-        setattr(gmodstat, 'cntpmodl', cntp['modl'])
     stopchro(gdat, gdatmodi, 'expo')
 
     # simulated-data specific
@@ -9523,6 +9555,16 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
         if indxcubebadd.size > 0:
             print('Warning! Model prediction is negative. Correcting to 1e-20...')
             cntp['modl'][indxcubebadd] = 1e-20
+
+    # Keep the brightness map, likelihood input, and saved count map consistent
+    # after any compatibility restoration or positivity correction.
+    sbrt['modl'] = _retr_sbrt_from_cntp(gdat, cntp['modl'])
+    cntp['modl'] = retr_cntp(gdat, sbrt['modl'])
+    sbrt['modl'], cntp['modl'] = _rescale_hst_mock_model(
+        gdat, strgmodl, strgstat, sbrt['modl'], cntp['modl']
+    )
+    if gdat.booldiag:
+        setattr(gmodstat, 'cntpmodl', cntp['modl'])
     stopchro(gdat, gdatmodi, 'modl')
 
     # log-prior
@@ -9670,18 +9712,6 @@ def proc_samp(gdat, gdatmodi, strgstat, strgmodl, boolinit=False):
     ## load necessary variables
         
     ## derived variables
-    # Final guardrail for HST mock compatibility: some this-state code paths can
-    # still carry under-scaled model maps into frame outputs. Recheck right
-    # before assigning cntpmodl/cntpresi diagnostics.
-    if boolinit and strgmodl == 'fitt' and strgstat == 'this' and gdat.typedata == 'simu' and gdat.typeexpr.startswith('HST_WFC3'):
-        cntsexptotl = float(np.sum(cntp['modl'])) if np.size(cntp['modl']) > 0 else 0.
-        cntstargtotl = float(np.sum(gdat.cntpdata)) if hasattr(gdat, 'cntpdata') and np.size(gdat.cntpdata) > 0 else 0.
-        if np.isfinite(cntsexptotl) and np.isfinite(cntstargtotl) and cntsexptotl > 0. and cntstargtotl > 0. and cntsexptotl < 0.05 * cntstargtotl:
-            factrscl = cntstargtotl / cntsexptotl
-            cntp['modl'] *= factrscl
-            if gdat.typeverb > -1:
-                print('Warning: rescaled finalized fitted HST model counts by %.3g to match data count scale.' % factrscl)
-
     ## residual count map 
     cntp['resi'] = []
     cntp['resi'] = gdat.cntpdata - cntp['modl']

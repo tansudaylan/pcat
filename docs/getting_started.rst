@@ -76,13 +76,11 @@ problem-specific prior validation.
 Runtime paths
 -------------
 
-``pathbase`` is the parent project root. Each ``strgcnfg`` run becomes a
+``pathbase`` is the PCAT repository root. Each ``strgcnfg`` run becomes a
 self-contained child of ``pathbase/pcat_runs`` containing ``data/`` and
 ``visuals/``. A ``pathbase`` that already identifies ``pcat_runs`` or ends in
 ``strgcnfg`` is used directly. If ``pathbase`` is omitted, PCAT uses
-``PCAT_DATA_PATH`` and then ``TDGU_DATA_PATH``. ``PCAT_PATH`` separately
-identifies the repository root for repository-local utilities and does not
-replace the analysis output path.
+``PCAT_PATH``.
 
 Configuration principles
 ------------------------
