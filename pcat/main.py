@@ -65,7 +65,7 @@ import tdpy
 import tdpy.util as tdpy_util
 from tdpy.paths import make_directory, make_symlink, open_narr
 from tdpy.util import summgene
-from .paths import get_repository_path
+from .paths import get_repository_path, get_visuals_path
 
 from .plotting import _pad_animation_text, histogram_frame_limits, plot_grid as plot_grid_native
 from .spectral import apply_gaussian_resolving_power, apply_line_spread_function, evaluate_line_profile, spectral_profile_parameters
@@ -15219,7 +15219,7 @@ def plot_pdfntotlflux():
         axis.set_ylabel('$N_{samp}$')
         make_legd(axis)
         plt.tight_layout()
-        pathfold = os.environ["TDGU_DATA_PATH"] + 'visuals/powrpdfn/'
+        pathfold = str(get_visuals_path() / 'powrpdfn') + os.sep
         path = pathfold + 'powrpdfn%04d.%s' % (n, gdat.typefileplot)
         print('Writing to %s...' % path)
         figr.savefig(path)
