@@ -1,4 +1,22 @@
 import importlib
+import io
+
+
+def test_console_tee_respects_verbosity_without_suppressing_file_log(monkeypatch):
+    main = importlib.import_module('pcat.main')
+    tee = main.logg.__new__(main.logg)
+    tee.terminal = io.StringIO()
+    tee.log = io.StringIO()
+
+    monkeypatch.setenv('TDPY_VERBOSITY', '0')
+    tee.write('hidden')
+    assert tee.terminal.getvalue() == ''
+    assert tee.log.getvalue() == 'hidden'
+
+    monkeypatch.setenv('TDPY_VERBOSITY', '1')
+    tee.write('shown')
+    assert tee.terminal.getvalue() == 'shown'
+    assert tee.log.getvalue() == 'hiddenshown'
 
 
 def test_pcat_package_imports():

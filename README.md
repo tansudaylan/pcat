@@ -4,8 +4,7 @@
 
 ## Purpose
 
-PCAT is a Bayesian inference framework for Poisson-distributed images, photon
-events, spectra, and other data. It supports fixed-dimensional inference and
+PCAT is a transdimensional, hierarchical, Bayesian inference framework. It supports fixed-dimensional inference and
 transdimensional inference over a metamodel. A model has a specified parameter
 dimension; a metamodel combines candidate models that may have different
 dimensions. During transdimensional inference PCAT samples both the selected

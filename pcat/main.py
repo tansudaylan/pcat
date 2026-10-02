@@ -1,6 +1,6 @@
 # plotting
 
-from tdpy.verbosity import print
+from tdpy.verbosity import print, retr_boolverb
 import matplotlib as mpl
 mpl.use('agg')
 import matplotlib.pyplot as plt
@@ -19153,7 +19153,8 @@ class logg(object):
         make_symlink(gdat.pathstdo, pathlink)
     
     def write(self, strg):
-        self.terminal.write(strg)
+        if retr_boolverb():
+            self.terminal.write(strg)
         self.log.write(strg)  
 
     def flush(self):
@@ -20111,8 +20112,9 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
     
             print('gdatmodi.this.lliktotl')
             print(gdatmodi.this.lliktotl)
-            print('Chi2 per degree of freedom')
-            print(gdatmodi.this.chi2doff)
+            if hasattr(gdatmodi.this, 'chi2doff'):
+                print('Chi2 per degree of freedom')
+                print(gdatmodi.this.chi2doff)
         
         if boollogg:
             print('Chronometers: ')
