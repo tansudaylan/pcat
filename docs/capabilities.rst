@@ -1,8 +1,8 @@
 Capabilities
 ============
 
-PCAT applies one posterior-sampling and output pipeline to fixed-dimensional
-models and transdimensional catalogs. A run can use simulated data or supplied
+PCAT applies one posterior-sampling and output pipeline to inference within a
+model and inference over a metamodel. A run can use simulated data or supplied
 data, and its model can contain a fixed set of parameters, a variable number of
 elements, or both.
 

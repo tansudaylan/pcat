@@ -57,6 +57,21 @@ def test_example_reuses_shared_fits_writer_and_preserves_baseline_template(tmp_p
     )
 
 
+@pytest.mark.parametrize("legacy", [False, True])
+def test_existing_mismodeling_run_is_preserved_before_writing_inputs(tmp_path, monkeypatch, legacy):
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    run_name = "preserved_run"
+    root = Path(example.retr_pathrun(tmp_path, run_name))
+    cached = tmp_path / "data" / "outp" / run_name if legacy else root / "data" / "outp"
+    cached.mkdir(parents=True)
+    marker = cached / "preserve.txt"
+    marker.write_text("existing scientific output")
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        example.run_fit(example.simulate_light_curves(), run_name, "A", "flargauss", "constant", 300)
+    assert marker.read_text() == "existing scientific output"
+    assert not (root / "data" / "inpt").exists()
+
+
 def test_misspecified_profile_fit_samples_gaussian_flares(tmp_path, monkeypatch):
     monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
     monkeypatch.setattr(example, "NUMBER_CHAINS", 1)
@@ -90,3 +105,24 @@ def test_residual_and_predictive_chi_squared_shape_diagnostics(tmp_path, monkeyp
     figure_path = example.plot_residual_chi2_shapes(summary, "png")
     assert figure_path.is_file()
     assert figure_path.stat().st_size > 10_000
+
+
+@pytest.mark.parametrize("counts,models", [
+    ([-1.0, 1.0], [[1.0, 1.0]]),
+    ([], [[]]),
+    (np.ma.array([1.0, 2.0], mask=[True, False]), [[1.0, 2.0]]),
+    ([1.0, 2.0], np.ma.array([[1.0, 2.0]], mask=[[False, True]])),
+])
+def test_residual_shapes_reject_invalid_or_missing_observations(counts, models):
+    with pytest.raises(ValueError):
+        example.calculate_residual_diagnostics(counts, models, np.random.default_rng(1), 10)
+
+
+def test_timestamped_output_set_is_checked_before_sampling(tmp_path, monkeypatch):
+    monkeypatch.setattr(example, "VISUAL_PATH", tmp_path)
+    marker = tmp_path / "mismodeling_summary_20261025_120000.json"
+    marker.write_text("existing results")
+    monkeypatch.setattr(example, "simulate_light_curves", lambda: pytest.fail("must reject before simulation"))
+    with pytest.raises(FileExistsError):
+        example.run_example(300, time_tag="20261025_120000", number_chains=1)
+    assert marker.read_text() == "existing results"

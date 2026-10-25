@@ -15,9 +15,10 @@ sigma_eff includes a fractional floor for calibration and fringe residuals.
 from tdpy.verbosity import print
 
 import argparse
+import hashlib
+import json
 from datetime import datetime, timezone
 from tdpy.cli import add_plot_arguments
-import shutil
 from pathlib import Path
 
 import astropy.io.fits
@@ -25,6 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pcat.demo import load_example_posterior
 from pcat.demo import configure_example_style, save_example_figure
+from pcat.main import retr_pathrun
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
 RUN_NAME = EXAMPLE_PATH.name
@@ -104,13 +106,19 @@ def write_pcat_inputs(wavelength, flux, error, continuum):
     return edges, continuum[:, None, None]
 
 
-def run_pcat(edges, template, numbswep):
+def fresh_run_root():
+    run_root = Path(retr_pathrun(EXAMPLE_PATH, RUN_NAME))
+    path_cache = run_root / "data" / "outp"
+    legacy_cache = EXAMPLE_PATH / "data" / "outp" / RUN_NAME
+    if path_cache.exists() or legacy_cache.exists():
+        raise FileExistsError(f"Refusing to overwrite cached JWST run {RUN_NAME}")
+    return run_root
+
+
+def run_pcat(edges, template, numbswep, *, number_chains=1):
     from pcat import sampling
 
-    path_cache = EXAMPLE_PATH / "data" / "outp" / RUN_NAME
-    if path_cache.exists():
-        print(f"Removing cached PCAT state {path_cache}...")
-        shutil.rmtree(path_cache)
+    fresh_run_root()
     return sampling.sample(
         typeexpr="fire",
         typedata="inpt",
@@ -131,6 +139,7 @@ def run_pcat(edges, template, numbswep):
         fittmaxmnumbelempop0=25,
         inittype="rand",
         typeseed=0,
+        numbproc=number_chains,
         probtran=0.7,
         probspmr=0.4,
         stdvpropelemfire=[5.0e-5, 1.0e-5, 5.0e-4, 5.0e-4],
@@ -184,7 +193,7 @@ def render_line_histogram_frames(posterior):
     return paths
 
 
-def plot_spectrum_fit(wavelength, flux, error, continuum, posterior, typefileplot, colrfore):
+def plot_spectrum_fit(wavelength, flux, error, continuum, posterior, typefileplot, colrfore, time_tag=None):
     """Data, continuum template, posterior model, and normalized residuals versus wavelength."""
     sigma = np.sqrt(error**2 + (FRACTIONAL_ERROR_FLOOR * continuum)**2)  # [Jy]
     countsperjansky = continuum / sigma**2  # [Jy^-1]
@@ -192,7 +201,8 @@ def plot_spectrum_fit(wavelength, flux, error, continuum, posterior, typefileplo
     modl = posterior.listpostcntpmodl[:, ::-1, 0, 0] / countsperjansky[None, :]  # [Jy]
     quantiles = np.percentile(modl, [16., 50., 84.], axis=0)
     figure, axes = plt.subplots(2, 1, figsize=(7.0, 4.4), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
-    axes[0].step(wavelength, flux, where="mid", color=colrfore, lw=0.8, label="JWST MIRI MRS, NGC 7027 (PID 1523)")
+    axes[0].plot(wavelength, flux, marker=".", markersize=2, linestyle="none",
+                 color=colrfore, label="JWST MIRI MRS, NGC 7027 (PID 1523)")
     axes[0].plot(wavelength, continuum, color="C2", ls="--", lw=1.0, label="Continuum template")
     axes[0].fill_between(wavelength, quantiles[0], quantiles[2], color="C0", alpha=0.4, lw=0)
     axes[0].plot(wavelength, quantiles[1], color="C0", lw=1.0, label="PCAT posterior median model")
@@ -201,22 +211,23 @@ def plot_spectrum_fit(wavelength, flux, error, continuum, posterior, typefileplo
                          textcoords="offset points", ha="center", fontsize=8)
     axes[0].set_ylabel("Flux density [Jy]")
     axes[0].legend(loc="upper left", fontsize=8)
-    axes[1].step(wavelength, (flux - quantiles[1]) / sigma, where="mid", color=colrfore, lw=0.8)
+    axes[1].plot(wavelength, (flux - quantiles[1]) / sigma, marker=".", markersize=2,
+                 linestyle="none", color=colrfore)
     axes[1].axhline(0.0, color="0.5", lw=0.8)
     axes[1].set_ylabel(r"Residual [$\sigma$]")
     axes[1].set_xlabel(r"Wavelength [$\mu$m]")
     figure.subplots_adjust(hspace=0.05)
-    save_example_figure(figure, EXAMPLE_PATH, "jwst_miri_ngc7027_spectrum_fit", typefileplot)
+    return save_spectral_figure(figure, "jwst_miri_ngc7027_spectrum_fit", typefileplot, time_tag)
 
 
-def plot_line_catalog(wavelength, flux, posterior, typefileplot, colrfore):
+def plot_line_catalog(wavelength, flux, posterior, typefileplot, colrfore, time_tag=None):
     """Posterior samples of line wavelength and integrated flux over the observed spectrum."""
     listelin = np.concatenate([np.asarray(sample[0]["elin"]) for sample in posterior.listpostdictelem])  # [m^-1]
     listflux = np.concatenate([np.asarray(sample[0]["flux"]) for sample in posterior.listpostdictelem])  # [Jy m^-1]
     # 1 Jy m^-1 integrated over wavenumber is 1e-26 W m^-2 Hz^-1 times c [m s^-1]
     listfluxsi = listflux * 1e-26 * 2.998e8  # [W m^-2]
     figure, axes = plt.subplots(2, 1, figsize=(7.0, 4.4), sharex=True, gridspec_kw={"height_ratios": [1, 2]})
-    axes[0].step(wavelength, flux, where="mid", color=colrfore, lw=0.8)
+    axes[0].plot(wavelength, flux, marker=".", markersize=2, linestyle="none", color=colrfore)
     axes[0].set_ylabel("Flux density [Jy]")
     axes[1].scatter(1e6 / listelin, listfluxsi, s=4, alpha=0.3, color="C0", lw=0,
                     label=f"Posterior line samples ({len(posterior.listpostdictelem)} catalogs)")
@@ -229,10 +240,10 @@ def plot_line_catalog(wavelength, flux, posterior, typefileplot, colrfore):
     axes[1].set_xlim(wavelength[0], wavelength[-1])
     axes[1].legend(loc="upper left", fontsize=8)
     figure.subplots_adjust(hspace=0.05)
-    save_example_figure(figure, EXAMPLE_PATH, "jwst_miri_ngc7027_line_catalog_samples", typefileplot)
+    return save_spectral_figure(figure, "jwst_miri_ngc7027_line_catalog_samples", typefileplot, time_tag)
 
 
-def plot_line_count(posterior, typefileplot):
+def plot_line_count(posterior, typefileplot, time_tag=None):
     """Posterior probability of the number of emission lines."""
     numbelem = np.asarray(posterior.listpostnumbelem).ravel().astype(int)
     values, counts = np.unique(numbelem, return_counts=True)
@@ -240,29 +251,75 @@ def plot_line_count(posterior, typefileplot):
     axis.bar(values, counts / counts.sum(), color="C0")
     axis.set_xlabel("Number of emission lines")
     axis.set_ylabel("Posterior probability")
-    save_example_figure(figure, EXAMPLE_PATH, "jwst_miri_ngc7027_line_count_posterior", typefileplot)
+    return save_spectral_figure(figure, "jwst_miri_ngc7027_line_count_posterior", typefileplot, time_tag)
+
+
+def save_spectral_figure(figure, name, typefileplot, time_tag=None):
+    if time_tag:
+        name = f"{name}_{time_tag}"
+    target = EXAMPLE_PATH / "visuals" / f"{name}.{typefileplot}"
+    if target.exists():
+        raise FileExistsError(f"Refusing to overwrite spectral figure {target}")
+    save_example_figure(figure, EXAMPLE_PATH, name, typefileplot)
+    return target
 
 
 def main():
+    global RUN_NAME, PATH_INPT
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=200_000)
     add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--skip-sampling", action="store_true", help="Replot an existing chain.")
+    parser.add_argument("--run-name", help="Saved run to replot, or a fresh sampler run name.")
+    parser.add_argument("--time-tag", default=datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"))
+    parser.add_argument("--chains", type=int, default=1)
     arguments = parser.parse_args()
+    if datetime.strptime(arguments.time_tag, "%Y%m%d_%H%M%S").strftime("%Y%m%d_%H%M%S") != arguments.time_tag:
+        raise ValueError("time-tag must use YYYYMMDD_HHMMSS")
+    if arguments.numbswep < 100 or arguments.chains < 1:
+        raise ValueError("At least 100 sweeps and one chain are required")
+    RUN_NAME = arguments.run_name or (EXAMPLE_PATH.name if arguments.skip_sampling
+                                      else f"{EXAMPLE_PATH.name}_{arguments.time_tag}")
+    if Path(RUN_NAME).name != RUN_NAME or RUN_NAME in {".", ".."}:
+        raise ValueError("run-name must be a single directory name")
+    if list((EXAMPLE_PATH / "visuals").glob(f"jwst_miri_ngc7027_*_{arguments.time_tag}.*")):
+        raise FileExistsError("Refusing to overwrite earlier spectral outputs")
+    run_root = None if arguments.skip_sampling else fresh_run_root()
+    source_path = PATH_INPT / NAME_X1D
     wavelength, flux, error = read_spectrum()
     continuum = estimate_continuum(flux, error)
-    edges, template = write_pcat_inputs(wavelength, flux, error, continuum)
     if not arguments.skip_sampling:
-        run_pcat(edges, template, arguments.numbswep)
+        PATH_INPT = run_root / "data" / "inpt"
+        edges, template = write_pcat_inputs(wavelength, flux, error, continuum)
+        run_pcat(edges, template, arguments.numbswep, number_chains=arguments.chains)
     posterior = load_example_posterior(
         f"{EXAMPLE_PATH.name}/data/outp/{RUN_NAME}/gdatfinlpost"
     )
     colrfore = configure_example_style(arguments.typeplotback)
     render_line_histogram_frames(posterior)
-    plot_spectrum_fit(wavelength, flux, error, continuum, posterior, arguments.typefileplot, colrfore)
-    plot_line_catalog(wavelength, flux, posterior, arguments.typefileplot, colrfore)
-    plot_line_count(posterior, arguments.typefileplot)
+    figure_paths = [
+        plot_spectrum_fit(wavelength, flux, error, continuum, posterior, arguments.typefileplot, colrfore, arguments.time_tag),
+        plot_line_catalog(wavelength, flux, posterior, arguments.typefileplot, colrfore, arguments.time_tag),
+        plot_line_count(posterior, arguments.typefileplot, arguments.time_tag),
+    ]
+    metadata = {"run_name": RUN_NAME, "time_tag": arguments.time_tag, "skip_sampling": arguments.skip_sampling,
+                "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                "input_file": NAME_X1D, "input_sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
+                "wavelength_range_um": WAVELENGTH_RANGE, "fractional_error_floor": FRACTIONAL_ERROR_FLOOR,
+                "spectrum_bins": int(wavelength.size), "posterior_catalogs": len(posterior.listpostdictelem),
+                "chains": (int(posterior.numbproc) if hasattr(posterior, "numbproc")
+                           else None if arguments.skip_sampling else arguments.chains),
+                "sweeps_per_chain": (int(posterior.numbswep) if hasattr(posterior, "numbswep")
+                                     else None if arguments.skip_sampling else arguments.numbswep),
+                "figure_paths": [path.name for path in figure_paths],
+                "assumptions": "Continuum-based effective-count Poisson approximation to calibrated JWST flux density; short chains verify integration."}
+    metadata_path = EXAMPLE_PATH / "visuals" / f"jwst_miri_ngc7027_run_{arguments.time_tag}.json"
+    print(f"Writing to {metadata_path}...")
+    with metadata_path.open("x", encoding="utf-8") as stream:
+        json.dump(metadata, stream, indent=2, allow_nan=False)
+        stream.write("\n")
 
 
 if __name__ == "__main__":

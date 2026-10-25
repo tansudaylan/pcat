@@ -602,7 +602,7 @@ Omit ``--smoke`` for the full 60,000-sweep run. The example also compares the po
 
 ### Model misspecification
 
-The [flare-catalog script](examples/mismodeling_flare_catalog/mismodeling_flare_catalog.py) and [notebook](examples/mismodeling_flare_catalog/mismodeling_flare_catalog.ipynb) compare fits using the data-generating models with fits using different forward models. Four fast-rise, exponential-decay (FRED) flares are injected into each simulated light curve. One fit replaces the asymmetric FRED profiles with symmetric Gaussian flares. Another replaces a 2% modulated baseline with a constant level. In the recorded run, the Gaussian fit reports 15.1 flares on average instead of four, despite a chi-squared per bin of 0.99, close to 0.97 for the correct model.
+The [flare-catalog script](examples/mismodeling_flare_catalog/mismodeling_flare_catalog.py) and [notebook](examples/mismodeling_flare_catalog/mismodeling_flare_catalog.ipynb) compare fits using the data-generating models with fits using different forward models. Four fast-rise, exponential-decay (FRED) flares are injected into each simulated light curve. One fit replaces the asymmetric FRED profiles with symmetric Gaussian flares. Another replaces a 2% modulated baseline with a constant level. The example compares the resulting catalogs, Pearson residual distributions, and posterior-predictive total chi-squared distributions. The reference curves include standard and fitted Gaussians for residuals and a Gaussian approximation to the predictive total.
 
 Run a short check with:
 
@@ -612,7 +612,26 @@ python examples/mismodeling_flare_catalog/mismodeling_flare_catalog.py --smoke
 
 Omit ``--smoke`` for the default 40,000 sweeps per chain. The [Mejiro comparison above](#mejiro-roman-strong-lens-inference) provides a separate image-model example: it fits one simulated exposure with the correct PSF and with a PSF 30% too wide, then measures the resulting lens-parameter bias.
 
-![Injected and inferred flare catalogs under correct and misspecified models](examples/mismodeling_flare_catalog/visuals/mismodeling_catalog_samples.png)
+Use `--chains` to select the number of independent chains. Each invocation uses
+a new timestamp for its run names, figures, and summary JSON, preserving earlier
+posteriors and plots. The summary records the actual residual and predictive
+arrays, chain settings, and source hash. Existing native and legacy run outputs
+are protected from replacement.
+
+The two-chain, 600-sweep integration run `20261025_171151` executed all four
+fits. Its correct models still infer roughly ten components for four injected
+flares. These short chains need further mixing and convergence assessment
+before they can support catalog-recovery or bias conclusions. A small residual
+or a Gaussian-looking histogram alone does not establish an accurate catalog.
+
+![Injected and inferred flare catalogs under correct and misspecified models](examples/mismodeling_flare_catalog/visuals/mismodeling_catalog_samples_20261025_171855.png)
+
+![Pearson residual distributions and predictive total chi-squared compared with Gaussian reference curves](examples/mismodeling_flare_catalog/visuals/mismodeling_residual_chi2_shapes_20261025_171855.png)
+
+These figures replay the saved native posterior states from that integration
+run. The plotting replay preserves the median model arrays and total
+chi-squared values exactly, with separate sampling and plotting source hashes
+in the summary JSON.
 
 Full transdimensional runs initialize a model configuration, define a likelihood and data product, and call `pcat.sampling.init(...)` with a populated configuration dictionary.
 

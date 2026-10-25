@@ -11,10 +11,9 @@ that generated it and once with a misspecified forward model.
 - Profile mismatch: light curve A is fit with symmetric Gaussian flares instead of FRED flares.
 - Baseline mismatch: light curve B is fit with a constant quiescent level instead of the modulated one.
 
-The correct models recover the four injected flares. The misspecified models converge to confident
-and wrong catalogs. Gaussian components tile each asymmetric decay, so about 15 flares fit the
-data with a residual indistinguishable from noise. Faint flares absorb the unmodeled variability
-of light curve B, which leaves a coherent residual. A good fit therefore does not validate a catalog.
+Compare the recovered catalogs and residuals rather than assuming that a small chi-squared
+identifies the correct flare population. Short runs exercise the pipeline and do not establish
+convergence or a particular catalog-size bias.
 """
 
 from __future__ import annotations
@@ -22,7 +21,9 @@ from __future__ import annotations
 from tdpy.verbosity import print
 
 import argparse
-import shutil
+from datetime import datetime, timezone
+import hashlib
+import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -84,15 +85,15 @@ def simulate_light_curves(seed: int = 3) -> dict:
 
 
 def run_fit(light_curves: dict, run_name: str, light_curve: str, profile: str, baseline: str,
-            numbswep: int) -> object:
+            numbswep: int, *, number_chains=None) -> object:
     """Fit one light curve with one forward model and return PCAT's final posterior state."""
     from pcat import sampling
 
     run_root = Path(retr_pathrun(EXAMPLE_PATH, run_name))
     cached_state = run_root / "data" / "outp" / run_name
-    if cached_state.exists():
-        print(f"Removing cached PCAT state {cached_state}...")
-        shutil.rmtree(cached_state)
+    legacy_state = EXAMPLE_PATH / "data" / "outp" / run_name
+    if cached_state.parent.exists() or legacy_state.exists():
+        raise FileExistsError(f"Refusing to overwrite cached PCAT run {run_name}")
     input_path = run_root / "data" / "inpt"
     baseline_template = write_time_series_fits(
         input_path, light_curves["edges"], light_curves["counts"][light_curve],
@@ -108,7 +109,7 @@ def run_fit(light_curves: dict, run_name: str, light_curve: str, profile: str, b
         limtparaelem={name: LIMITS[name] for name in ("flux", *shape_names)},
         maxmgangdata=100.0 / (3600.0 * 180.0 / np.pi),  # [rad], unused for non-spatial data
         anlytype="spec", fittminmnumbelempop0=0, fittmaxmnumbelempop0=MAXIMUM_NUMBER,
-        inittype="rand", typeseed=0, numbproc=NUMBER_CHAINS,
+        inittype="rand", typeseed=0, numbproc=NUMBER_CHAINS if number_chains is None else number_chains,
         probtran=0.5, probspmr=0.3, radispmr=0.01,  # [day]
         stdvpropelemfire=[0.01, 1.0e-3] + [0.02] * len(shape_names),
         booladaptstdp=True, boolburntmpr=True, factburntmpr=0.9,
@@ -121,12 +122,14 @@ def run_fit(light_curves: dict, run_name: str, light_curve: str, profile: str, b
 
 def calculate_residual_diagnostics(counts, posterior_models, rng, number_replicates):
     """Compare Pearson residual and total chi-squared shapes with Gaussian references."""
+    if np.ma.is_masked(counts) or np.ma.is_masked(posterior_models):
+        raise ValueError("counts and posterior models must contain measured values")
     counts = np.asarray(counts, dtype=float)
     posterior_models = np.asarray(posterior_models, dtype=float)
-    if counts.ndim != 1 or posterior_models.ndim != 2 or posterior_models.shape[1] != counts.size:
+    if counts.ndim != 1 or counts.size == 0 or posterior_models.ndim != 2 or posterior_models.shape[1] != counts.size:
         raise ValueError("counts and posterior models must have matching one-dimensional bins")
     if (posterior_models.shape[0] == 0 or not np.isfinite(counts).all()
-            or not np.isfinite(posterior_models).all() or np.any(posterior_models < 0.0)):
+            or np.any(counts < 0.0) or not np.isfinite(posterior_models).all() or np.any(posterior_models < 0.0)):
         raise ValueError("counts and posterior model draws must be finite and nonnegative")
     if number_replicates < 2:
         raise ValueError("at least two predictive replicates are required")
@@ -181,8 +184,10 @@ def gaussian_density(values, mean, standard_deviation):
     return np.exp(-0.5 * standardized**2) / (standard_deviation * np.sqrt(2.0 * np.pi))
 
 
-def plot_residual_chi2_shapes(summary: dict, typefileplot: str) -> Path:
+def plot_residual_chi2_shapes(summary: dict, typefileplot: str, time_tag=None) -> Path:
     """Compare residual histograms and predictive total chi-squared with Gaussians."""
+    from matplotlib.ticker import MaxNLocator
+
     figure, axes = plt.subplots(len(FITS), 2, figsize=(8.2, 9.0))
     for row, (run_name, _, _, _, label) in enumerate(FITS):
         result = summary[run_name]
@@ -191,17 +196,15 @@ def plot_residual_chi2_shapes(summary: dict, typefileplot: str) -> Path:
         resid_stdv = float(np.std(residual, ddof=1))
         resid_grid = np.linspace(float(residual.min()), float(residual.max()), 300)
         axis = axes[row, 0]
-        axis.hist(residual, bins=30, density=True, color="#007360", alpha=0.55,
+        axis.hist(residual, bins=30, density=True, color="0.25", alpha=0.55,
                   label="Observed Pearson residuals")
         axis.plot(resid_grid, gaussian_density(resid_grid, 0.0, 1.0), color="black",
                   ls="--", label="Standard Gaussian")
         axis.plot(resid_grid, gaussian_density(resid_grid, resid_mean, resid_stdv),
                   color="#A51C30", label="Gaussian fit")
-        axis.set_title(label, loc="left", fontsize=9)
+        axis.set_title(f"{label}\nmean={resid_mean:.2f}, sd={resid_stdv:.2f}", loc="left", fontsize=9)
         axis.set_xlabel("Pearson residual")
         axis.set_ylabel("Density")
-        axis.text(0.98, 0.92, f"mean={resid_mean:.2f}, sd={resid_stdv:.2f}",
-                  transform=axis.transAxes, ha="right", va="top", fontsize=8)
 
         chi2_predictive = result["chi2_predictive"]
         chi2_mean = float(np.mean(chi2_predictive))
@@ -209,7 +212,7 @@ def plot_residual_chi2_shapes(summary: dict, typefileplot: str) -> Path:
         chi2_total = result["chi2_total"]
         chi2_grid = np.linspace(0.0, max(float(chi2_predictive.max()), chi2_total) * 1.05, 300)
         axis = axes[row, 1]
-        axis.hist(chi2_predictive, bins=30, density=True, color="#347F72", alpha=0.55,
+        axis.hist(chi2_predictive, bins=30, density=True, color="0.25", alpha=0.55,
                   label="Posterior-predictive $\\chi^2$")
         axis.plot(chi2_grid, gaussian_density(chi2_grid, chi2_mean, chi2_stdv),
                   color="#A51C30", ls="--", label="Gaussian approximation")
@@ -217,9 +220,9 @@ def plot_residual_chi2_shapes(summary: dict, typefileplot: str) -> Path:
                      label="Observed total $\\chi^2$")
         axis.set_xlabel(r"Total Pearson $\chi^2$")
         axis.set_ylabel("Density")
-        axis.text(0.98, 0.92, f"upper-tail fraction="
-                  f"{result['chi2_upper_tail_fraction']:.3f}",
-                  transform=axis.transAxes, ha="right", va="top", fontsize=8)
+        axis.set_title(f"Upper-tail fraction={result['chi2_upper_tail_fraction']:.3f}", loc="left", fontsize=9)
+        axis.xaxis.set_major_locator(MaxNLocator(nbins=4))
+        axis.ticklabel_format(axis="x", style="sci", scilimits=(-3, 4), useMathText=True)
 
     handles = []
     labels = []
@@ -228,20 +231,20 @@ def plot_residual_chi2_shapes(summary: dict, typefileplot: str) -> Path:
         handles.extend(axis_handles)
         labels.extend(axis_labels)
     figure.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.995),
-                  ncol=3, fontsize=7)
+                  ncol=3, fontsize=9, fancybox=True, framealpha=1.0)
     for axis in axes.flat:
         axis.grid(False)
     figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.94))
-    return save(figure, "mismodeling_residual_chi2_shapes", typefileplot)
+    return save(figure, "mismodeling_residual_chi2_shapes", typefileplot, time_tag)
 
 
-def plot_light_curve_fits(light_curves: dict, summary: dict, light_curve: str, typefileplot: str) -> Path:
+def plot_light_curve_fits(light_curves: dict, summary: dict, light_curve: str, typefileplot: str, time_tag=None) -> Path:
     """Data, correct and misspecified median models, and both standardized residuals for one light curve."""
     hours = (light_curves["time"] - TIME_OFFSET) * 24.0  # [hour]
     counts = light_curves["counts"][light_curve]
     fits = [row for row in FITS if row[1] == light_curve]
     figure, axes = plt.subplots(3, 1, figsize=(7.0, 5.6), sharex=True, gridspec_kw={"height_ratios": [2.4, 1, 1]})
-    axes[0].plot(hours, counts, color="0.55", lw=0.6, label="Simulated counts")
+    axes[0].plot(hours, counts, color="black", marker=".", markersize=2, linestyle="none", label="Simulated counts")
     if light_curve == "B":
         axes[0].plot(hours, light_curves["baselines"]["modulated"], color="black", ls=":", lw=1.0,
                      label="Injected quiescent level")
@@ -249,13 +252,15 @@ def plot_light_curve_fits(light_curves: dict, summary: dict, light_curve: str, t
         model = summary[run_name]["model"]
         axes[0].plot(hours, model, color=color, lw=1.2,
                      label=f"{label}, {summary[run_name]['mean_number']:.1f} flares on average")
-        axis.plot(hours, (counts - model) / np.sqrt(np.maximum(model, 1.0)), color=color, lw=0.6)
+        residual = (counts - model) / np.sqrt(np.maximum(model, 1.0))
+        axis.plot(hours, residual, color="black",
+              marker=".", markersize=2, linestyle="none")
         axis.axhline(0.0, color="black", lw=0.6)
-        axis.set_ylim(-5.0, 5.0)
+        residual_limit = max(5.0, 1.1 * float(np.max(np.abs(residual))))
+        axis.set_ylim(-residual_limit, residual_limit)
         axis.set_ylabel(r"Residual [$\sigma$]")
-        axis.text(0.01, 0.92, f"{label}, $\\chi^2$ per bin {summary[run_name]['chi2_per_bin']:.2f}",
-                  transform=axis.transAxes, va="top", fontsize=8,
-                  bbox={"boxstyle": "round", "facecolor": "white", "edgecolor": "none"})
+        axis.set_title(f"{label}, $\\chi^2$ per bin {summary[run_name]['chi2_per_bin']:.2f}",
+                   loc="left", fontsize=9)
     for elin in INJECTED["elin"]:
         axes[0].axvline((elin - TIME_OFFSET) * 24.0, color="black", ls="--", lw=0.5)
     # headroom above the brightest flare keeps the legend clear of the data
@@ -267,12 +272,12 @@ def plot_light_curve_fits(light_curves: dict, summary: dict, light_curve: str, t
     axes[-1].set_xlim(0.0, 24.0)
     for axis in axes:
         axis.grid(False)
-    figure.subplots_adjust(hspace=0.06)
+    figure.subplots_adjust(hspace=0.3)
     name = "profile" if light_curve == "A" else "baseline"
-    return save(figure, f"mismodeling_{name}_light_curve", typefileplot)
+    return save(figure, f"mismodeling_{name}_light_curve", typefileplot, time_tag)
 
 
-def plot_catalogs(light_curves: dict, posteriors: dict, typefileplot: str) -> Path:
+def plot_catalogs(light_curves: dict, posteriors: dict, typefileplot: str, time_tag=None) -> Path:
     """Posterior flare peak times and excesses of all four fits against the injected catalog."""
     figure, axes = plt.subplots(len(FITS), 1, figsize=(7.0, 6.4), sharex=True, sharey=True)
     for axis, (run_name, _, _, _, label) in zip(axes, FITS):
@@ -295,10 +300,10 @@ def plot_catalogs(light_curves: dict, posteriors: dict, typefileplot: str) -> Pa
     axes[-1].set_xlabel("Time [hour]")
     axes[-1].set_xlim(0.0, 24.0)
     figure.subplots_adjust(hspace=0.08)
-    return save(figure, "mismodeling_catalog_samples", typefileplot)
+    return save(figure, "mismodeling_catalog_samples", typefileplot, time_tag)
 
 
-def plot_catalog_size(posteriors: dict, typefileplot: str) -> Path:
+def plot_catalog_size(posteriors: dict, typefileplot: str, time_tag=None) -> Path:
     """Posterior probability of the number of flares for all four fits."""
     figure, axis = plt.subplots(figsize=(7.0, 3.0))
     width = 0.2
@@ -316,11 +321,14 @@ def plot_catalog_size(posteriors: dict, typefileplot: str) -> Path:
     axis.set_ylabel("Posterior probability")
     axis.legend(loc="upper right", fontsize=8, fancybox=True, framealpha=1.0)
     axis.grid(False)
-    return save(figure, "mismodeling_catalog_size", typefileplot)
+    return save(figure, "mismodeling_catalog_size", typefileplot, time_tag)
 
 
-def save(figure, name: str, typefileplot: str) -> Path:
-    path = VISUAL_PATH / f"{name}.{typefileplot}"
+def save(figure, name: str, typefileplot: str, time_tag=None) -> Path:
+    suffix = f"_{time_tag}" if time_tag else ""
+    path = VISUAL_PATH / f"{name}{suffix}.{typefileplot}"
+    if path.exists():
+        raise FileExistsError(f"Refusing to overwrite misspecification figure {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Writing to {path}...")
     figure.savefig(path, dpi=300 if typefileplot == "png" else None, bbox_inches="tight", facecolor="white")
@@ -328,20 +336,45 @@ def save(figure, name: str, typefileplot: str) -> Path:
     return path
 
 
-def run_example(numbswep: int = 40000, typefileplot: str = "png") -> dict:
+def run_example(numbswep: int = 40000, typefileplot: str = "png", *, time_tag=None, number_chains=None) -> dict:
     """Run all four fits and write the comparison figures."""
+    time_tag = time_tag or datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    if datetime.strptime(time_tag, "%Y%m%d_%H%M%S").strftime("%Y%m%d_%H%M%S") != time_tag:
+        raise ValueError("time_tag must use YYYYMMDD_HHMMSS")
+    if numbswep < 40 or typefileplot not in {"png", "pdf"}:
+        raise ValueError("At least 40 sweeps and a PNG or PDF output are required")
+    number_chains = NUMBER_CHAINS if number_chains is None else number_chains
+    if number_chains < 1:
+        raise ValueError("number_chains must be positive")
+    for run_name, *_ in FITS:
+        run_root = Path(retr_pathrun(EXAMPLE_PATH, f"{run_name}_{time_tag}"))
+        if (run_root / "data" / "outp").exists():
+            raise FileExistsError(f"Refusing to overwrite cached PCAT run {run_root}")
+    if list(VISUAL_PATH.glob(f"mismodeling_*_{time_tag}.*")):
+        raise FileExistsError("Refusing to overwrite a previous misspecification output set")
     plt.rcParams.update({"font.size": 9, "text.usetex": False, "axes.grid": False})
     light_curves = simulate_light_curves()
-    posteriors = {run_name: run_fit(light_curves, run_name, light_curve, profile, baseline, numbswep)
+    posteriors = {run_name: run_fit(light_curves, f"{run_name}_{time_tag}", light_curve, profile, baseline, numbswep,
+                                  number_chains=number_chains)
                   for run_name, light_curve, profile, baseline, _ in FITS}
     summary = summarize(light_curves, posteriors)
     summary["figure_paths"] = [
-        plot_light_curve_fits(light_curves, summary, "A", typefileplot),
-        plot_light_curve_fits(light_curves, summary, "B", typefileplot),
-        plot_catalogs(light_curves, posteriors, typefileplot),
-        plot_catalog_size(posteriors, typefileplot),
-        plot_residual_chi2_shapes(summary, typefileplot),
+        plot_light_curve_fits(light_curves, summary, "A", typefileplot, time_tag),
+        plot_light_curve_fits(light_curves, summary, "B", typefileplot, time_tag),
+        plot_catalogs(light_curves, posteriors, typefileplot, time_tag),
+        plot_catalog_size(posteriors, typefileplot, time_tag),
+        plot_residual_chi2_shapes(summary, typefileplot, time_tag),
     ]
+    record = {"time_tag": time_tag, "sweeps_per_chain": numbswep, "chains": number_chains,
+              "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              "assumptions": "Seeded Poisson counts with four injected FRED flares; short runs verify integration rather than convergence.",
+              "fits": {name: {key: value.tolist() if isinstance(value, np.ndarray) else value
+                              for key, value in summary[name].items()} for name, *_ in FITS}}
+    record_path = VISUAL_PATH / f"mismodeling_summary_{time_tag}.json"
+    print(f"Writing to {record_path}...")
+    with record_path.open("x", encoding="utf-8") as stream:
+        json.dump(record, stream, indent=2, allow_nan=False)
+        stream.write("\n")
     return summary
 
 
@@ -349,9 +382,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=40000)
     parser.add_argument("--smoke", action="store_true", help="Run a short pipeline check.")
+    parser.add_argument("--time-tag")
+    parser.add_argument("--chains", type=int, default=NUMBER_CHAINS)
     add_plot_arguments(parser)
     arguments = parser.parse_args()
-    summary = run_example(2000 if arguments.smoke else arguments.numbswep, arguments.typefileplot)
+    summary = run_example(2000 if arguments.smoke else arguments.numbswep, arguments.typefileplot,
+                          time_tag=arguments.time_tag, number_chains=arguments.chains)
     for run_name, *_ , label in FITS:
         result = summary[run_name]
         print(f"{label}: mean number of flares {result['mean_number']:.2f}, "

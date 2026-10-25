@@ -1,0 +1,23 @@
+{
+  "run_name": "jwst_miri_ngc7027_line_catalog_20261025_173152",
+  "time_tag": "20261025_173152",
+  "skip_sampling": false,
+  "source_sha256": "5c68a75c679c09ad7964a445d0a20c522a8ca61fe4731e7cf41cd5a57a160363",
+  "input_file": "jw01523-o001_t002_miri_ch1-short_x1d.fits",
+  "input_sha256": "02f65ddac1a49dabb83a331e6b8bdc1d38507dffe5dc9ba3e0c39132d9292dc1",
+  "wavelength_range_um": [
+    5.3,
+    5.535
+  ],
+  "fractional_error_floor": 0.01,
+  "spectrum_bins": 294,
+  "posterior_catalogs": 24,
+  "chains": 1,
+  "sweeps_per_chain": 1200,
+  "figure_paths": [
+    "jwst_miri_ngc7027_spectrum_fit_20261025_173152.png",
+    "jwst_miri_ngc7027_line_catalog_samples_20261025_173152.png",
+    "jwst_miri_ngc7027_line_count_posterior_20261025_173152.png"
+  ],
+  "assumptions": "Continuum-based effective-count Poisson approximation to calibrated JWST flux density; short chains verify integration."
+}
