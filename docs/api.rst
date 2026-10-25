@@ -440,11 +440,11 @@ Instrument response
    array. Coordinates and ``pixel_size`` use the same angular unit.
 
    ``evaluate(xpos, ypos, pixel_indices)`` returns densities for the selected
-   grid pixels. Interleaved validation points exceeding the supplied fraction
-   of the profile peak mark a cell for direct evaluation. Negative/nonfinite
-   polynomial outputs and out-of-table positions also use the direct profile.
-   This sampled check is not a rigorous uniform bound. Values are not clipped
-   or renormalized. Calling the object on radial distances retains direct
+   grid pixels. Interleaved validation points flag cells when sampled error
+   exceeds the supplied fraction of the profile peak. Unsampled locations can
+   still have larger errors. Negative/nonfinite polynomial outputs and
+   out-of-table positions use the direct profile. Values are returned without
+   clipping or renormalization. Calling the object on radial distances retains direct
    profile inspection. Rebuild the object after changing the PSF.
 
    Native Cartesian sampling selects this evaluator with
@@ -561,6 +561,17 @@ mejiro lens inference
 These functions import mejiro and the selected imaging backend only when called.
 Current specifications record Mejiro's backend. Older specifications without
 that field default to Lenstronomy.
+
+The native Chalcedon path propagates through multiple lens planes when the
+specification contains distinct lens redshifts. New simulated exposures retain
+the lens's Astropy cosmology in ``cosmology_yaml``. Multiple-plane specifications
+must supply that field so the forward model uses the original distance ratios.
+Single-plane specifications from earlier versions remain supported. The renderer
+cache distinguishes cosmologies as well as lens geometry and backend.
+
+Additional halo profiles in the specification stay fixed while this bridge
+samples its listed macro-lens and source parameters. It does not infer the
+halo count, halo mass function, or time-delay cosmography parameters.
 
 .. py:function:: pcat.mejiro_lens.simulate_mejiro_exposure(strong_lens=None, band="F129", exposure_time=146.0, fov_arcsec=5.0, supersampling_factor=3, seed=2026)
 

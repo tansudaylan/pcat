@@ -23,6 +23,7 @@ dependencies = [
   "numba",
   "numpy",
   "Pillow",
+  "PyYAML",
   "scipy",
   "scikit-learn",
   "seaborn",

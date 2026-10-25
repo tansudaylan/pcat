@@ -31,11 +31,10 @@ Maintained workflows include:
   flare profiles, Keplerian radial-velocity models, and a fixed-dimensional
   transit-timing likelihood.
 * **Transdimensional catalog postprocessing.** Every transdimensional model
-  produces catalog samples. By default, final processing creates a condensed
+  produces catalog samples. By default, postprocessing creates a condensed
   catalog by associating recurrent supported spatial elements across those
-  samples. This posterior summary is not a likelihood. Optional matching to an
-  external reference catalog uses the condensed product and is also
-  postprocessing. Set ``boolcondcatl=False`` to skip condensation.
+  samples. External-catalog matching also uses the condensed product. Set
+  ``boolcondcatl=False`` to skip condensation.
 
 Inference and proposal engine
 -----------------------------

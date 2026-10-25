@@ -85,6 +85,7 @@ def simulate_mejiro_exposure(
         "z_lens": float(lens.z_lens),
         "z_source": float(lens.z_source),
         "lens_redshift_list": [float(value) for value in lens_redshift_list],
+        "cosmology_yaml": lens.cosmo.to_format("yaml") if getattr(lens, "cosmo", None) is not None else None,
         "kwargs_numerics": kwargs_numerics,
         "kwargs_pixel": {
             "nx": image.num_pix, "ny": image.num_pix,
@@ -109,12 +110,10 @@ def simulate_mejiro_exposure(
 
 
 def _image_model(specification: dict) -> object:
-    """Return the lenstronomy image model described by a mejiro specification."""
+    """Return the cached renderer with the exposure's backend and cosmology."""
     backend = specification.get("backend", "lenstronomy")
     lens_model_kwargs = {}
     if backend == "chalcedon":
-        if len(set(specification["lens_redshift_list"])) > 1:
-            raise NotImplementedError("PCAT Mejiro rendering does not yet support multiple lens planes")
         from chalcedon import LensModel, LightModel
         from chalcedon.imaging import ImageModel, PixelGrid, PSF
 
@@ -122,7 +121,14 @@ def _image_model(specification: dict) -> object:
             "z_lens": specification["z_lens"],
             "z_source": specification["z_source"],
             "lens_redshift_list": specification["lens_redshift_list"],
+            "multi_plane": len(set(specification["lens_redshift_list"])) > 1,
         }
+        if lens_model_kwargs["multi_plane"]:
+            from astropy.cosmology import Cosmology
+
+            if not specification.get("cosmology_yaml"):
+                raise ValueError("Multi-plane Mejiro specifications must preserve their cosmology_yaml")
+            lens_model_kwargs["cosmo"] = Cosmology.from_format(specification["cosmology_yaml"], format="yaml")
     elif backend == "lenstronomy":
         from lenstronomy.Data.pixel_grid import PixelGrid
         from lenstronomy.Data.psf import PSF
@@ -134,6 +140,7 @@ def _image_model(specification: dict) -> object:
 
     pixel = specification["kwargs_pixel"]
     key = (backend, specification.get("z_lens"), specification.get("z_source"),
+            specification.get("cosmology_yaml"),
            tuple(specification.get("lens_redshift_list", ())), specification["psf_fwhm"],
            pixel["nx"], pixel["ny"], pixel["ra_at_xy_0"], pixel["dec_at_xy_0"],
            tuple(np.ravel(pixel["transform_pix2angle"])), tuple(sorted(specification["kwargs_numerics"].items())),

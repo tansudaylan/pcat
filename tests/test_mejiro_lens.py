@@ -3,9 +3,6 @@ import importlib.util
 import numpy as np
 import pytest
 
-pytest.importorskip("mejiro")
-pytest.importorskip("roman_technical_information")
-
 from pcat.mejiro_lens import (  # noqa: E402
     LABELS, PARAMETERS, mejiro_lens_log_likelihood, render_mejiro_counts,
     run_mejiro_lens_inference, simulate_mejiro_exposure,
@@ -16,7 +13,79 @@ from pcat.plotting import plot_lens_parameter_recovery  # noqa: E402
 
 @pytest.fixture(scope="module")
 def specification():
+    pytest.importorskip("mejiro")
+    pytest.importorskip("roman_technical_information")
     return simulate_mejiro_exposure()
+
+
+@pytest.mark.parametrize("halo_redshift", [0.3, 0.7])
+def test_native_mejiro_bridge_preserves_single_and_multiple_lens_planes(monkeypatch, tmp_path, halo_redshift):
+    import builtins
+    from copy import deepcopy
+    from astropy.cosmology import Planck18
+    from chalcedon import ImageModel, LensModel, LightModel, PixelGrid, PSF
+    from chalcedon.imaging import make_grid_with_coordtransform
+
+    geometry = make_grid_with_coordtransform(31, 0.08)
+    pixel = {"nx": 31, "ny": 31, "ra_at_xy_0": geometry[2],
+             "dec_at_xy_0": geometry[3], "transform_pix2angle": geometry[6]}
+    specification = {
+        "backend": "chalcedon", "z_lens": 0.3, "z_source": 1.5,
+        "lens_redshift_list": [0.3, 0.3, halo_redshift], "psf_fwhm": 0.08,
+        "kwargs_pixel": pixel, "kwargs_numerics": {"supersampling_factor": 2},
+        "lens_model_list": ["SIE", "SHEAR", "TNFW"],
+        "source_light_model_list": ["GAUSSIAN"], "lens_light_model_list": [],
+        "kwargs_lens": [
+            {"theta_E": 0.7, "e1": 0.08, "e2": -0.04, "center_x": 0, "center_y": 0},
+            {"gamma1": 0.02, "gamma2": 0.01},
+            {"Rs": 0.12, "alpha_Rs": 0.04, "r_trunc": 0.5,
+             "center_x": 0.6, "center_y": -0.2},
+        ],
+        "kwargs_source": [{"amp": 1.0, "sigma": 0.06, "center_x": 0.04, "center_y": 0.02}],
+        "kwargs_lens_light": [], "exposure_time": 146.0, "sky_counts": 3.0,
+        "cosmology_yaml": Planck18.to_format("yaml"),
+    }
+    original = deepcopy(specification)
+    parameters = np.array([specification[group][index][key]
+                           for _, group, index, key, *_ in PARAMETERS])
+    lens = LensModel(specification["lens_model_list"], multi_plane=halo_redshift != 0.3,
+                     z_lens=0.3, z_source=1.5,
+                     lens_redshift_list=specification["lens_redshift_list"], cosmo=Planck18)
+    renderer = ImageModel(PixelGrid(**pixel), PSF("GAUSSIAN", fwhm=0.08), lens,
+                          LightModel(["GAUSSIAN"]), LightModel([]),
+                          kwargs_numerics=specification["kwargs_numerics"])
+    expected = renderer.image(specification["kwargs_lens"], specification["kwargs_source"], []) * 146 + 3
+    original_import = builtins.__import__
+
+    def forbid_lenstronomy(name, *args, **kwargs):
+        if name == "lenstronomy" or name.startswith("lenstronomy."):
+            pytest.fail("Native Mejiro specifications must stay independent of Lenstronomy")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", forbid_lenstronomy)
+    actual = render_mejiro_counts(specification, parameters)
+    np.testing.assert_allclose(actual, expected, rtol=1e-13, atol=1e-13)
+    assert np.isfinite(actual).all() and np.all(actual >= 3)
+    for group in ("kwargs_lens", "kwargs_source", "kwargs_lens_light"):
+        assert specification[group] == original[group]
+    if halo_redshift != 0.3:
+        renderer_before = mejiro_lens_module._image_model(specification)
+        specification["cosmology_yaml"] = Planck18.clone(Om0=0.4, name="comparison").to_format("yaml")
+        assert mejiro_lens_module._image_model(specification) is not renderer_before
+        specification.pop("cosmology_yaml")
+        with pytest.raises(ValueError, match="cosmology_yaml"):
+            render_mejiro_counts(specification, parameters)
+        sampling_specification = deepcopy(original)
+        sampling_specification["observed_counts"] = np.random.default_rng(2026).poisson(expected)
+        sampling_specification["true_parameters"] = parameters
+        posterior = run_mejiro_lens_inference(
+            sampling_specification, tmp_path, "native_multiplane", numbswep=60,
+            numbburn=20, numbsamp=20, numbproc=1, numbframanim=4)
+        draws = np.asarray(posterior.listpostparagenrscalbase)
+        assert draws.shape == (20, len(PARAMETERS))
+        assert np.isfinite(draws).all()
+        assert np.isfinite(posterior.listpostlliktotl).all()
+        assert posterior.mejiro_specification["cosmology_yaml"] == original["cosmology_yaml"]
 
 
 def test_pcat_model_reproduces_mejiro_image(specification):
@@ -85,6 +154,8 @@ def test_pcat_samples_mejiro_exposure(specification, tmp_path):
 
 
 def test_example_configuration_uses_mejiro_pipeline(monkeypatch, tmp_path):
+    pytest.importorskip("mejiro")
+    pytest.importorskip("roman_technical_information")
     script = __import__("pathlib").Path(__file__).resolve().parents[1] / "examples" / \
         "mejiro_roman_strong_lens" / "mejiro_roman_strong_lens.py"
     module_specification = importlib.util.spec_from_file_location("mejiro_example", script)

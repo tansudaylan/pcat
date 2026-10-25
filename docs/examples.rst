@@ -336,10 +336,9 @@ Publication and instrument examples
    misspecified posteriors are narrow and exclude the injected number. The
    example also compares standardized Pearson-residual distributions with a
    standard Gaussian and total chi-squared values from posterior-predictive
-   Poisson replicates with a Gaussian approximation. The displayed fraction is
-   the share of those Gaussian-approximation replicates above the observed
-   chi-squared value. A formal p-value requires a null distribution for the
-   full model.
+   Poisson replicates with a Gaussian approximation. The displayed fraction
+   counts replicates whose total chi-squared equals or exceeds the observed
+   value, adding one to both the exceedance count and the number of replicates.
 
    .. code-block:: bash
 
