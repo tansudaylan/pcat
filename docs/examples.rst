@@ -176,17 +176,39 @@ Publication and instrument examples
 
       python examples/jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py --numbswep 200000
 
-   .. image:: ../examples/jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_spectrum_fit.png
+   New chains and summary figures use timestamped names. Existing native and
+   legacy runs are preserved. Replot a saved chain with ``--skip-sampling`` and
+   ``--run-name``; this leaves its input cubes untouched and reads the sampling
+   settings from the stored posterior.
+
+   The run ``jwst_miri_ngc7027_line_catalog_20261025_173152`` used one
+   1,200-sweep chain on 294 spectral bins and retained 24 catalogs. The FITS
+   headers identify JWST, MIRI, program 1523, and NGC 7027. The source and
+   observation hashes are recorded with the figure metadata. The figures below
+   replay that exact posterior. This short run demonstrates integration and
+   leaves large residuals; further sampling and model assessment are needed
+   before interpreting line counts or fluxes.
+
+   Calibrated flux densities are converted to effective counts using a
+   continuum estimate and a stated 1% fractional uncertainty floor. This
+   Poisson approximation does not reproduce the full calibrated spectral
+   covariance or fit every instrumental effect.
+
+   .. code-block:: bash
+
+      python examples/jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py --skip-sampling --run-name jwst_miri_ngc7027_line_catalog_20261025_173152
+
+   .. image:: ../examples/jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_spectrum_fit_20261025_175318.png
       :alt: Real JWST MIRI spectrum of NGC 7027 with the PCAT median model and residuals
       :width: 720px
       :align: center
 
-   .. image:: ../examples/jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_catalog_samples.png
+   .. image:: ../examples/jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_catalog_samples_20261025_175318.png
       :alt: Posterior line wavelengths and integrated fluxes from the JWST spectrum
       :width: 720px
       :align: center
 
-   .. image:: ../examples/jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_count_posterior.png
+   .. image:: ../examples/jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_count_posterior_20261025_175318.png
       :alt: Posterior probability for the number of emission lines in NGC 7027
       :width: 520px
       :align: center
@@ -462,12 +484,20 @@ Analysis utilities
 
       python examples/proposal_state_animation/proposal_state_animation.py --numbswep 120
 
-   .. image:: ../examples/proposal_state_animation/visuals/post/anim/proposal_sequence.gif
+   The native trace files are ``proposal_sequence.gif`` and
+   ``proposal_candidates.gif``. The example preserves each run and places
+   timestamped copies directly in its ``visuals/`` directory. The displayed
+   120-sweep integration run accepted 25 proposals and rejected 95 while
+   exercising all six move families. Its retained sequence has 16 frames and
+   its candidate sequence has 120. Fixed monospaced headers and data-based
+   residual ranges keep text steady and early discrepancies visible.
+
+   .. image:: ../examples/proposal_state_animation/visuals/proposal_sequence_20261025_181311.gif
       :alt: Retained PCAT chain states after burn-in at the configured plotting cadence
       :width: 720px
       :align: center
 
-   .. image:: ../examples/proposal_state_animation/visuals/post/anim/proposal_candidates.gif
+   .. image:: ../examples/proposal_state_animation/visuals/proposal_candidates_20261025_181311.gif
       :alt: Every current and proposed PCAT state, including rejected proposals
       :width: 720px
       :align: center

@@ -463,6 +463,23 @@ def test_daylan2017_configuration_preserves_published_mock_assumptions():
     assert np.std(diffuse_template[1, :, 0]) > 0.15
 
 
+def test_proposal_example_preserves_existing_run_before_sampling(tmp_path, monkeypatch):
+    from pcat.main import retr_pathrun
+
+    script = REPOSITORY_ROOT / "examples/proposal_state_animation/proposal_state_animation.py"
+    module = load_example_module("pcat_preserved_proposal_example", script)
+    monkeypatch.setattr(module, "EXAMPLE_PATH", tmp_path)
+    tag = "20261025_120000"
+    root = Path(retr_pathrun(tmp_path, f"{module.RUN_NAME}_{tag}"))
+    cache = root / "data/outp"
+    cache.mkdir(parents=True)
+    marker = cache / "keep.txt"
+    marker.write_text("existing chain")
+    with pytest.raises(FileExistsError):
+        module.run_example(120, time_tag=tag)
+    assert marker.read_text() == "existing chain"
+
+
 def test_split_merge_jacobian_changes_counterfactual_acceptance_probability():
     from types import SimpleNamespace
 

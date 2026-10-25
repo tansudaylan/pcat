@@ -1051,6 +1051,16 @@ def test_proposal_animation_uses_recorded_types_and_acceptance(tmp_path):
         assert animation.size[0] > 800
 
 
+def test_candidate_residual_scale_contains_missed_observed_signal_and_stays_fixed():
+    from pcat.main import _proposal_residual_limit
+
+    state = SimpleNamespace()
+    data = np.array([100.0, 20000.0, 150.0])
+    limit = _proposal_residual_limit(state, data)
+    assert limit >= float(data.max())
+    assert _proposal_residual_limit(state, data) == limit
+
+
 @pytest.mark.parametrize('typeplotback', ['white', 'dark'])
 def test_rejected_proposal_candidate_frame_shows_data_and_residual_panels(
     tmp_path, monkeypatch, typeplotback
@@ -1089,6 +1099,10 @@ def test_rejected_proposal_candidate_frame_shows_data_and_residual_panels(
     assert figures[0].axes[0].images
     assert figures[0].axes[1].images
     assert figures[0]._suptitle.get_color() == '#A51C30'
+    assert figures[0]._suptitle.get_ha() == 'left'
+    assert figures[0]._suptitle.get_fontfamily() == ['monospace']
+    assert figures[0]._suptitle.get_position()[0] == 0.04
+    assert figures[0].texts[-1].get_position() == (0.04, 0.025)
     assert all(axis.xaxis.label.get_color() == ('white' if typeplotback == 'dark' else 'black')
                for axis in figures[0].axes)
     assert any(
@@ -1155,7 +1169,8 @@ def test_candidate_residual_scales_are_fixed_for_1d_and_2d_frames(tmp_path, monk
             state_series, SimpleNamespace(this=current, next=candidate, cntrswep=sweep),
             True, tmp_path / f"series_{sweep}.png",
         )
-    expected_series_limit = 5. * np.percentile(np.sqrt(variance_series), 99.5)
+    expected_series_limit = max(1.2 * data_series.max(),
+                                5. * np.percentile(np.sqrt(variance_series), 99.5))
     np.testing.assert_allclose(figures[0].axes[1].get_ylim(),
                                (-expected_series_limit, expected_series_limit))
     assert figures[0].axes[1].get_ylim() == figures[1].axes[1].get_ylim()
@@ -1179,7 +1194,8 @@ def test_candidate_residual_scales_are_fixed_for_1d_and_2d_frames(tmp_path, monk
             state_image, SimpleNamespace(this=current, next=candidate, cntrswep=sweep),
             True, tmp_path / f"image_{sweep}.png",
         )
-    expected_image_limit = 5. * np.percentile(np.sqrt(variance_image), 99.5)
+    expected_image_limit = max(1.2 * data_image.max(),
+                               5. * np.percentile(np.sqrt(variance_image), 99.5))
     np.testing.assert_allclose(figures[0].axes[1].images[0].get_clim(),
                                (-expected_image_limit, expected_image_limit))
     assert figures[0].axes[1].images[0].get_clim() == figures[1].axes[1].images[0].get_clim()

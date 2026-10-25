@@ -39,6 +39,11 @@ examples/daylan+2017_fermi_point_sources/visuals/*
 !examples/proposal_state_animation/visuals/
 examples/proposal_state_animation/visuals/*
 !examples/proposal_state_animation/visuals/parameterization_jacobian_jumps.gif
+!examples/proposal_state_animation/visuals/proposal_sequence_20261025_181311.gif
+!examples/proposal_state_animation/visuals/proposal_candidates_20261025_181311.gif
+!examples/proposal_state_animation/visuals/parameterization_jacobian_jumps_20261025_181311.gif
+!examples/proposal_state_animation/visuals/jacobian_acceptance_effect_20261025_181311.png
+!examples/proposal_state_animation/visuals/proposal_summary_20261025_181311.json
 CODING_STANDARDS.md
 REFACTORING_PROGRESS.md
 examples/*/visuals/*/

@@ -12597,7 +12597,9 @@ def _proposal_residual_limit(gdat, data):
     if finite_variance.size == 0:
         finite_variance = np.maximum(data[np.isfinite(data)], 1.)
     sigma = np.sqrt(finite_variance) if finite_variance.size else np.array([1.])
-    residual_limit = max(1., 5. * float(np.percentile(sigma, 99.5)))
+    finite_data = np.asarray(data)[np.isfinite(data)]
+    data_scale = 1.2 * float(np.max(np.abs(finite_data))) if finite_data.size else 1.
+    residual_limit = max(1., data_scale, 5. * float(np.percentile(sigma, 99.5)))
     gdat.proposal_residual_limit = residual_limit
     return residual_limit
 
@@ -12659,7 +12661,8 @@ def _draw_proposal_data_panel(axis, data, current_model, candidate_model, valid,
         axis.set_aspect('equal')
     else:
         bins = np.arange(data.size)
-        axis.plot(bins, data, color='black', lw=1.0, label='Observed data')
+        axis.plot(bins, data, color='black', marker='.', markersize=3,
+              linestyle='none', label='Observed data')
         for model, color, label in (
             (current_model, current_color, 'Current model'),
             (candidate_model, candidate_color, 'Proposed model'),
@@ -12766,7 +12769,7 @@ def _write_proposal_candidate_frame(gdat, gdatmodi, accepted, pathout):
     residual_limit = _proposal_residual_limit(gdat, data)
 
     figure = plt.figure(figsize=(10.0, 4.8), facecolor='white')
-    grid = figure.add_gridspec(1, 2, left=0.07, right=0.98, bottom=0.18, top=0.80, wspace=0.22)
+    grid = figure.add_gridspec(1, 2, left=0.10, right=0.98, bottom=0.18, top=0.80, wspace=0.22)
     axis_data = figure.add_subplot(grid[0, 0])
     axis_residual = figure.add_subplot(grid[0, 1])
     _draw_proposal_data_panel(axis_data, data, current_model, candidate_model, valid, data_limit)
@@ -12805,8 +12808,11 @@ def _write_proposal_candidate_frame(gdat, gdatmodi, accepted, pathout):
         'Sweep %s | %s | %s | acceptance probability %.3f' %
         (sweep, proposal_label, status, acceptance_probability),
         color=color,
-        fontsize=11,
+        fontsize=9,
         fontweight='bold',
+        fontfamily='monospace',
+        ha='left',
+        x=0.04,
         y=0.96,
     )
     current_log_posterior = float(getattr(current, 'lpostotl', np.nan))
@@ -12819,11 +12825,12 @@ def _write_proposal_candidate_frame(gdat, gdatmodi, accepted, pathout):
     ]
     summary_values = [f'{value:.3e}'.rjust(11) for value in summary_values]
     figure.text(
-        0.5,
+        0.04,
         0.025,
         r'$\log \pi$: %s $\rightarrow$ %s   |   $\log q_r/q_f$: %s   |   $\log|J|$: %s' %
         tuple(summary_values),
-        ha='center',
+        ha='left',
+        fontfamily='monospace',
         fontsize=9,
     )
     pathout = os.fspath(pathout)

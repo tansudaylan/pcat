@@ -1,0 +1,32 @@
+{
+  "run_name": "proposal_state_animation_20261025_181311",
+  "time_tag": "20261025_181311",
+  "sweeps": 120,
+  "proposal_counts": {
+    "Within-model proposal": 20,
+    "Birth proposal": 9,
+    "Death proposal": 40,
+    "Split proposal": 8,
+    "Merge proposal": 31,
+    "Jump proposal": 12
+  },
+  "accepted_proposals": 25,
+  "rejected_proposals": 95,
+  "source_sha256": "bfc42a1ec436d355feafb8a88e20b393e692a98ca72c5b818bc18313bd60225b",
+  "sampler_source_sha256": "aff66dc80d82a6c0619e22ab3994506cf6b24c36f46330faf3c080e034e43b55",
+  "assumptions": "Seeded simulated two-line spectrum; short run demonstrates trace semantics rather than convergence.",
+  "jacobian_counterfactual": {
+    "split": {
+      "valid_proposals": 3,
+      "mean_actual_acceptance": 0.3333333333333333,
+      "mean_without_jacobian": 0.3333333333333333,
+      "largest_probability_change": 0.0
+    },
+    "merge": {
+      "valid_proposals": 31,
+      "mean_actual_acceptance": 0.0967741935483871,
+      "mean_without_jacobian": 0.0967741935483871,
+      "largest_probability_change": 4.755624972195967e-18
+    }
+  }
+}

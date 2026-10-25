@@ -10,6 +10,9 @@ The short run demonstrates output semantics rather than convergence.
 from tdpy.verbosity import print
 
 import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
 from pathlib import Path
 import shutil
 
@@ -310,18 +313,28 @@ def summarize_proposal_types(worker):
     }
 
 
-def run_example(number_sweeps=120):
+def run_example(number_sweeps=120, *, time_tag=None):
     """Run the simulated Voigt problem and return animations and Jacobian plot."""
     from pcat.main import retr_pathrun
 
-    run_root = Path(retr_pathrun(EXAMPLE_PATH, RUN_NAME))
+    time_tag = time_tag or datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    if datetime.strptime(time_tag, "%Y%m%d_%H%M%S").strftime("%Y%m%d_%H%M%S") != time_tag:
+        raise ValueError("time_tag must use YYYYMMDD_HHMMSS")
+    if number_sweeps < 24:
+        raise ValueError("At least 24 sweeps are required")
+    run_name = f"{RUN_NAME}_{time_tag}"
+    run_root = Path(retr_pathrun(EXAMPLE_PATH, run_name))
+    if (run_root / "data" / "outp").exists() or (run_root / "visuals").exists():
+        raise FileExistsError(f"Refusing to overwrite proposal example {run_root}")
+    if list((EXAMPLE_PATH / "visuals").glob(f"*_{time_tag}.*")):
+        raise FileExistsError("Refusing to overwrite earlier proposal figures")
     namespace = load_example_namespace(
         "voigt_spectral_line_catalog/voigt_spectral_line_catalog.py"
     )
     configuration, variations, _ = namespace["build_configurations"]()
     configuration.update(variations["nomi"])
     configuration.update(
-        strgcnfg=RUN_NAME,
+        strgcnfg=run_name,
         pathbase=str(EXAMPLE_PATH),
         truenumbelempop0=2,
         fittminmnumbelempop0=1,
@@ -348,20 +361,11 @@ def run_example(number_sweeps=120):
         numbproc=1,
         typeverb=0,
     )
-    path_cache = run_root / "data" / "outp" / RUN_NAME
-    for path in (
-        path_cache,
-        EXAMPLE_PATH / "visuals" / "post" / "fram",
-        EXAMPLE_PATH / "visuals" / "post" / "anim",
-    ):
-        if path.exists():
-            print(f"Removing cached example output {path}...")
-            shutil.rmtree(path)
     sampling.sample(**configuration)
     from pcat.main import readfile
 
     worker = readfile(
-        str(run_root / "data" / "outp" / RUN_NAME / "gdatmodi0000post")
+        str(run_root / "data" / "outp" / run_name / "gdatmodi0000post")
     )
     jacobian_summary = summarize_jacobian_acceptance(worker)
     proposal_counts = summarize_proposal_types(worker)
@@ -373,10 +377,10 @@ def run_example(number_sweeps=120):
             + ". Increase the run length to show the full proposal roster."
         )
     jacobian_path = plot_jacobian_acceptance(
-        jacobian_summary, EXAMPLE_PATH / "visuals" / "jacobian_acceptance_effect.png"
+        jacobian_summary, EXAMPLE_PATH / "visuals" / f"jacobian_acceptance_effect_{time_tag}.png"
     )
     parameterization_animation, parameterization_summary = make_parameterization_jump_animation(
-        EXAMPLE_PATH / "visuals" / "parameterization_jacobian_jumps.gif"
+        EXAMPLE_PATH / "visuals" / f"parameterization_jacobian_jumps_{time_tag}.gif"
     )
 
     animation_root = run_root / "visuals" / "post" / "anim"
@@ -384,6 +388,23 @@ def run_example(number_sweeps=120):
     proposal_path = animation_root / "proposal_candidates.gif"
     if not posterior_path.is_file() or not proposal_path.is_file():
         raise RuntimeError("PCAT did not produce both requested animations.")
+    final_posterior = EXAMPLE_PATH / "visuals" / f"proposal_sequence_{time_tag}.gif"
+    final_proposal = EXAMPLE_PATH / "visuals" / f"proposal_candidates_{time_tag}.gif"
+    shutil.copy2(posterior_path, final_posterior)
+    shutil.copy2(proposal_path, final_proposal)
+    posterior_path, proposal_path = final_posterior, final_proposal
+    accepted = np.asarray(worker.listpostboolpropaccp).reshape(-1).astype(bool)
+    record = {"run_name": run_name, "time_tag": time_tag, "sweeps": number_sweeps,
+              "proposal_counts": proposal_counts, "accepted_proposals": int(accepted.sum()),
+              "rejected_proposals": int((~accepted).sum()),
+              "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              "sampler_source_sha256": hashlib.sha256(Path(readfile.__code__.co_filename).read_bytes()).hexdigest(),
+              "assumptions": "Seeded simulated two-line spectrum; short run demonstrates trace semantics rather than convergence."}
+    record_path = EXAMPLE_PATH / "visuals" / f"proposal_summary_{time_tag}.json"
+    print(f"Writing to {record_path}...")
+    with record_path.open("x", encoding="utf-8") as stream:
+        json.dump(record, stream, indent=2)
+        stream.write("\n")
     return {
         "posterior_animation": posterior_path,
         "proposal_animation": proposal_path,
@@ -415,8 +436,9 @@ def run_example(number_sweeps=120):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=120)
+    parser.add_argument("--time-tag")
     arguments = parser.parse_args()
-    products = run_example(arguments.numbswep)
+    products = run_example(arguments.numbswep, time_tag=arguments.time_tag)
     for label in (
         "posterior_animation", "proposal_animation", "jacobian_figure",
         "parameterization_animation",

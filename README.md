@@ -78,20 +78,30 @@ Gaussian, differential-evolution, or Student-t subtype. The example also
 reports proposal counts and exercises within-model, birth, death, split, merge,
 and jump moves.
 
-Run the example to generate both GIFs under
-`examples/proposal_state_animation/visuals/post/anim/`:
+Run the example to generate timestamped GIFs directly under
+`examples/proposal_state_animation/visuals/`. Native run folders retain
+`proposal_sequence.gif` and `proposal_candidates.gif` alongside their frames;
+the example copies them to timestamped display names without replacing earlier
+chains or animations.
 
 ```bash
 python examples/proposal_state_animation/proposal_state_animation.py --numbswep 120
 ```
 
-![Every PCAT proposal candidate, including rejected states](examples/proposal_state_animation/visuals/post/anim/proposal_candidates.gif)
+![Every PCAT proposal candidate, including rejected states](examples/proposal_state_animation/visuals/proposal_candidates_20261025_181311.gif)
 
 The matching retained-state sequence from the same short simulated Voigt-line
 run is shown below. It contains frames only at `numbswepplot` cadence, while the
 candidate animation contains all 120 sweeps.
 
-![Retained PCAT chain states at plotting cadence](examples/proposal_state_animation/visuals/post/anim/proposal_sequence.gif)
+![Retained PCAT chain states at plotting cadence](examples/proposal_state_animation/visuals/proposal_sequence_20261025_181311.gif)
+
+The displayed run attempted 20 within-model, 9 birth, 40 death, 8 split,
+31 merge, and 12 jump moves. It accepted 25 and rejected 95. The candidate
+sequence has 120 frames; the retained-state sequence has 16. Headers use fixed
+monospaced positions and both panels keep data-based scales, including large
+early residuals. This short simulated run demonstrates the trace outputs;
+convergence needs a longer analysis.
 
 ### Jacobian in split and merge moves
 
@@ -103,7 +113,12 @@ that omits only the Jacobian. Its acceptance curves show how the median
 split/merge Jacobians change acceptance probability at a fixed remainder of the
 ratio. The counterfactual is not a second chain.
 
-![Split and merge acceptance with and without the Jacobian](examples/proposal_state_animation/visuals/jacobian_acceptance_effect.png)
+In the displayed short native run, the prior-valid split and merge probabilities
+are mostly clipped near zero or one, so their mean probabilities barely change
+in the counterfactual. The controlled parameterization example below isolates
+the acceptance effect without relying on those saturated ratios.
+
+![Split and merge acceptance with and without the Jacobian](examples/proposal_state_animation/visuals/jacobian_acceptance_effect_20261025_181311.png)
 
 The same example animates jumps between two one-parameter models for the same
 positive amplitude: linear ``A`` and logarithmic ``eta = log(A)``. Their prior
@@ -113,7 +128,7 @@ acceptance ratio is one. Removing the Jacobian makes the reverse jump accept
 with probability ``1/A`` and biases occupancy toward the logarithmic
 parameterization, even though both models encode the same physical value.
 
-![Animated same-dimensional jumps with and without the Jacobian](examples/proposal_state_animation/visuals/parameterization_jacobian_jumps.gif)
+![Animated same-dimensional jumps with and without the Jacobian](examples/proposal_state_animation/visuals/parameterization_jacobian_jumps_20261025_181311.gif)
 
 ## Package organization
 

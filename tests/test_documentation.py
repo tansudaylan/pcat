@@ -112,9 +112,9 @@ def test_documentation_pages_are_in_the_toctree():
 def test_readthedocs_examples_show_real_spectrum_and_flare_results():
     page = (DOCS_ROOT / "examples.rst").read_text()
     relative_images = (
-        "jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_spectrum_fit.png",
-        "jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_catalog_samples.png",
-        "jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_count_posterior.png",
+        "jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_spectrum_fit_20261025_175318.png",
+        "jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_catalog_samples_20261025_175318.png",
+        "jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_line_count_posterior_20261025_175318.png",
         "variable_number_stellar_flares/visuals/variable_number_stellar_flares_light_curve_fit.png",
         "variable_number_stellar_flares/visuals/variable_number_stellar_flares_catalog_samples.png",
         "variable_number_stellar_flares/visuals/variable_number_stellar_flares_count_posterior.png",
@@ -584,10 +584,11 @@ def test_documentation_distinguishes_posterior_and_candidate_animations():
     assert "numbburn" in outputs
     assert "proposal_sequence.gif" in example_script
     assert "proposal_candidates.gif" in example_script
-    assert "examples/proposal_state_animation/visuals/post/anim/proposal_sequence.gif" in readme
-    assert "examples/proposal_state_animation/visuals/post/anim/proposal_candidates.gif" in readme
+    assert "examples/proposal_state_animation/visuals/proposal_sequence_20261025_181311.gif" in readme
+    assert "examples/proposal_state_animation/visuals/proposal_candidates_20261025_181311.gif" in readme
     for animation_name in ("proposal_sequence.gif", "proposal_candidates.gif"):
-        assert f"../examples/proposal_state_animation/visuals/post/anim/{animation_name}" in example_guide
+        stem = animation_name.removesuffix(".gif")
+        assert f"../examples/proposal_state_animation/visuals/{stem}_20261025_181311.gif" in example_guide
 
 
 def test_point_source_example_accepts_isolated_output_and_seed(tmp_path, monkeypatch):
@@ -833,10 +834,10 @@ def test_jacobian_example_is_linked_and_documents_unclipped_acceptance():
     readme = (REPOSITORY_ROOT / "README.md").read_text()
     sampling = (DOCS_ROOT / "sampling.rst").read_text()
     script = (REPOSITORY_ROOT / "examples/proposal_state_animation/proposal_state_animation.py").read_text()
-    animation = REPOSITORY_ROOT / "examples/proposal_state_animation/visuals/parameterization_jacobian_jumps.gif"
+    animation = REPOSITORY_ROOT / "examples/proposal_state_animation/visuals/parameterization_jacobian_jumps_20261025_181311.gif"
 
-    assert "visuals/jacobian_acceptance_effect.png" in readme
-    assert "visuals/parameterization_jacobian_jumps.gif" in readme
+    assert "visuals/jacobian_acceptance_effect_20261025_181311.png" in readme
+    assert "visuals/parameterization_jacobian_jumps_20261025_181311.gif" in readme
     assert "parameterization_jacobian_jumps.gif" in sampling
     assert "make_parameterization_jump_animation" in script
     assert animation.is_file()
