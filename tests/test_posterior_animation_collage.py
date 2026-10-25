@@ -25,7 +25,15 @@ def _write_frame(path: Path, color: str, marker: int) -> None:
     image.save(path)
 
 
-def test_make_collage_combines_posterior_sequences(tmp_path):
+def test_make_collage_combines_posterior_sequences(tmp_path, monkeypatch):
+    labels = []
+    original_text = ImageDraw.ImageDraw.text
+
+    def capture_text(draw, position, text, *arguments, **options):
+        labels.append(text)
+        return original_text(draw, position, text, *arguments, **options)
+
+    monkeypatch.setattr(ImageDraw.ImageDraw, "text", capture_text)
     examples_root = tmp_path / "examples"
     for panel_index, panel in enumerate(POSTERIOR_ANIMATION_PANELS):
         if panel.static_image is not None:
@@ -55,6 +63,8 @@ def test_make_collage_combines_posterior_sequences(tmp_path):
         assert animation.n_frames == 4
         assert animation.size == (440, 632)
         assert animation.info["duration"] == 100
+    assert "PCAT inference examples" in labels
+    assert not any("burn-in" in label or "posterior samples" in label for label in labels)
 
 
 def test_collage_rejects_frozen_source_sequence(tmp_path):
@@ -68,6 +78,27 @@ def test_collage_rejects_frozen_source_sequence(tmp_path):
         _animation_frame_paths(panel, tmp_path)
 
 
+def test_miri_collage_uses_only_hash_verified_recorded_native_frames(tmp_path):
+    import hashlib
+    import json
+
+    panel = POSTERIOR_ANIMATION_PANELS[2]
+    directory = tmp_path / "jwst_miri_ngc7027_line_catalog/visuals"
+    first = directory / "jwst_line_hist_native_swep000.png"
+    second = directory / "jwst_line_hist_native_swep001.png"
+    stray = directory / "jwst_line_hist_test_swep002.png"
+    for path, color in ((first, "#254f5b"), (second, "#b44b35"), (stray, "black")):
+        _write_frame(path, color, 5)
+    record = {"spectral_frame_paths": [first.name, second.name],
+              "spectral_frame_sha256": {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                                         for path in (first, second)}}
+    (directory / "jwst_miri_ngc7027_run_20261025_120000.json").write_text(json.dumps(record))
+    assert _animation_frame_paths(panel, tmp_path) == [first, second]
+    second.write_bytes(first.read_bytes())
+    with pytest.raises(RuntimeError, match="recorded provenance"):
+        _animation_frame_paths(panel, tmp_path)
+
+
 def test_collage_places_spectral_fit_logo_and_variable_starspots_in_requested_panels():
     panels = POSTERIOR_ANIMATION_PANELS
 
@@ -76,7 +107,7 @@ def test_collage_places_spectral_fit_logo_and_variable_starspots_in_requested_pa
     assert "Daylan+2017 NG cap mock" in panels[1].label
     assert "Fermi-LAT point sources" in panels[1].label
     assert "JWST/MIRI NGC 7027" in panels[2].label
-    assert panels[2].pattern == "jwst_miri_ngc7027_line_catalog/visuals/jwst_line_hist_*_swep*.png"
+    assert panels[2].pattern == "jwst_miri_ngc7027_line_catalog/visuals/jwst_spectrum_fit_*_swep*.png"
     assert "variable-count rotating starspots" in panels[3].label
     assert panels[4].static_image == "docs/_static/pcat_logo.png"
     assert panels[4].pattern is None
@@ -168,7 +199,7 @@ def test_flare_posterior_frames_keep_one_data_based_y_scale(tmp_path, monkeypatc
 
     assert len(paths) == len(axes) == 2
     for axis in axes:
-        assert axis.get_ylim() == pytest.approx((88.5, 127.5))
+        assert axis.get_ylim() == pytest.approx((75.0, 205.0))
 
 
 def test_animation_frames_use_one_shared_palette():
@@ -180,6 +211,16 @@ def test_animation_frames_use_one_shared_palette():
 
     assert all(frame.mode == "P" for frame in quantized)
     assert all(frame.getpalette() == quantized[0].getpalette() for frame in quantized[1:])
+
+
+def test_shared_palette_preserves_thin_blue_models_and_exact_white_background():
+    frame = Image.new("RGB", (400, 400), "white")
+    ImageDraw.Draw(frame).line((200, 5, 200, 395), fill="#176B87", width=1)
+    quantized = _quantize_shared_palette([frame, frame.copy()])
+    for image in quantized:
+        decoded = image.convert("RGB")
+        assert decoded.getpixel((200, 200)) == (23, 107, 135)
+        assert decoded.getpixel((0, 0)) == (255, 255, 255)
 
 
 def test_changing_animation_text_is_padded_to_a_fixed_width():

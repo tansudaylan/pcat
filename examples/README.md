@@ -120,9 +120,9 @@ python examples/variable_number_exoplanets_radial_velocity/variable_number_exopl
 ```
 
 The full run takes about 1.5 minutes on the documented machine. In the recorded
-run the injected three-planet model receives 92% posterior probability. This is
-a simulated-data example, and the smoke configuration is not a convergence
-claim.
+run, the injected three-planet model receives 92% posterior probability. The
+1,000-sweep smoke run checks the pipeline; the reported posterior comes from the
+100,000-sweep demonstration.
 
 ![Posterior probability for the number of planets](variable_number_exoplanets_radial_velocity/visuals/variable_number_exoplanets_rv_count_posterior.png)
 

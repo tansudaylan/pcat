@@ -12,14 +12,16 @@ Variable dimension: 60 epochs containing two Keplerian planets, with the number 
 of different dimension, and dynesty needs one nested-sampling run per planet count, whose evidences
 give the posterior on the count. Both use the same marginalized likelihood (offset analytically,
 jitter numerically) and the same priors, including a uniform prior on the count, so their posteriors
-on the number of planets must agree.
+on the number of planets target the same result; finite runs can disagree through incomplete exploration.
 """
 
 from tdpy.verbosity import print
 
 import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
 from tdpy.cli import add_plot_arguments
-import shutil
 import time
 from pathlib import Path
 
@@ -67,6 +69,8 @@ class Likelihood:
 def effective_sample_size(chain):
     """Return the minimum ESS over parameters for a (steps, walkers, dims) chain."""
     tau = emcee.autocorr.integrated_time(chain, quiet=True)
+    if not np.isfinite(tau).all() or np.any(tau <= 0.0):
+        return np.nan
     return float(np.min(chain.shape[0] * chain.shape[1] / tau))
 
 
@@ -78,19 +82,25 @@ def pcat_log_likelihood(gdat, strgmodl, values):
     return PCAT_LIKELIHOOD(values)
 
 
+def fresh_comparison_root(run_name):
+    from pcat.main import retr_pathrun
+
+    root = Path(retr_pathrun(EXAMPLE_PATH, run_name))
+    if ((root / "data/outp").exists() or (root / "visuals").exists()
+            or (EXAMPLE_PATH / "data/outp" / run_name).exists()):
+        raise FileExistsError(f"Refusing to overwrite comparison run {run_name}")
+    return root
+
+
 def run_pcat(likelihood, numbswep):
     global PCAT_LIKELIHOOD
     from pcat import sampling
 
     PCAT_LIKELIHOOD = likelihood
-    # PCAT resumes from cached state, so remove it to time a fresh run
-    path_cache = EXAMPLE_PATH / "data" / "outp" / RUN_NAME
-    if path_cache.exists():
-        print(f"Removing cached PCAT state {path_cache}...")
-        shutil.rmtree(path_cache)
+    fresh_comparison_root(RUN_NAME)
     numbburn = numbswep // 5
     start = time.perf_counter()
-    result = sampling.sample_fixed(
+    sampling.sample_fixed(
         retr_llik=pcat_log_likelihood,
         parameter_names=NAMES,
         prior_types=("self",) * 3,
@@ -109,9 +119,9 @@ def run_pcat(likelihood, numbswep):
         typeverb=0,
     )
     elapsed = time.perf_counter() - start
-    # Keep proposal-animation rendering outside the measured sampler runtime.
-    from pcat.main import proc_anim
-    proc_anim(RUN_NAME, pathbase=str(EXAMPLE_PATH))
+    from pcat.main import readfile, retr_pathrun
+
+    result = readfile(str(Path(retr_pathrun(EXAMPLE_PATH, RUN_NAME)) / "data/outp" / RUN_NAME / "gdatfinlpost"))
     samples = np.asarray(result.listpostparagenrscalbase)
     return samples, elapsed, effective_sample_size(samples[:, None, :])
 
@@ -133,11 +143,11 @@ def run_emcee(likelihood, numbstep, seed=3):
     return chain.reshape(-1, 3), elapsed, effective_sample_size(chain)
 
 
-def run_dynesty(likelihood, seed=5):
+def run_dynesty(likelihood, seed=5, *, nlive=500, maxcall=None):
     sampler = dynesty.NestedSampler(likelihood, lambda unit: MINIMA + unit * (MAXIMA - MINIMA), 3,
-                                    nlive=500, rstate=np.random.default_rng(seed))
+                                    nlive=nlive, rstate=np.random.default_rng(seed))
     start = time.perf_counter()
-    sampler.run_nested(print_progress=False)
+    sampler.run_nested(print_progress=False, maxcall=maxcall)
     elapsed = time.perf_counter() - start
     results = sampler.results
     samples = results.samples_equal()
@@ -149,7 +159,7 @@ def run_dynesty(likelihood, seed=5):
 
 def plot_marginals(results, typefileplot):
     """Overlay the marginal posteriors from the three samplers with the simulated truth."""
-    figure, axes = plt.subplots(1, 3, figsize=(7.0, 2.6))
+    figure, axes = plt.subplots(1, 3, figsize=(10.5, 3.3), layout="constrained")
     for k, axis in enumerate(axes):
         values = np.concatenate([result["samples"][:, k] for result in results.values()])
         bins = np.linspace(*np.percentile(values, [0.5, 99.5]), 40)
@@ -161,41 +171,63 @@ def plot_marginals(results, typefileplot):
         axis.set_yticks([])
     axes[0].set_ylabel("Posterior density")
     axes[0].legend(loc="upper left", fontsize=8)
-    figure.tight_layout()
-    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_marginal_posteriors", typefileplot)
+    save_comparison_figure(figure, "sampler_comparison_marginal_posteriors", typefileplot)
 
 
 def plot_efficiency(results, typefileplot):
     """Compare global-mode recovery, effective samples per second, and per likelihood evaluation."""
     names = list(results)
-    figure, axes = plt.subplots(1, 3, figsize=(7.0, 2.6))
-    for axis, key, label in [(axes[0], "frac_mode", "Fraction in true period mode"),
-                             (axes[1], "ess_per_second", "ESS per second [s$^{-1}$]"),
-                             (axes[2], "ess_per_call", "ESS per likelihood call")]:
+    figure, axes = plt.subplots(1, 3, figsize=(11.5, 3.5), layout="constrained")
+    for axis, key, label in [(axes[0], "frac_mode", "Fraction within 0.2 d of injected period"),
+                             (axes[1], "ess_per_second", "Reported ESS per second [s$^{-1}$]"),
+                             (axes[2], "ess_per_call", "Reported ESS per likelihood call")]:
         values = [results[name][key] for name in names]
-        axis.bar(names, values, color=[COLORS[name] for name in names])
+        valid = [np.isfinite(value) and value >= 0.0 for value in values]
+        axis.bar(names, [value if good else 0.0 for value, good in zip(values, valid)],
+                 color=[COLORS[name] for name in names])
         for position, value in enumerate(values):
-            axis.text(position, value * 1.05, f"{value:.2g}", ha="center")
+            if np.isfinite(value):
+                axis.text(position, value * 1.05, f"{value:.2g}", ha="center")
+            else:
+                axis.text(position, 0.05, "unresolved", transform=axis.get_xaxis_transform(), ha="center")
         if key == "frac_mode":
             axis.set_ylim(0.0, 1.15)
         else:
-            axis.set_yscale("log")
-            axis.set_ylim(min(values) / 3.0, max(values) * 4.0)
+            positive = [value for value in values if np.isfinite(value) and value > 0.0]
+            if positive:
+                axis.set_yscale("log")
+                axis.set_ylim(min(positive) / 3.0, max(positive) * 4.0)
         axis.set_ylabel(label)
-    figure.tight_layout()
-    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_efficiency", typefileplot)
+        if key != "frac_mode":
+            axis.set_xticks(range(len(names)), ["PCAT\nMCMC", "emcee\nMCMC", "dynesty\nKish"])
+    save_comparison_figure(figure, "sampler_comparison_efficiency", typefileplot)
 
 
 def main():
+    global RUN_NAME, DISPLAY_TAG
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=60000, help="PCAT sweeps.")
     parser.add_argument("--numbstep", type=int, default=4000, help="emcee steps per walker.")
     parser.add_argument("--numbswepplan", type=int, default=200000, help="PCAT sweeps, variable planet count.")
     parser.add_argument("--nliveplan", type=int, default=1000, help="dynesty live points, variable planet count.")
     parser.add_argument("--part", choices=("fixed", "variable", "both"), default="both")
+    parser.add_argument("--time-tag", default=datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"))
+    parser.add_argument("--nlive", type=int, default=500, help="dynesty live points, fixed dimension.")
+    parser.add_argument("--maxcall", type=int, help="Optional likelihood-call cap per dynesty run; capped runs are integration checks.")
     add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     arguments = parser.parse_args()
+    if datetime.strptime(arguments.time_tag, "%Y%m%d_%H%M%S").strftime("%Y%m%d_%H%M%S") != arguments.time_tag:
+        raise ValueError("time-tag must use YYYYMMDD_HHMMSS")
+    if min(arguments.numbswep, arguments.numbstep, arguments.numbswepplan) < 40:
+        raise ValueError("At least 40 MCMC steps are required")
+    if min(arguments.nlive, arguments.nliveplan) < 20 or (arguments.maxcall is not None and arguments.maxcall < 1):
+        raise ValueError("At least 20 live points and a positive call budget are required")
+    DISPLAY_TAG = arguments.time_tag
+    RUN_NAME = f"{EXAMPLE_PATH.name}_{DISPLAY_TAG}"
+    if list((EXAMPLE_PATH / "visuals").glob(f"sampler_comparison_*_{DISPLAY_TAG}.*")):
+        raise FileExistsError("Refusing to overwrite an earlier comparison output set")
     configure_example_style(arguments.typeplotback)
     if arguments.part in ("fixed", "both"):
         compare_fixed_dimension(arguments)
@@ -270,29 +302,28 @@ def run_pcat_planets(time_obs, velocity, stdv, numbswep):
     from pcat.radial_velocity import retr_dictpcatrvel
 
     strgcnfg = RUN_NAME + "_variable_planet_count"
+    fresh_comparison_root(strgcnfg)
     dictpcat = retr_dictpcatrvel(time_obs, velocity, stdv, np.zeros(time_obs.size, int), str(EXAMPLE_PATH), strgcnfg,
                                  maxmnumbplan=MAXM_NUMB_PLAN, factpriodoff=0.0, probtran=0.7, probspmr=0.4,
                                  probjump=0.2, numbswep=numbswep, numbsamp=numbswep // 50,
                                  numbswepplot=max(numbswep // 40, 1), inittype="rand", typeseed=0,
                                  stdvpropelemfire=[1e-2, 1e-4, 3e-2, 3e-2, 3e-2], boolmakeplot=False,
                                  boolmakeplotinit=False, makeanim=False, typeverb=0,
+                                 numbproc=1,
                                  retr_llik=pcat_planet_log_likelihood)
     PCAT_PLANET_CALLS[0] = 0
     start = time.perf_counter()
     sampling.sample(**dictpcat)
     elapsed = time.perf_counter() - start
-    # Keep proposal-animation rendering outside the measured sampler runtime.
-    from pcat.main import proc_anim
-    proc_anim(strgcnfg, pathbase=str(EXAMPLE_PATH))
     pathrun = Path(retr_pathrun(str(EXAMPLE_PATH), strgcnfg))
     posterior = readfile(str(pathrun / "data" / "outp" / strgcnfg / "gdatfinlpost"))
     numbelem = np.asarray(posterior.listpostnumbelem).astype(int).ravel()
     listperi = [np.asarray(sample[0]["elin"]) for sample, n in zip(posterior.listpostdictelem, numbelem) if n == 2]
     return {"prob": np.bincount(numbelem, minlength=MAXM_NUMB_PLAN + 1) / numbelem.size, "elapsed": elapsed,
-            "calls": PCAT_PLANET_CALLS[0], "peri": np.sort(np.array(listperi), 1)}
+            "calls": PCAT_PLANET_CALLS[0], "peri": np.sort(np.asarray(listperi).reshape(-1, 2), 1)}
 
 
-def run_dynesty_planets(time_obs, velocity, stdv, timerefr, nlive, seed=5):
+def run_dynesty_planets(time_obs, velocity, stdv, timerefr, nlive, seed=5, *, maxcall=None):
     """One nested-sampling run per planet count; returns log-evidences, costs, and two-planet periods."""
     output = {"logz": [], "logzerr": [], "elapsed": [], "calls": []}
     for numbplan in range(MAXM_NUMB_PLAN + 1):
@@ -303,7 +334,7 @@ def run_dynesty_planets(time_obs, velocity, stdv, timerefr, nlive, seed=5):
         else:
             sampler = dynesty.NestedSampler(likelihood, likelihood.prior_transform, 5 * numbplan, nlive=nlive,
                                             sample="rslice", rstate=np.random.default_rng(seed + numbplan))
-            sampler.run_nested(print_progress=False, dlogz=0.1)
+            sampler.run_nested(print_progress=False, dlogz=0.1, maxcall=maxcall)
             results = sampler.results
             logz, logzerr = results.logz[-1], results.logzerr[-1]
             if numbplan == 2:
@@ -326,7 +357,7 @@ def run_dynesty_planets(time_obs, velocity, stdv, timerefr, nlive, seed=5):
 def plot_planet_count(pcat_result, dynesty_result, typefileplot):
     """Posterior on the number of planets from one PCAT run and from dynesty evidences."""
     numbplan = np.arange(MAXM_NUMB_PLAN + 1)
-    figure, axis = plt.subplots(figsize=(3.4, 2.6))
+    figure, axis = plt.subplots(figsize=(6.5, 3.6), layout="constrained")
     axis.bar(numbplan - 0.2, pcat_result["prob"], 0.4, color=COLORS["PCAT"], label="PCAT, 1 run")
     axis.bar(numbplan + 0.2, dynesty_result["prob"], 0.4, yerr=dynesty_result["proberr"], color=COLORS["dynesty"],
              label=f"dynesty, {MAXM_NUMB_PLAN} runs")
@@ -336,13 +367,15 @@ def plot_planet_count(pcat_result, dynesty_result, typefileplot):
     axis.set_xticks(numbplan)
     axis.set_xlabel("Number of planets")
     axis.set_ylabel("Posterior probability")
-    axis.legend(loc="upper left")
-    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_planet_count_posterior", typefileplot)
+    handles, labels = axis.get_legend_handles_labels()
+    figure.legend(handles, labels, loc="outside upper center", ncol=3, fontsize=9,
+                  fancybox=True, framealpha=1.0)
+    save_comparison_figure(figure, "sampler_comparison_planet_count_posterior", typefileplot)
 
 
 def plot_planet_cost(pcat_result, dynesty_result, typefileplot):
     """Likelihood evaluations and wall-clock time to obtain the posterior on the number of planets."""
-    figure, axes = plt.subplots(1, 2, figsize=(7.0, 2.6))
+    figure, axes = plt.subplots(1, 2, figsize=(9.0, 3.3), layout="constrained")
     for axis, key, label in [(axes[0], "calls", "Likelihood evaluations"), (axes[1], "elapsed", "Wall-clock time [s]")]:
         axis.bar("PCAT", pcat_result[key], color=COLORS["PCAT"], label="PCAT, all counts at once")
         bottom = 0.0
@@ -353,39 +386,47 @@ def plot_planet_cost(pcat_result, dynesty_result, typefileplot):
             bottom += value
         axis.set_ylabel(label)
     axes[1].legend(loc="upper left")
-    figure.tight_layout()
-    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_planet_count_cost", typefileplot)
+    save_comparison_figure(figure, "sampler_comparison_planet_count_cost", typefileplot)
 
 
 def plot_planet_periods(pcat_result, dynesty_result, typefileplot):
     """Period posteriors of the two-planet solution from PCAT and dynesty."""
-    figure, axes = plt.subplots(1, 2, figsize=(7.0, 2.6))
+    figure, axes = plt.subplots(1, 2, figsize=(9.0, 3.3), layout="constrained")
     for k, axis in enumerate(axes):
-        values = np.concatenate([pcat_result["peri"][:, k], dynesty_result["peri"][:, k]])
-        bins = np.linspace(*np.percentile(values, [1.0, 99.0]), 40)
-        axis.hist(pcat_result["peri"][:, k], bins=bins, density=True, histtype="step", lw=1.5, color=COLORS["PCAT"],
-                  label="PCAT")
-        axis.hist(dynesty_result["peri"][:, k], bins=bins, density=True, histtype="step", lw=1.5,
-                  color=COLORS["dynesty"], label="dynesty")
+        samples = {name: np.asarray(result.get("peri", []), dtype=float).reshape(-1, 2)
+                   for name, result in (("PCAT", pcat_result), ("dynesty", dynesty_result))}
+        available = [values[:, k] for values in samples.values() if len(values)]
+        values = np.concatenate(available) if available else PLANETS[:, 0]
+        lower, upper = float(values.min()), float(values.max())
+        if lower == upper:
+            lower, upper = lower * 0.9, upper * 1.1
+        bins = np.linspace(lower, upper, 40)
+        for name, posterior in samples.items():
+            if len(posterior):
+                axis.hist(posterior[:, k], bins=bins, density=True, histtype="step", lw=1.5,
+                          color=COLORS[name], label=name)
+            else:
+                axis.plot([], [], color=COLORS[name], label=f"{name}: zero retained two-planet draws")
         axis.axvline(PLANETS[k, 0], color="0.4", ls="--", label="Simulated truth")
         axis.set_xlabel(f"Period of planet {'bc'[k]} [d]")
         axis.set_yticks([])
     axes[0].set_ylabel("Posterior density")
     axes[0].legend(loc="upper left")
-    figure.tight_layout()
-    save_example_figure(figure, EXAMPLE_PATH, "sampler_comparison_two_planet_periods", typefileplot)
+    save_comparison_figure(figure, "sampler_comparison_two_planet_periods", typefileplot)
 
 
 def compare_variable_dimension(arguments):
     time_obs, velocity, stdv, timerefr = simulate_planets()
     pcat_result = run_pcat_planets(time_obs, velocity, stdv, arguments.numbswepplan)
-    dynesty_result = run_dynesty_planets(time_obs, velocity, stdv, timerefr, arguments.nliveplan)
+    dynesty_result = run_dynesty_planets(time_obs, velocity, stdv, timerefr, arguments.nliveplan,
+                                       maxcall=arguments.maxcall)
     for name, result in [("PCAT", pcat_result), ("dynesty", dynesty_result)]:
         print(f"{name}: P(N) {np.round(result['prob'], 4)}, {np.sum(result['calls'])} calls, "
               f"{np.sum(result['elapsed']):.0f} s")
     plot_planet_count(pcat_result, dynesty_result, arguments.typefileplot)
     plot_planet_cost(pcat_result, dynesty_result, arguments.typefileplot)
     plot_planet_periods(pcat_result, dynesty_result, arguments.typefileplot)
+    write_comparison_metrics("variable", {"PCAT": pcat_result, "dynesty": dynesty_result}, arguments)
 
 
 def compare_fixed_dimension(arguments):
@@ -394,7 +435,7 @@ def compare_fixed_dimension(arguments):
     runners = {
         "PCAT": lambda like: run_pcat(like, arguments.numbswep),
         "emcee": lambda like: run_emcee(like, arguments.numbstep),
-        "dynesty": run_dynesty,
+        "dynesty": lambda like: run_dynesty(like, nlive=arguments.nlive, maxcall=arguments.maxcall),
     }
     for name, runner in runners.items():
         likelihood = Likelihood(time_obs, velocity)
@@ -405,6 +446,8 @@ def compare_fixed_dimension(arguments):
             "ess_per_second": ess / elapsed, "ess_per_call": ess / likelihood.count,
             # samples within 0.2 d of the simulated period; ESS is meaningful only when this is near 1
             "frac_mode": float(np.mean(np.abs(samples[:, 1] - TRUTH[1]) < 0.2)),
+            "ess_estimator": ("Kish importance-weight ESS" if name == "dynesty"
+                              else "minimum MCMC autocorrelation ESS"),
         }
         summary = ", ".join(f"{n} {np.median(samples[:, k]):.3f}+-{np.std(samples[:, k]):.3f}"
                             for k, n in enumerate(NAMES))
@@ -415,6 +458,46 @@ def compare_fixed_dimension(arguments):
 
     plot_marginals(results, arguments.typefileplot)
     plot_efficiency(results, arguments.typefileplot)
+    write_comparison_metrics("fixed", results, arguments)
+
+
+DISPLAY_TAG = None
+
+
+def save_comparison_figure(figure, name, typefileplot):
+    suffix = f"_{DISPLAY_TAG}" if DISPLAY_TAG else ""
+    target = EXAMPLE_PATH / "visuals" / f"{name}{suffix}.{typefileplot}"
+    if target.exists():
+        raise FileExistsError(f"Refusing to overwrite comparison figure {target}")
+    save_example_figure(figure, EXAMPLE_PATH, name + suffix, typefileplot)
+
+
+def write_comparison_metrics(part, results, arguments):
+    def portable(value):
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+        if isinstance(value, np.generic):
+            return portable(value.item())
+        if isinstance(value, float) and not np.isfinite(value):
+            return None
+        if isinstance(value, dict):
+            return {key: portable(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [portable(item) for item in value]
+        return value
+
+    record = {"part": part, "time_tag": DISPLAY_TAG, "settings": vars(arguments),
+              "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              "assumptions": "Seeded simulated radial velocities; bounded short runs demonstrate integration rather than sampler superiority.",
+              "cost_scope": "PCAT includes native setup and persistence; other timers cover sampler execution. MCMC and Kish ESS are different estimators.",
+              "nested_sampling_call_cap_used": arguments.maxcall is not None,
+              "results": portable(results)}
+    path = EXAMPLE_PATH / "visuals" / f"sampler_comparison_{part}_{DISPLAY_TAG}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Writing to {path}...")
+    with path.open("x", encoding="utf-8") as stream:
+        json.dump(record, stream, indent=2, allow_nan=False)
+        stream.write("\n")
 
 
 if __name__ == "__main__":

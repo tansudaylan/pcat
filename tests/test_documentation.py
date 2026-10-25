@@ -962,11 +962,11 @@ def test_three_sampler_comparison_documents_fixed_and_variable_dimensions():
     assert "emcee cannot vary the number of planets" in example_readme
     assert "--part both" in example_docs
     figure_names = (
-        "sampler_comparison_marginal_posteriors.png",
-        "sampler_comparison_efficiency.png",
-        "sampler_comparison_planet_count_posterior.png",
-        "sampler_comparison_planet_count_cost.png",
-        "sampler_comparison_two_planet_periods.png",
+        "sampler_comparison_marginal_posteriors_20261025_192240.png",
+        "sampler_comparison_efficiency_20261025_192240.png",
+        "sampler_comparison_planet_count_posterior_20261025_192240.png",
+        "sampler_comparison_planet_count_cost_20261025_192240.png",
+        "sampler_comparison_two_planet_periods_20261025_192240.png",
     )
     for name in figure_names:
         assert (examples / "visuals" / name).is_file()

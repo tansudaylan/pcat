@@ -73,6 +73,7 @@ def test_jwst_replot_never_rewrites_sampling_inputs(tmp_path, monkeypatch):
     )
     namespace["configure_example_style"] = lambda *arguments: "black"
     namespace["render_line_histogram_frames"] = lambda *arguments: []
+    namespace["render_spectrum_fit_frames"] = lambda *arguments: []
     (tmp_path / "visuals").mkdir()
     for name in ("plot_spectrum_fit", "plot_line_catalog", "plot_line_count"):
         namespace[name] = lambda *arguments: tmp_path / "visuals/figure.png"
@@ -82,3 +83,38 @@ def test_jwst_replot_never_rewrites_sampling_inputs(tmp_path, monkeypatch):
     assert not (namespace["PATH_INPT"] / "sbrt.fits").exists()
     metadata = json.loads((tmp_path / "visuals/jwst_miri_ngc7027_run_20261025_120000.json").read_text())
     assert metadata["sweeps_per_chain"] == 1200 and metadata["chains"] == 2
+
+
+def test_spectral_frames_show_real_bins_and_exact_model_draws_with_fixed_limits(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from matplotlib.figure import Figure
+    from pcat.demo import load_example_namespace
+
+    example = load_example_namespace("jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py")
+    example["EXAMPLE_PATH"] = tmp_path
+    wavelength = np.array([5.31, 5.40, 5.52])
+    flux = np.array([2.0, 8.0, 3.0])
+    error = np.array([0.1, 0.2, 0.1])
+    continuum = np.full(3, 2.0)
+    sigma = np.sqrt(error**2 + (example["FRACTIONAL_ERROR_FLOOR"] * continuum)**2)
+    models = np.array([[1.0, 7.0, 2.0], [3.0, 9.0, 4.0]])
+    posterior = SimpleNamespace(listpostcntpmodl=(models * (continuum / sigma**2))[..., None, None][:, ::-1])
+    figures = []
+    original_save = Figure.savefig
+
+    def capture(figure, *arguments, **options):
+        figures.append(figure)
+        return original_save(figure, *arguments, **options)
+
+    monkeypatch.setattr(Figure, "savefig", capture)
+    paths = example["render_spectrum_fit_frames"](wavelength, flux, error, continuum, posterior)
+    assert len(paths) == len(figures) == 2
+    assert all(path.parent == tmp_path / "visuals" and path.is_file() for path in paths)
+    for index, figure in enumerate(figures):
+        np.testing.assert_array_equal(figure.axes[0].lines[0].get_ydata(), flux)
+        np.testing.assert_allclose(figure.axes[0].lines[1].get_ydata(), models[index])
+        np.testing.assert_allclose(figure.axes[1].lines[0].get_ydata(), (flux - models[index]) / sigma)
+        assert figure.axes[0].lines[0].get_linestyle() == "None"
+        assert figure.axes[0].lines[1].get_color() == "#176B87"
+    assert figures[0].axes[0].get_ylim() == figures[1].axes[0].get_ylim()
+    assert figures[0].axes[1].get_ylim() == figures[1].axes[1].get_ylim()

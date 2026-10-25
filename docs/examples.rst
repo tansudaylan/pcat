@@ -178,16 +178,16 @@ Publication and instrument examples
 
    New chains and summary figures use timestamped names. Existing native and
    legacy runs are preserved. Replot a saved chain with ``--skip-sampling`` and
-   ``--run-name``; this leaves its input cubes untouched and reads the sampling
+   ``--run-name``. This leaves its input cubes untouched and reads the sampling
    settings from the stored posterior.
 
    The run ``jwst_miri_ngc7027_line_catalog_20261025_173152`` used one
    1,200-sweep chain on 294 spectral bins and retained 24 catalogs. The FITS
    headers identify JWST, MIRI, program 1523, and NGC 7027. The source and
    observation hashes are recorded with the figure metadata. The figures below
-   replay that exact posterior. This short run demonstrates integration and
-   leaves large residuals; further sampling and model assessment are needed
-   before interpreting line counts or fluxes.
+   replay that exact posterior. The short run leaves large residuals. Further
+   sampling and model assessment are needed before interpreting line counts or
+   fluxes.
 
    Calibrated flux densities are converted to effective counts using a
    continuum estimate and a stated 1% fractional uncertainty floor. This
@@ -336,8 +336,10 @@ Publication and instrument examples
    misspecified posteriors are narrow and exclude the injected number. The
    example also compares standardized Pearson-residual distributions with a
    standard Gaussian and total chi-squared values from posterior-predictive
-   Poisson replicates with a Gaussian approximation. The displayed upper-tail
-   fraction is a descriptive reference, not a formal p-value.
+   Poisson replicates with a Gaussian approximation. The displayed fraction is
+   the share of those Gaussian-approximation replicates above the observed
+   chi-squared value. A formal p-value requires a null distribution for the
+   full model.
 
    .. code-block:: bash
 
@@ -436,29 +438,40 @@ Analysis utilities
    computational costs make PCAT's transdimensional capability explicit
    without claiming that one sampler is universally faster.
 
+   The displayed integration run used 2,400 fixed-model PCAT sweeps, 800 emcee
+   steps per walker, and 100 fixed-model dynesty live points. Variable-count
+   settings were 1,600 PCAT sweeps and 50 live points per nested run with a
+   16,000-call cap. Autocorrelation warnings and the unreached nested evidence
+   criterion leave this comparison unconverged. MCMC autocorrelation ESS
+   estimates the number of independent chain draws. dynesty Kish weight ESS
+   estimates the information in its weighted samples. PCAT timing includes
+   setup and persistence. The JSON records preserve the actual samples,
+   settings, timings, call counts, source hash, and call-cap use. Figures
+   replay those arrays without changing any measured metric.
+
    .. code-block:: bash
 
       python examples/sampler_comparison_emcee_dynesty/sampler_comparison_emcee_dynesty.py --part both
 
-   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_marginal_posteriors.png
+   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_marginal_posteriors_20261025_192240.png
       :alt: Fixed-dimensional posterior marginals from PCAT, emcee, and dynesty
       :width: 720px
       :align: center
 
-   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_efficiency.png
+   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_efficiency_20261025_192240.png
       :alt: Fixed-dimensional mode recovery and sampling efficiency comparison
       :width: 720px
 
-   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_planet_count_posterior.png
+   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_planet_count_posterior_20261025_192240.png
       :alt: Posterior probability for the number of planets from PCAT and dynesty
       :width: 720px
       :align: center
 
-   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_planet_count_cost.png
+   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_planet_count_cost_20261025_192240.png
       :alt: Likelihood evaluations and runtime for transdimensional inference
       :width: 720px
 
-   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_two_planet_periods.png
+   .. image:: ../examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_two_planet_periods_20261025_192240.png
       :alt: Period posterior comparison for a two-planet model
       :width: 720px
       :align: center

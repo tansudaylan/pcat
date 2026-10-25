@@ -51,9 +51,11 @@ reusing cached light plots.
 ![Eight changing PCAT inference views and the centered PCAT logo](examples/pcat_posterior_samples.gif)
 
 Each synchronized frame combines eight evolving inference views with the
-static PCAT logo in the center. The data panels start from nonempty catalogs,
-follow burn-in for the first third of the animation, and show posterior samples
-for the remaining two thirds. They show an unbinned Gaussian mixture of
+static PCAT logo in the center. Each source retains its own recorded sampling
+stage. The source sequences have different
+lengths and are spread across a common display timeline. The observed JWST
+panel uses retained posterior draws throughout, so the collage does not assign
+one global burn-in or convergence stage. The panels show an unbinned Gaussian mixture of
 simulated events, Daylan+2017 northern Galactic cap Fermi-LAT point sources,
 the observed JWST/MIRI NGC 7027 spectral fit, a stellar light curve with a
 variable number of rotating starspots, and the Roman/WFI lens's outer arc and
@@ -62,6 +64,9 @@ times. The Roman source is one extended Gaussian. The simulation includes no
 independent point source. Time-series and spectral axes remain fixed across frames. The
 publication-inspired simulations illustrate PCAT's sampling behavior and do not
 reproduce published posterior values.
+
+The flare sequence uses 720 simulated photometric bins. PCAT allows the catalog
+to contain zero sources while the observed counts remain in the data.
 
 ## Every proposed state
 
@@ -72,16 +77,17 @@ animation shows frames from at or after burn-in at `numbswepplot` cadence. The c
 animation overlays current and proposed models on the data in one panel and
 compares both data-minus-model residuals in another. Colors and arrows show the
 proposed state change. Frames label the proposal type, acceptance probability,
-decision, proposal-density ratio, and Jacobian. Rejected candidates remain
-visible as proposals, not posterior samples. Within-model frames identify the
+decision, proposal-density ratio, and Jacobian. Rejected candidates appear in
+the candidate animation. Posterior samples contain only retained states.
+Within-model frames identify the
 Gaussian, differential-evolution, or Student-t subtype. The example also
 reports proposal counts and exercises within-model, birth, death, split, merge,
 and jump moves.
 
 Run the example to generate timestamped GIFs directly under
 `examples/proposal_state_animation/visuals/`. Native run folders retain
-`proposal_sequence.gif` and `proposal_candidates.gif` alongside their frames;
-the example copies them to timestamped display names without replacing earlier
+`proposal_sequence.gif` and `proposal_candidates.gif` alongside their frames.
+The example copies them to timestamped display names without replacing earlier
 chains or animations.
 
 ```bash
@@ -98,10 +104,10 @@ candidate animation contains all 120 sweeps.
 
 The displayed run attempted 20 within-model, 9 birth, 40 death, 8 split,
 31 merge, and 12 jump moves. It accepted 25 and rejected 95. The candidate
-sequence has 120 frames; the retained-state sequence has 16. Headers use fixed
+sequence has 120 frames, and the retained-state sequence has 16. Headers use fixed
 monospaced positions and both panels keep data-based scales, including large
-early residuals. This short simulated run demonstrates the trace outputs;
-convergence needs a longer analysis.
+early residuals. This short simulated run shows the proposal states and residuals.
+Longer chains are needed to assess convergence.
 
 ### Jacobian in split and merge moves
 
@@ -525,14 +531,27 @@ gradient-based burn-in mode.
 ### Comparing samplers
 
 The [PCAT, emcee, and dynesty example](examples/sampler_comparison_emcee_dynesty/sampler_comparison_emcee_dynesty.ipynb)
-compares all three on the same sinusoidal model with one parameter dimension,
+compares all three on the same three-parameter sinusoidal model,
 using posterior agreement, mode recovery, effective samples per second,
 likelihood calls, and evidence. A second experiment compares variable planet
 counts from zero to three. PCAT samples all counts in one run, while dynesty
 needs a separate evidence run per count. In this comparison, emcee requires one
 parameter dimension per chain and cannot make that comparison. The example reports count-posterior
-agreement, period recovery, likelihood evaluations, and wall time. No sampler
-leads on every metric in these two seeded simulations.
+agreement, period recovery, likelihood evaluations, and wall time.
+
+The bounded integration run `20261025_191910` used 2,400 PCAT sweeps,
+800 emcee steps per walker, and 100 dynesty live points for the sinusoid.
+The variable-count part used 1,600 PCAT sweeps and 50 dynesty live points per
+count with a 16,000-call cap. The short MCMC chains triggered autocorrelation
+warnings, and the capped nested runs did not reach their evidence criterion.
+Their count distributions disagree. These settings verify execution rather
+than establish a converged comparison or an efficiency advantage.
+
+The saved metrics distinguish MCMC autocorrelation ESS from dynesty's Kish
+importance-weight ESS. Their numerical values have different meanings.
+PCAT timing includes native setup and persistence, while the other timers
+cover sampler execution. Repeat runs use fresh names and preserve previous
+chains and figures. `--maxcall` sets an optional integration budget.
 
 Run both comparisons with:
 
@@ -540,15 +559,15 @@ Run both comparisons with:
 python examples/sampler_comparison_emcee_dynesty/sampler_comparison_emcee_dynesty.py --part both
 ```
 
-![Fixed-dimensional posterior marginals from PCAT, emcee, and dynesty](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_marginal_posteriors.png)
+![Fixed-dimensional posterior marginals from PCAT, emcee, and dynesty](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_marginal_posteriors_20261025_192240.png)
 
-![Fixed-dimensional sampling efficiency comparison](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_efficiency.png)
+![Reported sampler metrics with MCMC and Kish estimators labeled separately](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_efficiency_20261025_192240.png)
 
-![Variable planet-count posterior from PCAT and dynesty](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_planet_count_posterior.png)
+![Unconverged variable planet-count estimates from PCAT and capped dynesty runs](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_planet_count_posterior_20261025_192240.png)
 
-![Likelihood evaluations and runtime for variable-dimensional inference](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_planet_count_cost.png)
+![Likelihood evaluations and runtime for the bounded variable-model run](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_planet_count_cost_20261025_192240.png)
 
-![Two-planet period posteriors from PCAT and dynesty](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_two_planet_periods.png)
+![Conditional two-planet periods from the short comparison runs](examples/sampler_comparison_emcee_dynesty/visuals/sampler_comparison_two_planet_periods_20261025_192240.png)
 
 ## Applications
 

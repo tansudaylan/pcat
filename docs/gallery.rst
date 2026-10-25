@@ -12,8 +12,8 @@ the simulated Roman/WFI strong-lens benchmark. All data are simulated.
 Sampler operation
 -----------------
 
-:func:`pcat.plotting.plot_sampler_overview` writes every view in this section
-and the next that applies to a run. :func:`pcat.sampling.sample` calls it for
+:func:`pcat.plotting.plot_sampler_overview` writes the sampler and inference
+plots that apply to a run. :func:`pcat.sampling.sample` calls it for
 each run with final plots enabled.
 
 :func:`pcat.plotting.plot_proposal_ledger` follows each move type through

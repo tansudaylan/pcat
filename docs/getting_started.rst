@@ -71,9 +71,9 @@ A programmatic demonstration has the same form:
        strgcnfg="point_sources",
    )
 
-This configuration is a pipeline check, not a scientifically converged chain.
-Production analyses require enough samples, convergence checks, and
-problem-specific prior validation.
+This example uses 100 sweeps and saves 10 samples to check the pipeline and its
+output paths. Production analyses need longer runs, chain convergence checks,
+and prior validation for the problem being studied.
 
 Runtime paths
 -------------

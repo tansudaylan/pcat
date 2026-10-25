@@ -5,6 +5,9 @@ from __future__ import annotations
 from tdpy.verbosity import print
 
 import os
+import hashlib
+import importlib.util
+from itertools import count
 import runpy
 import sys
 from pathlib import Path
@@ -14,6 +17,9 @@ import matplotlib as mpl
 from tdpy.plotting import configure_plot_style
 
 from . import main as pcat_main
+
+
+_EXAMPLE_LOAD_IDS = count()
 
 
 DEMO_DEFAULTS = {
@@ -127,10 +133,25 @@ def run_example_script(relative_path: str, *arguments: str) -> None:
 
 
 def load_example_namespace(relative_path: str) -> dict[str, object]:
-    """Load an example's definitions without running its command-line entry point."""
+    """Return live example globals without running its command-line entry point."""
     script = Path(__file__).resolve().parents[1] / "examples" / relative_path
     print(f"Reading from {script}...")
-    return runpy.run_path(str(script), run_name=f"pcat_example_{script.stem}")
+    name = f"pcat_example_{hashlib.sha256(relative_path.encode()).hexdigest()[:16]}_{next(_EXAMPLE_LOAD_IDS)}"
+    specification = importlib.util.spec_from_file_location(name, script)
+    if specification is None or specification.loader is None:
+        raise ImportError(f"Unable to load PCAT example {relative_path}")
+    module = importlib.util.module_from_spec(specification)
+    previous = sys.modules.get(name)
+    sys.modules[name] = module
+    try:
+        specification.loader.exec_module(module)
+    except BaseException:
+        if previous is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = previous
+        raise
+    return vars(module)
 
 
 def load_example_posterior(relative_path: str, *, output_root: Path | None = None) -> object:

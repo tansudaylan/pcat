@@ -36,6 +36,38 @@ def test_example_posterior_loader_uses_native_run_when_present(tmp_path, monkeyp
     assert result is expected
 
 
+def test_example_namespace_output_root_is_the_writer_global(tmp_path):
+    from types import SimpleNamespace
+
+    namespace = demo.load_example_namespace(
+        "jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py"
+    )
+    assert namespace is namespace["render_line_histogram_frames"].__globals__
+    namespace["EXAMPLE_PATH"] = tmp_path
+    wavenumber = 1e6 / np.array([5.34, 5.5112])
+    posterior = SimpleNamespace(listpostdictelem=[
+        [{"elin": wavenumber}], [{"elin": wavenumber[:1]}],
+    ])
+    paths = namespace["render_line_histogram_frames"](posterior)
+    assert len(paths) == 2
+    assert all(path.parent == tmp_path / "visuals" for path in paths)
+    assert all(path.is_file() for path in paths)
+
+
+def test_separate_example_loads_keep_independent_output_roots(tmp_path):
+    import pickle
+
+    relative = "jwst_miri_ngc7027_line_catalog/jwst_miri_ngc7027_line_catalog.py"
+    first = demo.load_example_namespace(relative)
+    second = demo.load_example_namespace(relative)
+    first["EXAMPLE_PATH"] = tmp_path / "first"
+    second["EXAMPLE_PATH"] = tmp_path / "second"
+    assert first["render_line_histogram_frames"].__globals__["EXAMPLE_PATH"] == tmp_path / "first"
+    assert second["render_line_histogram_frames"].__globals__["EXAMPLE_PATH"] == tmp_path / "second"
+    assert pickle.loads(pickle.dumps(first["estimate_continuum"])) is first["estimate_continuum"]
+    assert pickle.loads(pickle.dumps(second["estimate_continuum"])) is second["estimate_continuum"]
+
+
 def test_example_posterior_loader_does_not_hide_incomplete_native_run(tmp_path, monkeypatch):
     root = tmp_path / "example"
     (root / "pcat_runs" / "selected").mkdir(parents=True)

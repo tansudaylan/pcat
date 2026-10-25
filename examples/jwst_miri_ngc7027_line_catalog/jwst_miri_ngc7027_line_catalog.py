@@ -193,6 +193,55 @@ def render_line_histogram_frames(posterior):
     return paths
 
 
+def render_spectrum_fit_frames(wavelength, flux, error, continuum, posterior):
+    """Render observed spectral bins with actual retained model draws and residuals."""
+    sigma = np.sqrt(error**2 + (FRACTIONAL_ERROR_FLOOR * continuum)**2)  # [Jy]
+    countsperjansky = continuum / sigma**2  # [Jy^-1]
+    models = np.asarray(posterior.listpostcntpmodl)[:, ::-1, 0, 0] / countsperjansky[None, :]  # [Jy]
+    if models.ndim != 2 or models.shape[1] != len(wavelength) or len(models) < 2:
+        raise ValueError("Spectral animation requires at least two aligned model draws")
+    if not np.isfinite(models).all():
+        raise ValueError("Spectral model draws must be finite")
+    residuals = (flux[None, :] - models) / sigma[None, :]
+    flux_minimum = min(float(np.min(flux)), float(np.min(models)))
+    flux_maximum = max(float(np.max(flux)), float(np.max(models)))
+    margin = max(0.01, 0.08 * (flux_maximum - flux_minimum))
+    residual_limit = max(5.0, 1.1 * float(np.max(np.abs(residuals))))
+    indices = np.unique(np.linspace(0, len(models) - 1, min(12, len(models)), dtype=int))
+    root = EXAMPLE_PATH / "visuals"
+    root.mkdir(parents=True, exist_ok=True)
+    tag = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+    paths = []
+    for index in indices:
+        figure, axes = plt.subplots(2, 1, figsize=(6.4, 4.6), sharex=True,
+                                    layout="constrained", gridspec_kw={"height_ratios": [3, 1]})
+        foreground = plt.rcParams["text.color"]
+        axes[0].plot(wavelength, flux, marker=".", markersize=3, linestyle="none",
+                     color=foreground, label="Observed JWST/MIRI bins")
+        axes[0].plot(wavelength, models[index], color="#176B87", linewidth=1.4,
+                     label="Retained PCAT model")
+        axes[0].set(ylabel="Flux density [Jy]", ylim=(flux_minimum - margin, flux_maximum + margin),
+                    title=f"JWST/MIRI NGC 7027\nRetained draw {index + 1:04d} / {len(models):04d}")
+        axes[0].title.set_fontfamily("monospace")
+        axes[0].title.set_fontsize(9)
+        handles, labels = axes[0].get_legend_handles_labels()
+        figure.legend(handles, labels, loc="outside upper center", ncol=2,
+                      fancybox=True, framealpha=1.0, fontsize=9)
+        axes[1].plot(wavelength, residuals[index], marker=".", markersize=3,
+                     linestyle="none", color=foreground)
+        axes[1].axhline(0.0, color="0.5", linewidth=0.7)
+        axes[1].set(xlabel="Wavelength [micrometer]", ylabel="Residual [sigma]",
+                    xlim=WAVELENGTH_RANGE, ylim=(-residual_limit, residual_limit))
+        for axis in axes:
+            axis.grid(False)
+        path = root / f"jwst_spectrum_fit_{tag}_swep{index:09d}.png"
+        print(f"Writing to {path}...")
+        figure.savefig(path, dpi=200, bbox_inches="tight")
+        plt.close(figure)
+        paths.append(path)
+    return paths
+
+
 def plot_spectrum_fit(wavelength, flux, error, continuum, posterior, typefileplot, colrfore, time_tag=None):
     """Data, continuum template, posterior model, and normalized residuals versus wavelength."""
     sigma = np.sqrt(error**2 + (FRACTIONAL_ERROR_FLOOR * continuum)**2)  # [Jy]
@@ -298,7 +347,8 @@ def main():
         f"{EXAMPLE_PATH.name}/data/outp/{RUN_NAME}/gdatfinlpost"
     )
     colrfore = configure_example_style(arguments.typeplotback)
-    render_line_histogram_frames(posterior)
+    histogram_paths = render_line_histogram_frames(posterior)
+    spectral_paths = render_spectrum_fit_frames(wavelength, flux, error, continuum, posterior)
     figure_paths = [
         plot_spectrum_fit(wavelength, flux, error, continuum, posterior, arguments.typefileplot, colrfore, arguments.time_tag),
         plot_line_catalog(wavelength, flux, posterior, arguments.typefileplot, colrfore, arguments.time_tag),
@@ -314,6 +364,12 @@ def main():
                 "sweeps_per_chain": (int(posterior.numbswep) if hasattr(posterior, "numbswep")
                                      else None if arguments.skip_sampling else arguments.numbswep),
                 "figure_paths": [path.name for path in figure_paths],
+                "histogram_frame_paths": [path.name for path in histogram_paths],
+                "histogram_frame_sha256": {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                                           for path in histogram_paths},
+                "spectral_frame_paths": [path.name for path in spectral_paths],
+                "spectral_frame_sha256": {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                                          for path in spectral_paths},
                 "assumptions": "Continuum-based effective-count Poisson approximation to calibrated JWST flux density; short chains verify integration."}
     metadata_path = EXAMPLE_PATH / "visuals" / f"jwst_miri_ngc7027_run_{arguments.time_tag}.json"
     print(f"Writing to {metadata_path}...")

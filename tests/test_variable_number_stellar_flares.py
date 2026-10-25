@@ -55,6 +55,10 @@ def test_flare_example_rejects_invalid_chain_counts(tmp_path, monkeypatch, chain
 
 @pytest.mark.parametrize("replay", [False, True])
 def test_flare_cli_uses_native_inputs_and_replay_keeps_inputs_untouched(tmp_path, monkeypatch, replay):
+    import hashlib
+    import json
+    from PIL import Image
+
     example = _load_flare_example(monkeypatch)
     arguments = ["flare_example", "--numbswep", "100", "--chains", "1",
                  "--run-name", "chosen", "--output-root", str(tmp_path)]
@@ -80,12 +84,28 @@ def test_flare_cli_uses_native_inputs_and_replay_keeps_inputs_untouched(tmp_path
     monkeypatch.setattr(example, "load_example_posterior", load_posterior)
     monkeypatch.setattr(example, "build_birth_proposal", lambda *args: {})
     monkeypatch.setattr(example, "configure_example_style", lambda *args: "black")
-    for name in ("render_flare_posterior_frames", "plot_light_curve_fit", "plot_flare_catalog_samples",
-                 "plot_flare_count_posterior"):
-        monkeypatch.setattr(example, name, lambda *args: None)
+    visual_root = tmp_path / "visuals"
+    visual_root.mkdir()
+
+    def write_plot(name):
+        path = visual_root / f"{name}.png"
+        Image.new("RGB", (3, 3), "white").save(path)
+        return path
+
+    frame_paths = [write_plot("frame0"), write_plot("frame1")]
+    monkeypatch.setattr(example, "render_flare_posterior_frames", lambda *args: frame_paths)
+    for name in ("plot_light_curve_fit", "plot_flare_catalog_samples", "plot_flare_count_posterior"):
+        monkeypatch.setattr(example, name, lambda *args, name=name: write_plot(name))
     example.main()
     assert calls == (["posterior"] if replay else ["sample", "posterior"])
     assert native_inputs.exists() is not replay
+    manifests = list(visual_root.glob("flare_collage_run_*.json"))
+    assert len(manifests) == 1
+    record = json.loads(manifests[0].read_text())
+    assert record["native_frame_paths"] == [path.name for path in frame_paths]
+    assert record["native_frame_sha256"] == {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in frame_paths
+    }
 
 
 def test_variable_number_stellar_flares_uses_input_counts_bins_and_baseline_template(tmp_path):

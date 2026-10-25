@@ -194,7 +194,7 @@ def run_pcat(edges, template, numbswep, proposal, flare_profile="flarfred", *,
     )
 
 
-def plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, typefileplot, colrfore):
+def plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, typefileplot, colrfore, time_tag=None):
     """Simulated data, injected ground-truth flares, and PCAT's posterior model versus time."""
     modl = posterior.listpostcntpmodl[:, :, 0, 0]
     quantiles = np.percentile(modl, [16.0, 50.0, 84.0], axis=0)
@@ -213,27 +213,29 @@ def plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, typefileplot, c
     axes[1].set_ylabel(r"Residual [$\sigma$]")
     axes[1].set_xlabel("Time [hour]")
     figure.subplots_adjust(hspace=0.05)
-    save_example_figure(figure, EXAMPLE_PATH, "variable_number_stellar_flares_light_curve_fit", typefileplot)
+    return save_flare_figure(figure, "variable_number_stellar_flares_light_curve_fit", typefileplot, time_tag)
 
 
 def render_flare_posterior_frames(meantime, observed_counts, posterior):
     """Render simulated photometry and PCAT flare models from the prior draw to posterior samples."""
-    snapshots = animation_states(posterior, require_nonzero_catalog=True)
+    snapshots = animation_states(posterior)
     models = np.array([np.asarray(snapshot["cntpmodl"], dtype=float)[:, 0, 0] for snapshot in snapshots])
-    # data-based limits; early burn-in models may leave the axes
-    span = float(np.ptp(observed_counts))
-    lower = float(observed_counts.min()) - 0.05 * span  # [counts per bin]
-    upper = float(observed_counts.max()) + 0.25 * span  # [counts per bin]
+    if not np.isfinite(observed_counts).all() or not np.isfinite(models).all():
+        raise ValueError("Flare animation requires finite observations and model draws")
+    minimum = min(float(np.min(observed_counts)), float(np.min(models)))
+    maximum = max(float(np.max(observed_counts)), float(np.max(models)))
+    span = max(1.0, maximum - minimum)
+    lower = minimum - 0.05 * span  # [counts per bin]
+    upper = maximum + 0.25 * span  # [counts per bin]
     visual_root = EXAMPLE_PATH / "visuals"
     visual_root.mkdir(parents=True, exist_ok=True)
-    for old_frame in visual_root.glob("flare_photometry_swep*.png"):
-        print(f"Removing previous frame {old_frame}...")
-        old_frame.unlink()
+    tag = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
     paths = []
     for snapshot, model in zip(snapshots, models):
         figure, axis = plt.subplots(figsize=(6.0, 4.3), facecolor="white")
         hours = (meantime - TIME_OFFSET_DAYS) * 24.0  # [hour]
-        axis.plot(hours, observed_counts, color="#555D61", lw=0.7, alpha=0.75,
+        axis.plot(hours, observed_counts, color="black", marker=".", markersize=2,
+                  linestyle="none", alpha=0.75,
                   label="Simulated 2-min photometry")
         axis.plot(hours, model, color="#B04435", lw=1.6,
                   label=f"PCAT model, {int(np.ravel(snapshot['numbelem'])[0])} flares")
@@ -241,7 +243,7 @@ def render_flare_posterior_frames(meantime, observed_counts, posterior):
                  ylabel="Counts per 2 min bin", title=animation_phase_label(snapshot))
         axis.grid(False)
         axis.legend(loc="upper right", framealpha=1, facecolor="white")
-        path = visual_root / f"flare_photometry_swep{snapshot['cntrswep']:09d}.png"
+        path = visual_root / f"flare_photometry_{tag}_swep{snapshot['cntrswep']:09d}.png"
         print(f"Writing to {path}...")
         figure.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")
         plt.close(figure)
@@ -249,7 +251,7 @@ def render_flare_posterior_frames(meantime, observed_counts, posterior):
     return paths
 
 
-def plot_flare_catalog_samples(catalog, posterior, typefileplot, colrfore):
+def plot_flare_catalog_samples(catalog, posterior, typefileplot, colrfore, time_tag=None):
     """Posterior samples of flare time and peak excess counts, with the injected flares marked."""
     listelin = np.concatenate([np.asarray(sample[0]["elin"]) for sample in posterior.listpostdictelem])  # [day]
     listflux = np.concatenate([np.asarray(sample[0]["flux"]) for sample in posterior.listpostdictelem])  # [counts day]
@@ -263,10 +265,10 @@ def plot_flare_catalog_samples(catalog, posterior, typefileplot, colrfore):
     axis.set_xlabel("Time [hour]")
     axis.set_ylabel("Peak excess [counts per bin]")
     axis.legend(loc="upper left", fontsize=8)
-    save_example_figure(figure, EXAMPLE_PATH, "variable_number_stellar_flares_catalog_samples", typefileplot)
+    return save_flare_figure(figure, "variable_number_stellar_flares_catalog_samples", typefileplot, time_tag)
 
 
-def plot_flare_count_posterior(catalog, posterior, typefileplot, colrfore):
+def plot_flare_count_posterior(catalog, posterior, typefileplot, colrfore, time_tag=None):
     """Posterior probability of the number of flares, compared to the injected count."""
     numbelem = np.asarray(posterior.listpostnumbelem).ravel().astype(int)
     values, counts = np.unique(numbelem, return_counts=True)
@@ -276,11 +278,22 @@ def plot_flare_count_posterior(catalog, posterior, typefileplot, colrfore):
     axis.set_xlabel("Number of flares")
     axis.set_ylabel("Posterior probability")
     axis.legend(loc="upper right", fontsize=8)
-    save_example_figure(figure, EXAMPLE_PATH, "variable_number_stellar_flares_count_posterior", typefileplot)
+    return save_flare_figure(figure, "variable_number_stellar_flares_count_posterior", typefileplot, time_tag)
+
+
+def save_flare_figure(figure, name, typefileplot, time_tag=None):
+    name = f"{name}_{time_tag}" if time_tag else name
+    target = EXAMPLE_PATH / "visuals" / f"{name}.{typefileplot}"
+    if target.exists():
+        raise FileExistsError(f"Refusing to overwrite flare figure {target}")
+    save_example_figure(figure, EXAMPLE_PATH, name, typefileplot)
+    return target
 
 
 def main():
     global EXAMPLE_PATH, PATH_INPT
+    import hashlib
+    import json
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=100_000)
@@ -292,8 +305,13 @@ def main():
     add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--skip-sampling", action="store_true", help="Replot an existing chain.")
+    parser.add_argument("--time-tag", default=datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"))
     arguments = parser.parse_args()
+    if datetime.strptime(arguments.time_tag, "%Y%m%d_%H%M%S").strftime("%Y%m%d_%H%M%S") != arguments.time_tag:
+        raise ValueError("time-tag must use YYYYMMDD_HHMMSS")
     EXAMPLE_PATH = arguments.output_root.resolve()
+    if list((EXAMPLE_PATH / "visuals").glob(f"*_{arguments.time_tag}.*")):
+        raise FileExistsError("Refusing to overwrite an earlier flare output set")
     base_name = RUN_NAME if arguments.profile == "flarfred" else f"{RUN_NAME}_{arguments.profile}"
     run_name = arguments.run_name or (
         base_name if arguments.skip_sampling
@@ -317,10 +335,24 @@ def main():
         f"{EXAMPLE_PATH.name}/data/outp/{run_name}/gdatfinlpost", output_root=EXAMPLE_PATH,
     )
     colrfore = configure_example_style(arguments.typeplotback)
-    render_flare_posterior_frames(meantime, obsvcnts, posterior)
-    plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, arguments.typefileplot, colrfore)
-    plot_flare_catalog_samples(catalog, posterior, arguments.typefileplot, colrfore)
-    plot_flare_count_posterior(catalog, posterior, arguments.typefileplot, colrfore)
+    frames = render_flare_posterior_frames(meantime, obsvcnts, posterior)
+    figures = [
+        plot_light_curve_fit(meantime, obsvcnts, catalog, posterior, arguments.typefileplot, colrfore, arguments.time_tag),
+        plot_flare_catalog_samples(catalog, posterior, arguments.typefileplot, colrfore, arguments.time_tag),
+        plot_flare_count_posterior(catalog, posterior, arguments.typefileplot, colrfore, arguments.time_tag),
+    ]
+    record = {"run_name": run_name, "time_tag": arguments.time_tag,
+              "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              "native_frame_paths": [path.name for path in frames],
+              "native_frame_sha256": {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in frames},
+              "observation_bins": len(obsvcnts), "observed_minimum": float(np.min(obsvcnts)),
+              "observed_maximum": float(np.max(obsvcnts)), "input_kind": "Seeded simulated stellar photometry",
+              "figure_paths": [path.name for path in figures]}
+    target = EXAMPLE_PATH / "visuals" / f"flare_collage_run_{arguments.time_tag}.json"
+    print(f"Writing to {target}...")
+    with target.open("x", encoding="utf-8") as stream:
+        json.dump(record, stream, indent=2)
+        stream.write("\n")
 
 
 if __name__ == "__main__":

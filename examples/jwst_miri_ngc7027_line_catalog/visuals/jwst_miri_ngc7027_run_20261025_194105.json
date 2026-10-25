@@ -1,0 +1,51 @@
+{
+  "run_name": "jwst_miri_ngc7027_line_catalog_20261025_173152",
+  "time_tag": "20261025_194105",
+  "skip_sampling": true,
+  "source_sha256": "1fd5a69e16b7802909396250c160b0ae9aeb892e907ad9602908c43fbe769712",
+  "input_file": "jw01523-o001_t002_miri_ch1-short_x1d.fits",
+  "input_sha256": "02f65ddac1a49dabb83a331e6b8bdc1d38507dffe5dc9ba3e0c39132d9292dc1",
+  "wavelength_range_um": [
+    5.3,
+    5.535
+  ],
+  "fractional_error_floor": 0.01,
+  "spectrum_bins": 294,
+  "posterior_catalogs": 24,
+  "chains": 1,
+  "sweeps_per_chain": 1200,
+  "figure_paths": [
+    "jwst_miri_ngc7027_spectrum_fit_20261025_194105.png",
+    "jwst_miri_ngc7027_line_catalog_samples_20261025_194105.png",
+    "jwst_miri_ngc7027_line_count_posterior_20261025_194105.png"
+  ],
+  "histogram_frame_paths": [
+    "jwst_line_hist_20261025_194109_073649_swep000000000.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000002.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000004.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000006.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000008.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000010.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000012.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000014.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000016.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000018.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000020.png",
+    "jwst_line_hist_20261025_194109_073649_swep000000023.png"
+  ],
+  "histogram_frame_sha256": {
+    "jwst_line_hist_20261025_194109_073649_swep000000000.png": "f6dc4999b19ab21e41d736443fc8b6d6856eaa0d2795163dc6959a74f8c81828",
+    "jwst_line_hist_20261025_194109_073649_swep000000002.png": "30c1fc0395a89203f12c88541f4c1ed39ea5c9dcd3270cd36edcbe40c4b839dd",
+    "jwst_line_hist_20261025_194109_073649_swep000000004.png": "3ab6bc07c8a539528ef203131f8910441d764cdc741ef1cab6bc587de69fc1d9",
+    "jwst_line_hist_20261025_194109_073649_swep000000006.png": "3ab6bc07c8a539528ef203131f8910441d764cdc741ef1cab6bc587de69fc1d9",
+    "jwst_line_hist_20261025_194109_073649_swep000000008.png": "3ab6bc07c8a539528ef203131f8910441d764cdc741ef1cab6bc587de69fc1d9",
+    "jwst_line_hist_20261025_194109_073649_swep000000010.png": "2301ff1e03e75447c5f3a502ade378faf7422d9872eba543b14c706a10dcb04b",
+    "jwst_line_hist_20261025_194109_073649_swep000000012.png": "95a5387f10e9593ff43f0ba99cb6422f8361e34fbc882d354acd7438731519cc",
+    "jwst_line_hist_20261025_194109_073649_swep000000014.png": "6aeb93113d5e3e91c99af43ed265a053090d726b20fd36a6c373165a7bffef36",
+    "jwst_line_hist_20261025_194109_073649_swep000000016.png": "b8943fd52c89896d28d836d8a458b62afb913c1975db13f662ad25a53f837135",
+    "jwst_line_hist_20261025_194109_073649_swep000000018.png": "c78f753430cbb21eb4af06801e9f9b0141dce80fc082e0ba726c9add17eab4a8",
+    "jwst_line_hist_20261025_194109_073649_swep000000020.png": "07509c5b0fd4ad0800ce19151522ba79f004f74a844849c28a1a8a781dfd62b3",
+    "jwst_line_hist_20261025_194109_073649_swep000000023.png": "e1ba7de66fa78a27680293405fb3bc7f708a733c6b413819a9d8fec0700a3966"
+  },
+  "assumptions": "Continuum-based effective-count Poisson approximation to calibrated JWST flux density; short chains verify integration."
+}

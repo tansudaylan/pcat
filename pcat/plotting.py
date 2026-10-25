@@ -3,6 +3,8 @@
 from tdpy.verbosity import print
 
 from dataclasses import dataclass
+import hashlib
+import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -274,6 +276,8 @@ class PosteriorAnimationPanel:
     label: str
     pattern: str | None = None
     static_image: str | None = None
+    manifest_pattern: str | None = None
+    manifest_key: str = "histogram"
 
 
 def histogram_frame_limits(reference_count: float, maximum_model_count: float) -> tuple[float, float]:
@@ -471,7 +475,9 @@ POSTERIOR_ANIMATION_PANELS = (
     ),
     PosteriorAnimationPanel(
         "JWST/MIRI NGC 7027 | observed spectral fit",
-        "jwst_miri_ngc7027_line_catalog/visuals/jwst_line_hist_*_swep*.png",
+        "jwst_miri_ngc7027_line_catalog/visuals/jwst_spectrum_fit_*_swep*.png",
+        manifest_pattern="jwst_miri_ngc7027_line_catalog/visuals/jwst_miri_ngc7027_run_*.json",
+        manifest_key="spectral",
     ),
     PosteriorAnimationPanel(
         "Stellar light curve | variable-count rotating starspots",
@@ -487,7 +493,9 @@ POSTERIOR_ANIMATION_PANELS = (
     ),
     PosteriorAnimationPanel(
         "Simulated photometry | PCAT flare catalog",
-        "variable_number_stellar_flares/visuals/flare_photometry_swep*.png",
+        "variable_number_stellar_flares/visuals/flare_photometry_*_swep*.png",
+        manifest_pattern="variable_number_stellar_flares/visuals/flare_collage_run_*.json",
+        manifest_key="native",
     ),
     PosteriorAnimationPanel(
         "Simulated RV | variable-number exoplanets",
@@ -520,6 +528,24 @@ def _animation_frame_paths(
     if panel.pattern is None:
         raise ValueError(f"{panel.label} needs a frame pattern or static image.")
     paths = sorted(examples_root.glob(panel.pattern))
+    if panel.manifest_pattern:
+        manifests = sorted(examples_root.glob(panel.manifest_pattern))
+        if manifests:
+            manifest = manifests[-1]
+            print(f"Reading from {manifest}...")
+            record = json.loads(manifest.read_text(encoding="utf-8"))
+            names = record.get(f"{panel.manifest_key}_frame_paths")
+            hashes = record.get(f"{panel.manifest_key}_frame_sha256", {})
+            if not isinstance(names, list) or len(names) < 2:
+                raise RuntimeError(f"Rerun the observed-spectrum example to record its frame manifest: {manifest}")
+            paths = []
+            for name in names:
+                if not isinstance(name, str) or Path(name).name != name:
+                    raise RuntimeError("Invalid observed-spectrum frame path")
+                path = manifest.parent / name
+                if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != hashes.get(name):
+                    raise RuntimeError(f"Observed-spectrum frame differs from its recorded provenance: {path}")
+                paths.append(path)
     if len(paths) < 2:
         raise RuntimeError(
             f"{panel.label} requires at least two posterior frames matching "
@@ -550,13 +576,25 @@ def _quantize_shared_palette(frames: list[Image.Image]) -> list[Image.Image]:
     palette_source = Image.new("RGB", (sample_size, sample_size * len(samples)), "white")
     for index, sample in enumerate(samples):
         palette_source.paste(sample, (0, index * sample_size))
-    adaptive_palette = palette_source.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+    reserved = [(255, 255, 255), (0, 0, 0), (23, 107, 135),
+                (176, 68, 53), (165, 28, 48), (0, 114, 178)]
+    adaptive_palette = palette_source.quantize(colors=256 - len(reserved), method=Image.Quantize.MEDIANCUT)
     palette = Image.new("P", (1, 1))
-    palette.putpalette(adaptive_palette.getpalette())
-    return [
-        frame.convert("RGB").quantize(palette=palette, dither=Image.Dither.NONE)
-        for frame in frames
-    ]
+    palette.putpalette([value for color in reserved for value in color]
+                       + adaptive_palette.getpalette()[:3 * (256 - len(reserved))])
+    quantized = []
+    for frame in frames:
+        rgb = frame.convert("RGB")
+        result = rgb.quantize(palette=palette, dither=Image.Dither.NONE)
+        pixels = np.asarray(rgb)
+        indices = np.array(result)
+        for index, color in enumerate(reserved):
+            selected = ((pixels[:, :, 0] == color[0]) & (pixels[:, :, 1] == color[1])
+                        & (pixels[:, :, 2] == color[2]))
+            indices[selected] = index
+        result.putdata(indices.ravel())
+        quantized.append(result)
+    return quantized
 
 
 def _animation_sample_index(
@@ -689,12 +727,9 @@ def make_posterior_animation_collage(
     for frame_index in range(frame_count):
         canvas = Image.new("RGB", canvas_size, "white")
         draw = ImageDraw.Draw(canvas)
-        draw.text((margin, margin), "PCAT: nonempty catalogs through burn-in and posterior sampling", fill="black",
+        draw.text((margin, margin), "PCAT inference examples", fill="black",
                   font=title_font)
-        # panel frames follow PCAT's animation schedule, which spends the first third in burn-in
-        phase = "burn-in" if frame_index < frame_count / 3 else "posterior samples"
-        phase = _pad_animation_text(phase, len("posterior samples"))
-        counter = f"{phase} | frame {frame_index + 1:02d} / {frame_count:02d}"
+        counter = f"Frame {frame_index + 1:0{len(str(frame_count))}d} / {frame_count}"
         counter_box = draw.textbbox((0, 0), counter, font=counter_font)
         draw.text(
             (canvas.width - margin - (counter_box[2] - counter_box[0]), margin + 6),
