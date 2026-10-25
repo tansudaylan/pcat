@@ -23,6 +23,15 @@ burn-in and sampling and summarizes its acceptance after burn-in.
    :alt: Acceptance fraction per move type through the run and per-move totals
    :width: 100%
 
+:func:`pcat.plotting.plot_sampler_trajectory` aligns proposal-level log
+acceptance terms with move type, decision, filtered proposals, and temperature.
+
+.. _sampler-trajectory-example:
+
+.. image:: _static/gallery/sampler_trajectory.png
+   :alt: Proposal log acceptance ratios, decisions, filtered proposals, and likelihood temperature by sweep
+   :width: 100%
+
 :func:`pcat.plotting.plot_acceptance_decomposition` splits each log
 acceptance ratio into the posterior change, the move-selection ratio, and the
 split/merge Jacobian.

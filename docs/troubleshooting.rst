@@ -47,7 +47,7 @@ Missing figures or animations
 
 Check ``boolmakeplot``, ``boolmakeplotinit``, ``boolmakeplotfram``,
 ``boolmakeplotfinlpost``, and ``makeanim``. Animations require at least two frame
-plots, controlled by chain length and ``numbswepplot``. Frames that are visually
+plots, with cadence set by chain length and ``numbswepplot``. Frames that are visually
 identical may collapse to a single-frame GIF. Such a file is a static image and
 should not be reported as an animation.
 
@@ -74,15 +74,14 @@ Convergence
 -----------
 
 When ``boolcheckconv`` is enabled, inspect ``boolconv``,
-``maxmconvrhatcalc``, and ``numbsampconveffccalc`` in the final state. A process
-that reaches its sweep limit and writes all files is operationally complete but
-may still be statistically unconverged. Increase chain length or improve the
-proposal and prior configuration based on acceptance, trace, residual, and
-model-count diagnostics rather than weakening thresholds solely to terminate a
-run.
+``maxmconvrhatcalc``, and ``numbsampconveffccalc`` in the final state. A run can
+reach its sweep limit and write all files without reaching statistical
+convergence. Review acceptance rates, trace plots, residuals, and model-count
+history when adjusting chain length, proposals, or priors. Keep convergence
+thresholds tied to the desired sampling quality.
 
-Minimal diagnostic sequence
----------------------------
+Initial troubleshooting steps
+-----------------------------
 
 1. Reproduce the issue with a deterministic seed and a small configuration.
 2. Run the closest example in the same Python environment.

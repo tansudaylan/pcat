@@ -254,7 +254,7 @@ Publication and instrument examples
 
 ``roman_strong_lens_perturber_catalog``
    Seeded Roman strong-lens population benchmark and catalog-detection
-   diagnostic.
+   results.
 
    .. code-block:: bash
 
@@ -273,8 +273,8 @@ Publication and instrument examples
    mejiro (Wedig et al.) simulates the SLSim galaxy-galaxy lens ``SampleGG`` in
    the Roman WFI F129 band with its Roman PSF width, zero point, and sky. PCAT
    samples the SIE lens, external shear, and source position from one Poisson
-   exposure with the lenstronomy model that mejiro built. Four chains start from
-   prior draws and recover all nine injected parameters within about one
+   exposure with the imaging backend recorded in Mejiro's specification. Four
+   chains start from prior draws and recover all nine injected parameters within about one
    posterior standard deviation, with a maximum Gelman-Rubin R-hat of 1.1.
    Requires an editable mejiro install and ``roman-technical-information``.
 
@@ -337,8 +337,8 @@ Publication and instrument examples
 
    The shape comparison overlays a standard Gaussian on the observed Pearson
    residuals and a moment-matched Gaussian on total chi-squared values from
-   posterior-predictive Poisson replications. This preview was generated in
-   smoke mode and demonstrates the diagnostic, not chain convergence.
+   posterior-predictive Poisson replications. The smoke preview shows the
+   plotted distributions. It does not assess chain convergence.
 
 ``fermi_lat_pg1553_event_filter``
    Fermi Large Area Telescope event-filter configuration for PG 1553+113. This
@@ -386,8 +386,8 @@ Analysis utilities
    estimate posterior-to-prior KL divergence and mutual information between
    posterior parameters, using their normalized analytic densities. Each
    estimate is compared with its exact Gaussian value. The example reports
-   autocorrelation-aware Monte Carlo standard errors rather than claiming
-   that agreement alone demonstrates convergence.
+   autocorrelation-aware Monte Carlo standard errors.
+   Agreement alone does not establish convergence.
 
    .. code-block:: bash
 
@@ -404,7 +404,7 @@ Analysis utilities
       :align: center
 
 ``sampler_comparison_emcee_dynesty``
-   Controlled simulated radial-velocity comparison of PCAT, emcee, and dynesty.
+   Simulated radial-velocity comparisons of PCAT, emcee, and dynesty.
    The fixed-dimensional sinusoid uses the same likelihood and priors for all
    three, and compares posterior agreement, mode recovery, effective sampling
    rate, likelihood calls, and evidence. The variable-dimensional two-planet
@@ -487,7 +487,7 @@ Analysis utilities
 
 ``population_grid``
    Seeded simulated populations used to demonstrate PCAT's marginal and pairwise
-   posterior plotting. These arrays are illustrative rather than observations.
+   posterior plotting. The arrays are simulated and contain no observations.
 
 ``legacy_external_analysis_commands``
    Command-reference notebook for external analyses. It records commands but

@@ -19,6 +19,118 @@ def load_example_module(name, path):
     return module
 
 
+@pytest.mark.parametrize("native_layout", [False, True])
+def test_example_posterior_loader_uses_native_run_when_present(tmp_path, monkeypatch, native_layout):
+    root = tmp_path / "example"
+    native_root = root / "pcat_runs" / "selected"
+    if native_layout:
+        native_root.mkdir(parents=True)
+    captured = []
+    expected = object()
+    monkeypatch.setattr(demo.pcat_main, "readfile", lambda path: captured.append(path) or expected)
+    result = demo.load_example_posterior(
+        "example/data/outp/selected/gdatfinlpost", output_root=root,
+    )
+    base = native_root if native_layout else root
+    assert captured == [str(base / "data" / "outp" / "selected" / "gdatfinlpost")]
+    assert result is expected
+
+
+def test_example_posterior_loader_does_not_hide_incomplete_native_run(tmp_path, monkeypatch):
+    root = tmp_path / "example"
+    (root / "pcat_runs" / "selected").mkdir(parents=True)
+    old = root / "data" / "outp" / "selected"
+    old.mkdir(parents=True)
+    (old / "gdatfinlpost.p").write_bytes(b"older posterior")
+
+    def readfile(path):
+        assert "pcat_runs" in Path(path).parts
+        raise FileNotFoundError(path)
+
+    monkeypatch.setattr(demo.pcat_main, "readfile", readfile)
+    with pytest.raises(FileNotFoundError):
+        demo.load_example_posterior("example/data/outp/selected/gdatfinlpost", output_root=root)
+
+
+def test_proposal_profiling_preserves_existing_runs_and_forwards_new_name(tmp_path, monkeypatch):
+    from pcat import sampling
+
+    script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
+    example = load_example_module("profiling_preservation", script)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    cache = tmp_path / "data" / "outp" / "previous"
+    cache.mkdir(parents=True)
+    marker = cache / "posterior.txt"
+    marker.write_text("earlier posterior", encoding="utf-8")
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        example.run_sampler(100, "previous")
+    assert marker.read_text(encoding="utf-8") == "earlier posterior"
+    native = tmp_path / "pcat_runs" / "native_previous" / "data" / "outp" / "native_previous"
+    native.mkdir(parents=True)
+    native_marker = native / "posterior.txt"
+    native_marker.write_text("native posterior", encoding="utf-8")
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        example.run_sampler(100, "native_previous")
+    assert native_marker.read_text(encoding="utf-8") == "native posterior"
+    captured = {}
+    monkeypatch.setattr(sampling, "sample", lambda **configuration: captured.update(configuration))
+    assert example.run_sampler(100, "new_run") >= 0.0
+    assert captured["strgcnfg"] == "new_run"
+    assert captured["pathbase"] == str(tmp_path)
+    assert captured["probtran"] == 0.7
+    assert captured["probspmr"] == 0.3
+    assert captured["probjump"] == 0.1
+
+
+@pytest.mark.parametrize("name", ["", ".", "..", "nested/run"])
+def test_proposal_profiling_requires_a_single_run_name(tmp_path, monkeypatch, name):
+    script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
+    example = load_example_module("profiling_run_names", script)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    with pytest.raises(ValueError, match="single directory name"):
+        example.run_sampler(100, name)
+
+
+@pytest.mark.parametrize("native_layout", [False, True])
+def test_proposal_profiling_reads_the_requested_chain_and_timing_units(tmp_path, monkeypatch, native_layout):
+    import h5py
+
+    script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
+    example = load_example_module("profiling_replay", script)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    root = tmp_path / "pcat_runs" / "selected" if native_layout else tmp_path
+    cache = root / "data" / "outp" / "selected"
+    cache.mkdir(parents=True)
+    with h5py.File(cache / "gdatmodi0000post.h5", "w") as output:
+        output["listpostindxproptype"] = [0, 1, 2]
+        output["listpostboolpropaccp"] = [True, False, True]
+        output["listpostboolpropfilt"] = [True, True, True]
+        output["listpostchrototl"] = [0.001, 0.002, 0.003]  # [s]
+        output["listpostchroprop"] = [0.0001, 0.0002, 0.0003]  # [s]
+    chain = example.read_chain("selected")
+    np.testing.assert_array_equal(chain["type"], [0, 1, 2])
+    np.testing.assert_allclose(chain["time"], [1.0, 2.0, 3.0])  # [ms]
+    np.testing.assert_allclose(chain["phase"]["prop"], [0.1, 0.2, 0.3])  # [ms]
+
+
+def test_proposal_profiling_cli_uses_selected_output_and_run(tmp_path, monkeypatch):
+    script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
+    example = load_example_module("profiling_cli", script)
+    monkeypatch.setattr("sys.argv", [str(script), "--numbswep", "100", "--run-name", "fresh",
+                                    "--output-root", str(tmp_path)])
+    calls = []
+    monkeypatch.setattr(example, "run_sampler", lambda sweeps, name: calls.append((sweeps, name)) or 0.1)
+    chain = {"type": np.array([0]), "accp": np.array([True]), "filt": np.array([True]),
+             "time": np.array([1.0]), "phase": {}}  # [ms]
+    monkeypatch.setattr(example, "read_chain", lambda name: calls.append(name) or chain)
+    monkeypatch.setattr(example, "configure_example_style", lambda theme: None)
+    for name in ("plot_time_per_proposal", "plot_acceptance_and_cost", "plot_time_breakdown_by_phase"):
+        monkeypatch.setattr(example, name, lambda *args: None)
+    example.main()
+    assert calls == [(100, "fresh"), "fresh"]
+    assert example.EXAMPLE_PATH == tmp_path.resolve()
+
+
 def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch):
     captured = {}
     monkeypatch.setitem(demo.mpl.rcParams, "text.usetex", True)
@@ -243,6 +355,7 @@ def test_demo_entrypoint_preserves_scientific_configuration(
         ),
     )
 
+    monkeypatch.setattr("sys.argv", [str(script_path)])
     module.main()
 
     expected_output_root = (

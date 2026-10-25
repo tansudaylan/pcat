@@ -1,10 +1,11 @@
 """Strong-lens inference with PCAT on images simulated by mejiro.
 
 mejiro (https://github.com/AstroMusers/mejiro) describes a strong-lens system and an
-instrument and renders the noiseless image with lenstronomy. This module turns that
-image into a Poisson exposure and lets PCAT sample the macro-lens and source position
-with the same lenstronomy model that mejiro used, so data and model share one definition.
-mejiro and lenstronomy are imported lazily because they are optional dependencies.
+instrument, selects an imaging backend, and renders a noiseless image. This module
+turns that image into a Poisson exposure and lets PCAT sample the macro-lens and source
+position with the same backend. Older specifications without backend metadata use
+Lenstronomy. Mejiro and the selected backend are imported lazily because they are
+optional dependencies.
 """
 
 from __future__ import annotations
@@ -71,12 +72,19 @@ def simulate_mejiro_exposure(
     sky_rate = float(roman.get_minimum_zodiacal_light(band)[0].value
                      + roman.get_thermal_background(band)[0].value)  # [counts s^-1 pixel^-1]
     lens = image.strong_lens
+    lens_redshift_list = lens.lens_redshift_list
+    if lens_redshift_list is None:
+        lens_redshift_list = [lens.z_lens] * len(lens.lens_model_list)
     specification = {
         "band": band,
+        "backend": image.backend,
         "exposure_time": exposure_time,  # [s]
         "sky_counts": sky_rate * exposure_time,  # [counts pixel^-1]
         "pixel_scale": float(image.pixel_scale),  # [arcsec pixel^-1]
         "psf_fwhm": psf_fwhm,  # [arcsec]
+        "z_lens": float(lens.z_lens),
+        "z_source": float(lens.z_source),
+        "lens_redshift_list": [float(value) for value in lens_redshift_list],
         "kwargs_numerics": kwargs_numerics,
         "kwargs_pixel": {
             "nx": image.num_pix, "ny": image.num_pix,
@@ -102,22 +110,40 @@ def simulate_mejiro_exposure(
 
 def _image_model(specification: dict) -> object:
     """Return the lenstronomy image model described by a mejiro specification."""
-    pixel = specification["kwargs_pixel"]
-    key = (specification["psf_fwhm"], pixel["nx"], pixel["ny"], pixel["ra_at_xy_0"], pixel["dec_at_xy_0"],
-           tuple(np.ravel(pixel["transform_pix2angle"])), tuple(sorted(specification["kwargs_numerics"].items())),
-           tuple(specification["lens_model_list"]), tuple(specification["source_light_model_list"]),
-           tuple(specification["lens_light_model_list"]))
-    if key not in _IMAGE_MODELS:
+    backend = specification.get("backend", "lenstronomy")
+    lens_model_kwargs = {}
+    if backend == "chalcedon":
+        if len(set(specification["lens_redshift_list"])) > 1:
+            raise NotImplementedError("PCAT Mejiro rendering does not yet support multiple lens planes")
+        from chalcedon import LensModel, LightModel
+        from chalcedon.imaging import ImageModel, PixelGrid, PSF
+
+        lens_model_kwargs = {
+            "z_lens": specification["z_lens"],
+            "z_source": specification["z_source"],
+            "lens_redshift_list": specification["lens_redshift_list"],
+        }
+    elif backend == "lenstronomy":
         from lenstronomy.Data.pixel_grid import PixelGrid
         from lenstronomy.Data.psf import PSF
         from lenstronomy.ImSim.image_model import ImageModel
         from lenstronomy.LensModel.lens_model import LensModel
         from lenstronomy.LightModel.light_model import LightModel
+    else:
+        raise ValueError(f"Unsupported Mejiro image backend: {backend!r}")
 
+    pixel = specification["kwargs_pixel"]
+    key = (backend, specification.get("z_lens"), specification.get("z_source"),
+           tuple(specification.get("lens_redshift_list", ())), specification["psf_fwhm"],
+           pixel["nx"], pixel["ny"], pixel["ra_at_xy_0"], pixel["dec_at_xy_0"],
+           tuple(np.ravel(pixel["transform_pix2angle"])), tuple(sorted(specification["kwargs_numerics"].items())),
+           tuple(specification["lens_model_list"]), tuple(specification["source_light_model_list"]),
+           tuple(specification["lens_light_model_list"]))
+    if key not in _IMAGE_MODELS:
         _IMAGE_MODELS[key] = ImageModel(
             PixelGrid(**specification["kwargs_pixel"]),
             PSF(psf_type="GAUSSIAN", fwhm=specification["psf_fwhm"]),
-            lens_model_class=LensModel(specification["lens_model_list"]),
+            lens_model_class=LensModel(specification["lens_model_list"], **lens_model_kwargs),
             source_model_class=LightModel(specification["source_light_model_list"]),
             lens_light_model_class=LightModel(specification["lens_light_model_list"]),
             kwargs_numerics=specification["kwargs_numerics"],

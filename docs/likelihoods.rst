@@ -67,8 +67,8 @@ Configure populations with ``typeelem`` and their true and fitted settings in
 * ``lghtgausbgrd`` for extended Gaussian emission components.
 * ``lens`` for lens deflectors and their associated mass parameters.
 * ``clusvari`` for variable-width Gaussian components represented in an image count map.
-* ``typeemishost="sers"`` for a Sérsic foreground lens-galaxy light model;
-  ``"none"`` disables this host-emission component.
+* ``typeemishost="sers"`` selects a Sérsic foreground lens-galaxy light model.
+  Set ``"none"`` to omit host emission.
 * ``boollenssubh=True`` to include lens-substructure deflectors where the
   selected lens configuration supports them.
 
@@ -117,12 +117,13 @@ Subpixel evaluation
 ``kernevaltype="ulip"`` evaluates the selected PSF profile at each source-to-
 pixel angular separation. For Cartesian images, ``kernevaltype="bspx"`` instead
 fits a two-dimensional cubic polynomial in the source's subpixel shifts and
-evaluates its coefficients at the requested pixels. The fit is checked at
-interleaved phase samples; cells whose sampled error exceeds 0.1 percent of
-the profile peak use direct PSF evaluation. Nonfinite or negative polynomial
-values and pixels outside the fitted table also use direct evaluation. The
-sampled error check is not a uniform error bound, and the implementation does
-not renormalize or clip the fitted PSF. ``bspx`` requires ``typepixl="cart"``.
+evaluates its coefficients at the requested pixels. We compare the cubic
+approximation with direct PSF evaluation at interleaved phase samples. Cells
+with sampled errors above 0.1 percent of the profile peak use direct evaluation.
+Nonfinite or negative polynomial values and pixels outside the fitted table
+also use direct evaluation. The sampled error applies to tested phases and does
+not bound errors over the full profile. The implementation does not renormalize
+or clip the fitted PSF. ``bspx`` requires ``typepixl="cart"``.
 
 The setup cost is paid once for each fitted PSF, so the speed depends on the
 number of source evaluations and the image configuration. The

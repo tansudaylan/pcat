@@ -45,7 +45,7 @@ elements. Within-model proposals update parameters already in the state. Birth
 and death proposals change the catalog size, while supported element models can
 also use split and merge proposals. Multiple independent workers can sample a
 configuration, and :func:`pcat.sampling.sample_parallel` can execute related
-configurations for controlled comparisons.
+configurations for matched comparisons.
 
 See :doc:`sampling` for the proposal acceptance ratio, move-selection settings,
 proposal-scale adaptation, burn-in, and automatic convergence monitoring.

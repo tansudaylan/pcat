@@ -12,12 +12,16 @@ from __future__ import annotations
 from tdpy.verbosity import print
 
 import argparse
+from datetime import datetime
+import json
 from tdpy.cli import add_plot_arguments
 from pathlib import Path
-import shutil
+import textwrap
 import time
+from uuid import uuid4
 
 import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerTuple
 import numpy as np
 
 from pcat import sampling
@@ -98,21 +102,22 @@ def run_benchmark(number_sweeps=1200, burn_fraction=0.25):
     """Run all problem/strategy pairs and return samples with performance summaries."""
     burn_count = int(number_sweeps * burn_fraction)
     sample_count = number_sweeps - burn_count
+    run_tag = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex[:8]
+    run_base = EXAMPLE_PATH / 'data' / f'benchmark_{run_tag}'
     results = {}
     for problem in PROBLEMS:
         configuration = _problem_configuration(problem)
         for strategy, options in STRATEGIES.items():
             run_name = f"{problem}_{strategy}"
-            run_root = Path(retr_pathrun(EXAMPLE_PATH, run_name))
+            run_root = Path(retr_pathrun(run_base, run_name))
             if run_root.exists():
-                print(f"Removing cached benchmark output {run_root}...")
-                shutil.rmtree(run_root)
+                raise FileExistsError(f'Refusing to overwrite benchmark output {run_root}')
             start = time.perf_counter()
             posterior = sampling.sample_fixed(
                 retr_llik=benchmark_log_likelihood,
                 burn_problem=problem,
                 prior_types=("self",) * len(configuration["parameter_names"]),
-                pathbase=EXAMPLE_PATH,
+                pathbase=run_base,
                 strgcnfg=run_name,
                 numbswep=number_sweeps,
                 numbburn=burn_count,
@@ -131,6 +136,8 @@ def run_benchmark(number_sweeps=1200, burn_fraction=0.25):
             accepted = np.asarray(posterior.listpostboolpropaccp).reshape(-1).astype(bool)
             temperature = np.asarray(posterior.listpostfacttmpr).reshape(-1)
             results[(problem, strategy)] = {
+                "run_tag": run_tag,
+                "run_directory": run_root,
                 "samples": samples,
                 "elapsed_seconds": elapsed_seconds,
                 "acceptance_fraction": float(np.mean(accepted[burn_count:])),
@@ -138,26 +145,69 @@ def run_benchmark(number_sweeps=1200, burn_fraction=0.25):
                 "posterior_error": _posterior_error(problem, samples),
                 "inverse_temperature": temperature,
             }
+    metrics = {
+        'run_tag': run_tag, 'number_sweeps': number_sweeps, 'burn_fraction': burn_fraction,
+        'results': {
+            f'{problem}/{strategy}': {
+                key: value for key, value in result.items()
+                if key not in {'samples', 'inverse_temperature', 'run_directory'}
+            } | {'run_directory': str(result['run_directory'].relative_to(EXAMPLE_PATH))}
+            for (problem, strategy), result in results.items()
+        },
+    }
+    arrays_path = run_base / 'posterior_arrays.npz'
+    print(f'Writing to {arrays_path}...')
+    np.savez_compressed(arrays_path, **{
+        f'{problem}/{strategy}/{name}': result[name]
+        for (problem, strategy), result in results.items()
+        for name in ('samples', 'inverse_temperature')
+    })
+    metrics_path = run_base / 'metrics.json'
+    print(f'Writing to {metrics_path}...')
+    metrics_path.write_text(json.dumps(metrics, indent=2) + '\n', encoding='utf-8')
     return results
 
 
-def _save_figure(figure, name, typefileplot):
+def load_benchmark(run_directory):
+    """Load saved benchmark arrays and metrics without unpickling sampler callbacks."""
+    directory = Path(run_directory)
+    metrics_path = directory / 'metrics.json'
+    arrays_path = directory / 'posterior_arrays.npz'
+    print(f'Reading from {metrics_path}...')
+    metrics = json.loads(metrics_path.read_text(encoding='utf-8'))
+    print(f'Reading from {arrays_path}...')
+    results = {}
+    with np.load(arrays_path, allow_pickle=False) as arrays:
+        for key, values in metrics['results'].items():
+            results[tuple(key.split('/'))] = dict(
+                values, run_tag=metrics['run_tag'],
+                run_directory=EXAMPLE_PATH / values['run_directory'],
+                samples=arrays[f'{key}/samples'],
+                inverse_temperature=arrays[f'{key}/inverse_temperature'],
+            )
+    return results
+
+
+def _save_figure(figure, name, typefileplot, run_tag):
     from tdpy.plotting import save_figure as tdpy_save_figure
 
     VISUAL_PATH.mkdir(parents=True, exist_ok=True)
-    return Path(tdpy_save_figure(figure, VISUAL_PATH / name, typefileplot=typefileplot, close_figure=True))
+    path = VISUAL_PATH / f'{name}_{run_tag}.{typefileplot}'
+    if path.exists():
+        plt.close(figure)
+        raise FileExistsError(f'Refusing to overwrite benchmark figure {path}')
+    return Path(tdpy_save_figure(figure, path, typefileplot=typefileplot, close_figure=True))
 
 
 def plot_posterior_comparison(results, typefileplot="png"):
     """Plot retained posterior samples for both simulated benchmark problems."""
-    figure, axes = plt.subplots(1, 2, figsize=(9.0, 3.8), facecolor="white")
+    figure, axes = plt.subplots(1, 2, figsize=(9.0, 4.7), facecolor="white")
     axis = axes[0]
     for strategy, options in STRATEGIES.items():
         samples = results[("correlated_gaussian", strategy)]["samples"]
         axis.scatter(samples[:, 0], samples[:, 1], s=5, alpha=0.18, color=COLORS[strategy], label=options["label"])
     axis.scatter(0.0, 0.0, marker="x", s=65, color="black", linewidth=2.0, label="Target mean")
     axis.set(xlabel="x", ylabel="y", title="Correlated Gaussian")
-    axis.legend(loc="upper left", frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
 
     axis = axes[1]
     bins = np.linspace(-4.0, 4.0, 60)
@@ -167,12 +217,19 @@ def plot_posterior_comparison(results, typefileplot="png"):
     axis.axvline(-2.0, color="black", ls="--", lw=1.0)
     axis.axvline(2.0, color="black", ls="--", lw=1.0, label="Target modes")
     axis.set(xlabel="x", ylabel="Posterior density", title="Equal-weight bimodal target")
-    axis.legend(loc="upper center", frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
+    scatter_handles, labels = axes[0].get_legend_handles_labels()
+    histogram_handles, histogram_labels = axis.get_legend_handles_labels()
+    handles = list(zip(scatter_handles[:-1], histogram_handles[:-1]))
+    handles.extend((scatter_handles[-1], histogram_handles[-1]))
+    figure.legend(handles, labels + histogram_labels[-1:], loc='lower center', ncol=3,
+                   handler_map={tuple: HandlerTuple(ndivide=None)},
+                   frameon=True, fancybox=True, framealpha=1.0)
     for axis in axes:
         axis.grid(False)
         axis.spines[["top", "right"]].set_visible(False)
-    figure.tight_layout()
-    return _save_figure(figure, "burn_in_posterior_comparison", typefileplot)
+    figure.tight_layout(rect=(0, 0.23, 1, 1))
+    return _save_figure(figure, "burn_in_posterior_comparison", typefileplot,
+                        next(iter(results.values()))['run_tag'])
 
 
 def plot_performance_comparison(results, typefileplot="png"):
@@ -197,15 +254,18 @@ def plot_performance_comparison(results, typefileplot="png"):
             axis.bar(x_positions + offset, values, width=width, label=problem.replace("_", " ").title(),
                      color=("#007360", "#A51C30")[problem_index], alpha=0.82)
         axis.set_xticks(x_positions)
-        axis.set_xticklabels([options["label"] for options in STRATEGIES.values()], rotation=14)
+        axis.set_xticklabels([textwrap.fill(options["label"], 14) for options in STRATEGIES.values()])
         axis.set_ylabel(label)
         axis.grid(False)
         axis.spines[["top", "right"]].set_visible(False)
         if logarithmic:
             axis.set_yscale("log")
-    axes[0, 0].legend(loc="upper right", frameon=True, fancybox=True, framealpha=1.0, fontsize=8)
-    figure.tight_layout()
-    return _save_figure(figure, "burn_in_performance_comparison", typefileplot)
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    figure.legend(handles, labels, loc='upper center', ncol=2,
+                   frameon=True, fancybox=True, framealpha=1.0)
+    figure.tight_layout(rect=(0, 0, 1, 0.93))
+    return _save_figure(figure, "burn_in_performance_comparison", typefileplot,
+                        next(iter(results.values()))['run_tag'])
 
 
 def plot_temperature_schedule(results, typefileplot="png"):
@@ -219,7 +279,8 @@ def plot_temperature_schedule(results, typefileplot="png"):
     axis.spines[["top", "right"]].set_visible(False)
     axis.legend(loc="lower right", frameon=True, fancybox=True, framealpha=1.0)
     figure.tight_layout()
-    return _save_figure(figure, "burn_in_temperature_schedule", typefileplot)
+    return _save_figure(figure, "burn_in_temperature_schedule", typefileplot,
+                        next(iter(results.values()))['run_tag'])
 
 
 def main():

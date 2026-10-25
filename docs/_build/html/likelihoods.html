@@ -128,10 +128,10 @@ and <code class="docutils literal notranslate"><span class="pre">strgexpo</span>
 <code class="docutils literal notranslate"><span class="pre">strgexpo</span></code>. PCAT converts the input to expected counts using the exposure and
 its configured units before evaluating the likelihood.</p>
 <p><code class="docutils literal notranslate"><span class="pre">typepixl=&quot;cart&quot;</span></code> selects a Cartesian image. Set <code class="docutils literal notranslate"><span class="pre">numbsidecart</span></code> to choose
-its side length; <code class="docutils literal notranslate"><span class="pre">boolforccart=True</span></code> forces a square grid when pixel
+its side length. <code class="docutils literal notranslate"><span class="pre">boolforccart=True</span></code> forces a square grid when pixel
 coordinates are supplied directly. <code class="docutils literal notranslate"><span class="pre">typepixl=&quot;heal&quot;</span></code> selects HEALPix data
-and uses <code class="docutils literal notranslate"><span class="pre">numbsideheal</span></code> for its resolution. Fermi-LAT defaults to HEALPix;
-other image experiments default to Cartesian pixels.</p>
+and uses <code class="docutils literal notranslate"><span class="pre">numbsideheal</span></code> for its resolution. Fermi-LAT defaults to HEALPix.
+Other image experiments default to Cartesian pixels.</p>
 </section>
 <section id="poisson-count-image-likelihood">
 <h3>Poisson count-image likelihood<a class="headerlink" href="#poisson-count-image-likelihood" title="Link to this heading"></a></h3>
@@ -143,7 +143,7 @@ factorial, its log likelihood is</p>
 Gaussian image likelihood
 ~~~~~~~~~~~~~~~~~~~~~~~~~</p>
 <p>Set <code class="docutils literal notranslate"><span class="pre">liketype=&quot;gaus&quot;</span></code> for the built-in Gaussian residual likelihood. Supply
-<code class="docutils literal notranslate"><span class="pre">varidata</span></code> as a per-pixel variance map; if omitted, PCAT uses the observed
+<code class="docutils literal notranslate"><span class="pre">varidata</span></code> as a per-pixel variance map. If omitted, PCAT uses the observed
 counts with a floor of one:</p>
 <div class="math notranslate nohighlight">
 \[\log L_{\mathrm{Gaus}} = -\frac{1}{2}\sum_i \frac{(D_i-M_i)^2}{V_i}.\]</div>
@@ -173,7 +173,7 @@ additional deflectors.</p>
 <h3>Background emission and exposure<a class="headerlink" href="#background-emission-and-exposure" title="Link to this heading"></a></h3>
 <p>Experiment defaults define the available background components. Override their
 templates with <code class="docutils literal notranslate"><span class="pre">sbrtbacknorm</span></code> in <code class="docutils literal notranslate"><span class="pre">dicttrue</span></code> or <code class="docutils literal notranslate"><span class="pre">dictfitt</span></code>. The
-<code class="docutils literal notranslate"><span class="pre">listnamediff</span></code> entry selects the diffuse components added to the model; names
+<code class="docutils literal notranslate"><span class="pre">listnamediff</span></code> entry selects the diffuse components added to the model. Names
 such as <code class="docutils literal notranslate"><span class="pre">back0000</span></code> refer to entries in the template list. <code class="docutils literal notranslate"><span class="pre">boolspecback</span></code>
 controls whether a background amplitude is shared spectrally or varies by
 energy bin. Fermi-LAT configurations can use a uniform component, a diffuse
@@ -194,10 +194,10 @@ supported.</p></li>
 <p>The experiment selects a PSF profile family through <code class="docutils literal notranslate"><span class="pre">typemodlpsfn</span></code>. Current
 experiment defaults include single Gaussian, single King, and double King
 profiles. Supply profile parameters through <code class="docutils literal notranslate"><span class="pre">psfpexpr</span></code> in <code class="docutils literal notranslate"><span class="pre">dicttrue</span></code> and
-<code class="docutils literal notranslate"><span class="pre">dictfitt</span></code>; set <code class="docutils literal notranslate"><span class="pre">boolmodipsfn=True</span></code> when PSF parameters should vary in the
+<code class="docutils literal notranslate"><span class="pre">dictfitt</span></code>. Set <code class="docutils literal notranslate"><span class="pre">boolmodipsfn=True</span></code> when PSF parameters should vary in the
 fit. Fermi-LAT can also use its energy- and event-class-dependent PSF scale
 <code class="docutils literal notranslate"><span class="pre">fermscalfact</span></code>. PSF and source-kernel options depend on pixelization and
-element type; unsupported combinations should use <code class="docutils literal notranslate"><span class="pre">typeevalpsfn=&quot;none&quot;</span></code>.</p>
+element type. Unsupported combinations should use <code class="docutils literal notranslate"><span class="pre">typeevalpsfn=&quot;none&quot;</span></code>.</p>
 </section>
 </section>
 <section id="unbinned-event-level-likelihood">
@@ -206,9 +206,8 @@ element type; unsupported combinations should use <code class="docutils literal 
 <code class="docutils literal notranslate"><span class="pre">unbinned_gaussian_mixture</span></code> example passes the 140 simulated event coordinates
 directly to <code class="docutils literal notranslate"><span class="pre">pcat.fixed.sample_fixed_chains</span></code> and sums their Gaussian-mixture
 log densities with no spatial bins or count map. It samples the four center
-coordinates of two equal-weight Gaussian components; the component count and
-width are fixed. This is a fixed-dimensional custom-likelihood demonstration,
-not a native transdimensional Gaussian-mixture likelihood.</p>
+coordinates of two equal-weight Gaussian components. The component count and
+width are fixed, so this callback demonstrates inference within one model.</p>
 <p>The native <code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gmix&quot;</span></code> experiment remains the binned Poisson workflow
 shown in <code class="docutils literal notranslate"><span class="pre">gaussian_mixture_catalog</span></code>. Its variable-width <code class="docutils literal notranslate"><span class="pre">clusvari</span></code> elements
 are fit to an 8-by-8 count grid. <code class="docutils literal notranslate"><span class="pre">boolbinsener=False</span></code> only indicates that this
@@ -221,7 +220,7 @@ example has no energy axis. PCAT does not currently provide a built-in unbinned
 spectral bins. Set <code class="docutils literal notranslate"><span class="pre">binsenerfull</span></code> to the monotonically increasing spectral
 axis edges and use <code class="docutils literal notranslate"><span class="pre">typedata=&quot;inpt&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">strgexprsbrt</span></code>, <code class="docutils literal notranslate"><span class="pre">typeexpo</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">strgexpo</span></code> for supplied data and exposure. The built-in count likelihood is
-Poisson by default; <code class="docutils literal notranslate"><span class="pre">liketype=&quot;gaus&quot;</span></code> selects the Gaussian residual
+Poisson by default. <code class="docutils literal notranslate"><span class="pre">liketype=&quot;gaus&quot;</span></code> selects the Gaussian residual
 likelihood when <code class="docutils literal notranslate"><span class="pre">varidata</span></code> is supplied. A continuum or background template
 can be provided through <code class="docutils literal notranslate"><span class="pre">dictfitt[&quot;sbrtbacknorm&quot;]</span></code> and activated with
 <code class="docutils literal notranslate"><span class="pre">dictfitt[&quot;listnamediff&quot;]</span></code>.</p>
@@ -270,8 +269,8 @@ configuration API with an instrument <code class="docutils literal notranslate">
 <p>Use <code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;fire&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">anlytype=&quot;spec&quot;</span></code> for a time-binned photometric
 series, with time-bin edges in <code class="docutils literal notranslate"><span class="pre">binsenerfull</span></code> and observed counts/exposure
 configured as for other supplied one-dimensional data. This is the same
-one-dimensional binned likelihood used for spectra; flare and spot profiles
-are alternative element models, not separate likelihoods. Fixed baselines can
+one-dimensional binned likelihood used for spectra. Flare and spot profiles
+are alternative element models within this likelihood. Fixed baselines can
 be supplied with <code class="docutils literal notranslate"><span class="pre">dictfitt[&quot;sbrtbacknorm&quot;]</span></code> and enabled with
 <code class="docutils literal notranslate"><span class="pre">dictfitt[&quot;listnamediff&quot;]</span></code>.</p>
 <p>Flare <code class="docutils literal notranslate"><span class="pre">spectype</span></code> options are <code class="docutils literal notranslate"><span class="pre">&quot;flargauss&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;flarexpd&quot;</span></code>,
@@ -281,7 +280,7 @@ Davenport profiles, <code class="docutils literal notranslate"><span class="pre"
 independent <code class="docutils literal notranslate"><span class="pre">scalrise</span></code>/<code class="docutils literal notranslate"><span class="pre">scalfall</span></code> for FRED. Set physical bounds with
 <code class="docutils literal notranslate"><span class="pre">limtparaelem</span></code> and proposal scales with <code class="docutils literal notranslate"><span class="pre">stdvpropelemfire</span></code>. The
 <code class="docutils literal notranslate"><span class="pre">variable_number_stellar_flares</span></code> example accepts <code class="docutils literal notranslate"><span class="pre">--profile</span></code> with any of
-these four models; for example, <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">flardav</span></code> selects the Davenport
+these four models. For example, <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">flardav</span></code> selects the Davenport
 template. The generated time series remains FRED-injected, so alternate fits
 compare model misspecification against the same data.</p>
 <p>Periodic Gaussian spot dips use <code class="docutils literal notranslate"><span class="pre">spectype=[&quot;spotrot&quot;]</span></code> with the
@@ -304,7 +303,7 @@ and <code class="docutils literal notranslate"><span class="pre">argp</span></co
 <p>Set <code class="docutils literal notranslate"><span class="pre">maxmnumbplan</span></code> for the catalog-size limit, <code class="docutils literal notranslate"><span class="pre">minmrvsa</span></code>/<code class="docutils literal notranslate"><span class="pre">maxmrvsa</span></code> and
 <code class="docutils literal notranslate"><span class="pre">minmperi</span></code>/<code class="docutils literal notranslate"><span class="pre">maxmperi</span></code> for amplitude and period bounds, and <code class="docutils literal notranslate"><span class="pre">maxmecce</span></code> for
 the eccentricity ceiling. Per-instrument velocity offsets and an optional
-linear trend are marginalized analytically; enable the trend with
+linear trend are marginalized analytically. Enable the trend with
 <code class="docutils literal notranslate"><span class="pre">boollinetren=True</span></code>. Stellar jitter is marginalized on the log-uniform grid
 <code class="docutils literal notranslate"><span class="pre">listjittrvel</span></code>, configured through <code class="docutils literal notranslate"><span class="pre">minmjitt</span></code>, <code class="docutils literal notranslate"><span class="pre">maxmjitt</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">numbjitt</span></code>. The helper also supplies a data-informed period/amplitude/phase
@@ -316,22 +315,23 @@ and <code class="docutils literal notranslate"><span class="pre">stdvphas</span>
 <section id="transit-timing-likelihood">
 <h2>Transit-timing likelihood<a class="headerlink" href="#transit-timing-likelihood" title="Link to this heading"></a></h2>
 <p>For transit-time data, use <code class="docutils literal notranslate"><span class="pre">pcat.time_series.log_likelihood_transit_times</span></code>
-inside a fixed-dimensional PCAT likelihood callback. Pass observed transit
-times, predicted transit times from Ephesos, and positive timing errors in the
-same units. The function returns the uncertainty-weighted Gaussian log
-likelihood up to a parameter-independent normalization constant; it returns
-negative infinity for nonfinite model times. Ephesos supplies linear,
-sinusoidal-residual, and optional N-body time predictions. PCAT handles the
+inside a fixed-dimensional PCAT likelihood callback. The
+<code class="docutils literal notranslate"><span class="pre">pcat.time_series.make_transit_time_likelihood</span></code> factory connects a forward
+predictor to PCAT’s <code class="docutils literal notranslate"><span class="pre">(parameters,</span> <span class="pre">data)</span></code> callback. The data contain transit
+epochs, observed times, and positive timing errors. The Gaussian likelihood is
+uncertainty-weighted, up to a parameter-independent normalization constant, and
+returns negative infinity for nonfinite model times. Ephesos supplies linear,
+combined sinusoidal-TTV, and optional N-body time predictions. PCAT handles
 parameter priors and posterior sampling through <code class="docutils literal notranslate"><span class="pre">sample_fixed</span></code> or
-<code class="docutils literal notranslate"><span class="pre">sample_fixed_chains</span></code>. The predictor must align observed transit epochs with
-model epochs before evaluating this likelihood.</p>
+<code class="docutils literal notranslate"><span class="pre">sample_fixed_chains</span></code>. The predictor must align observed epochs with model
+epochs. See <code class="docutils literal notranslate"><span class="pre">transit_timing_variations</span></code> for a posterior-sampling example.</p>
 </section>
 <section id="generic-user-supplied-likelihood">
 <h2>Generic user-supplied likelihood<a class="headerlink" href="#generic-user-supplied-likelihood" title="Link to this heading"></a></h2>
-<p>Use <code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gener&quot;</span></code> for a fixed-dimensional custom likelihood. The
-<code class="docutils literal notranslate"><span class="pre">retr_llik(gdat,</span> <span class="pre">strgmodl,</span> <span class="pre">values)</span></code> callback returns one log-likelihood value
-for the supplied parameter vector; PCAT handles configured priors, proposals,
-accept/reject steps, persistence, and diagnostics. This is the appropriate path
+<p>Use <code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gener&quot;</span></code> for inference within one model with a custom
+likelihood. The <code class="docutils literal notranslate"><span class="pre">retr_llik(gdat,</span> <span class="pre">strgmodl,</span> <span class="pre">values)</span></code> callback returns one
+log-likelihood value for the supplied parameter vector. PCAT handles configured priors, proposals,
+accept/reject steps, persistence, and saved sample summaries. Use this path
 when none of the built-in binned likelihoods matches the data model. See
 <a class="reference internal" href="capabilities.html"><span class="doc">Capabilities</span></a> for a complete callback example and <a class="reference internal" href="sampling.html"><span class="doc">Sampling, proposals, and convergence</span></a> for
 proposal and convergence controls.</p>

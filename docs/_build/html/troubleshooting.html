@@ -133,7 +133,7 @@ products needed for provenance, then remove the self-contained
 <p>Check <code class="docutils literal notranslate"><span class="pre">boolmakeplot</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotinit</span></code>, <code class="docutils literal notranslate"><span class="pre">boolmakeplotfram</span></code>,
 <code class="docutils literal notranslate"><span class="pre">boolmakeplotfinlpost</span></code>, and <code class="docutils literal notranslate"><span class="pre">makeanim</span></code>. Animations require at least two frame
 plots, controlled by chain length and <code class="docutils literal notranslate"><span class="pre">numbswepplot</span></code>. Frames that are visually
-identical may collapse to a single-frame GIF; such a file is a static image and
+identical may collapse to a single-frame GIF. Such a file is a static image and
 should not be reported as an animation.</p>
 <p>For headless systems, set a writable Matplotlib cache before running:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">MPLCONFIGDIR</span><span class="o">=</span>/tmp/pcat-mplconfig<span class="w"> </span>python<span class="w"> </span>examples/chandra_point_source_catalog/chandra_point_source_catalog.py

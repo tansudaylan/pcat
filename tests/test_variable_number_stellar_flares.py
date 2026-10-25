@@ -2,6 +2,7 @@ import astropy.io.fits
 import h5py
 import importlib.util
 import numpy as np
+import pytest
 from pathlib import Path
 import sys
 from types import ModuleType
@@ -16,6 +17,75 @@ def _load_flare_example(monkeypatch):
     module = importlib.util.module_from_spec(specification)
     specification.loader.exec_module(module)
     return module
+
+
+@pytest.mark.parametrize("native_layout", [False, True])
+def test_flare_example_preserves_existing_run(tmp_path, monkeypatch, native_layout):
+    example = _load_flare_example(monkeypatch)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    cache = (tmp_path / "pcat_runs" / "saved" / "data" / "outp" / "saved"
+             if native_layout else tmp_path / "data" / "outp" / "saved")
+    cache.mkdir(parents=True)
+    marker = cache / "posterior.txt"
+    marker.write_text("earlier posterior", encoding="utf-8")
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        example.run_pcat(np.array([1.0, 2.0]), np.ones(1), 100, {}, run_name="saved")
+    assert marker.read_text(encoding="utf-8") == "earlier posterior"
+
+
+def test_flare_example_forwards_named_run_and_chain_count(tmp_path, monkeypatch):
+    example = _load_flare_example(monkeypatch)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    captured = {}
+    monkeypatch.setattr(sampling, "sample", lambda **configuration: captured.update(configuration))
+    example.run_pcat(np.array([1.0, 2.0]), np.ones(1), 100, {}, run_name="fresh", number_chains=1)
+    assert captured["strgcnfg"] == "fresh"
+    assert captured["numbproc"] == 1
+    assert captured["probtran"] == 0.5
+    assert captured["probspmr"] == captured["probjump"] == 0.3
+
+
+@pytest.mark.parametrize("chains", [0, -1, 1.5])
+def test_flare_example_rejects_invalid_chain_counts(tmp_path, monkeypatch, chains):
+    example = _load_flare_example(monkeypatch)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    with pytest.raises(ValueError, match="positive integer"):
+        example.run_pcat(np.array([1.0, 2.0]), np.ones(1), 100, {}, number_chains=chains)
+
+
+@pytest.mark.parametrize("replay", [False, True])
+def test_flare_cli_uses_native_inputs_and_replay_keeps_inputs_untouched(tmp_path, monkeypatch, replay):
+    example = _load_flare_example(monkeypatch)
+    arguments = ["flare_example", "--numbswep", "100", "--chains", "1",
+                 "--run-name", "chosen", "--output-root", str(tmp_path)]
+    if replay:
+        arguments.append("--skip-sampling")
+    monkeypatch.setattr(sys, "argv", arguments)
+    calls = []
+    native_inputs = tmp_path / "pcat_runs" / "chosen" / "data" / "inpt"
+
+    def sample(edges, template, sweeps, proposal, profile, **options):
+        assert (native_inputs / "sbrt.fits").is_file()
+        assert (native_inputs / "expo.fits").is_file()
+        assert options == {"run_name": "chosen", "number_chains": 1}
+        calls.append("sample")
+
+    def load_posterior(path, **options):
+        assert path.endswith("/data/outp/chosen/gdatfinlpost")
+        assert options["output_root"] == tmp_path
+        calls.append("posterior")
+        return object()
+
+    monkeypatch.setattr(example, "run_pcat", sample)
+    monkeypatch.setattr(example, "load_example_posterior", load_posterior)
+    monkeypatch.setattr(example, "build_birth_proposal", lambda *args: {})
+    monkeypatch.setattr(example, "configure_example_style", lambda *args: "black")
+    for name in ("render_flare_posterior_frames", "plot_light_curve_fit", "plot_flare_catalog_samples",
+                 "plot_flare_count_posterior"):
+        monkeypatch.setattr(example, name, lambda *args: None)
+    example.main()
+    assert calls == (["posterior"] if replay else ["sample", "posterior"])
+    assert native_inputs.exists() is not replay
 
 
 def test_variable_number_stellar_flares_uses_input_counts_bins_and_baseline_template(tmp_path):

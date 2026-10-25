@@ -210,9 +210,10 @@ examples of each.</p>
 <h2>Animation output<a class="headerlink" href="#animation-output" title="Link to this heading"></a></h2>
 <p>After building a model-specific <code class="docutils literal notranslate"><span class="pre">configuration</span></code>, enable both retained-state
 and proposal-candidate animations. <code class="docutils literal notranslate"><span class="pre">makeanim</span></code> assembles the retained-state
-GIF from saved chain frames at <code class="docutils literal notranslate"><span class="pre">numbswepplot</span></code> cadence. <code class="docutils literal notranslate"><span class="pre">boolmakeanimprop</span></code> records one
-current-versus-candidate frame per sweep on worker zero before each proposal is
-accepted or rejected; it also enables <code class="docutils literal notranslate"><span class="pre">makeanim</span></code>. Candidate recording must be
+GIF from saved chain frames at <code class="docutils literal notranslate"><span class="pre">numbswepplot</span></code> cadence. <code class="docutils literal notranslate"><span class="pre">boolmakeanimprop</span></code>
+records one current-versus-candidate frame per sweep on worker zero before each
+proposal is accepted or rejected. Enabling it also enables <code class="docutils literal notranslate"><span class="pre">makeanim</span></code>.
+Candidate recording must be
 enabled during sampling because the proposed states cannot be recovered from
 the final posterior alone.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pcat</span><span class="w"> </span><span class="kn">import</span> <span class="n">sampling</span>
@@ -226,8 +227,8 @@ the final posterior alone.</p>
 </pre></div>
 </div>
 <p>After a completed, converged run, <code class="docutils literal notranslate"><span class="pre">proposal_sequence.gif</span></code> contains the saved
-retained states from sweeps at or after <code class="docutils literal notranslate"><span class="pre">numbburn</span></code>. It is a visualization of
-the post-burn-in chain, not a claim that correlated states are independent.
+retained states from sweeps at or after <code class="docutils literal notranslate"><span class="pre">numbburn</span></code>. It visualizes the
+post-burn-in chain, whose states remain correlated.
 <code class="docutils literal notranslate"><span class="pre">proposal_candidates.gif</span></code> contains every recorded worker-zero proposal,
 including rejected candidates and burn-in transitions. Both files are written
 under <code class="docutils literal notranslate"><span class="pre">&lt;run&gt;/visuals/post/anim/</span></code>. The maintained
@@ -249,18 +250,19 @@ and project root to assemble them again:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">cmndargs.txt</span></code> and all explicit random seeds;</p></li>
 <li><p>input filenames, versions, selections, units, and checksums;</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">gdatfinlpost.p</span></code> and its matching <code class="docutils literal notranslate"><span class="pre">gdatfinlpost.h5</span></code> companion;</p></li>
-<li><p>retained sample count, convergence thresholds, and measured diagnostics;</p></li>
+<li><p>retained sample count, convergence thresholds, and measured convergence statistics;</p></li>
 <li><p>proposal acceptance and model-count transition summaries;</p></li>
 <li><p>posterior predictive data, model, and residual plots; and</p></li>
 <li><dl class="simple">
-<dt>whether the run used real data, a controlled simulation, or a smoke-test</dt><dd><p>configuration.</p>
+<dt>whether the run used observations, simulated inputs, or a smoke-test</dt><dd><p>configuration.</p>
 </dd>
 </dl>
 </li>
 </ul>
 <p>Do not compare serialized states copied without their HDF5 companions. Avoid
 overwriting a completed run with a different configuration under the same run
-tag; use a new <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> or remove both cached data and visuals deliberately.</p>
+tag. Use a new <code class="docutils literal notranslate"><span class="pre">strgcnfg</span></code> for a separate run. Remove cached data and visuals
+only when you intend to replace that run.</p>
 </section>
 </section>
 

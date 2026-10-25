@@ -91,7 +91,7 @@
 <h1>How PCAT works<a class="headerlink" href="#how-pcat-works" title="Link to this heading"></a></h1>
 <p>These schematics summarize how a run proceeds, how each data family becomes a
 likelihood, and which parts of PCAT a user can replace or tune. Regenerate them
-with <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">docs/make_diagrams.py</span></code>; the script fails if any label overflows
+with <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">docs/make_diagrams.py</span></code>. The script fails if any label overflows
 its box.</p>
 <section id="pipeline">
 <h2>Pipeline<a class="headerlink" href="#pipeline" title="Link to this heading"></a></h2>
@@ -108,7 +108,7 @@ defines each move and each term of the ratio.</p>
 <h2>Likelihoods<a class="headerlink" href="#likelihoods" title="Link to this heading"></a></h2>
 <p>The same parameter vector, fixed parameters plus a catalog of elements, feeds
 one forward model per data family. The likelihood of the predicted data and
-the prior form the posterior; the likelihood is tempered only during an
+the prior form the posterior. The likelihood is tempered only during an
 optional tempered burn-in. <a class="reference internal" href="likelihoods.html"><span class="doc">Likelihood configurations</span></a> documents each family and its
 settings.</p>
 <a class="reference internal image-reference" href="_images/pcat_likelihoods.png"><img alt="Data families, their forward models, likelihoods, and the posterior" src="_images/pcat_likelihoods.png" style="width: 100%;" />

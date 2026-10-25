@@ -24,6 +24,7 @@ dependencies = [
   "numpy",
   "Pillow",
   "scipy",
+  "scikit-learn",
   "seaborn",
   "tdpy",
 ]

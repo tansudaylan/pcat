@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -14,9 +15,13 @@ RUN_NAME = "chandra_point_source_catalog"
 OUTPUT_ROOT = Path(__file__).resolve().parents[1] / RUN_NAME
 
 
-def main() -> None:
+def main(argv=None) -> None:
     from pcat.demo import run_pipeline_demo
 
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output-root', type=Path, default=OUTPUT_ROOT)
+    parser.add_argument('--seed', type=int)
+    arguments = parser.parse_args(argv)
     cfg = {
         "typeexpr": "chan",
         "typeelem": ["lghtpnts"],
@@ -32,7 +37,9 @@ def main() -> None:
         "numbsidecart": 8,
         "strgcnfg": RUN_NAME,
     }
-    run_pipeline_demo(OUTPUT_ROOT, **cfg)
+    if arguments.seed is not None:
+        cfg['typeseed'] = arguments.seed
+    run_pipeline_demo(arguments.output_root, **cfg)
 
 
 if __name__ == "__main__":

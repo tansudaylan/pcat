@@ -55,7 +55,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#pipeline-demonstrations">Pipeline demonstrations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#publication-and-instrument-examples">Publication and instrument examples</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#analysis-utilities">Analysis utilities</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#scientific-interpretation">Scientific interpretation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interpreting-examples">Interpreting examples</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs and diagnostics</a></li>
@@ -111,6 +111,62 @@ center posterior, and displays the generated event-catalog frames.</p>
 mid-transit times. Its notebook reads the timing posterior and displays
 the sampled model against the simulated timing residuals.</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">neural_proposal_efficiency</span></code></dt><dd><p>Compares prior, data-informed, and neural birth proposals on held-out
+simulated radial-velocity scenes. Its companion notebook runs the actual
+training-and-sampling smoke path and displays the saved summary and figure.
+Two short chains per method check execution without establishing convergence
+or an efficiency advantage. Choose a fresh <code class="docutils literal notranslate"><span class="pre">--run-id</span></code> for each comparison.
+Existing benchmark artifacts or configured chain outputs are rejected before
+training starts. Use one process per run ID.
+Constant count traces receive zero ESS as a conservative reporting convention,
+including short traces. Missing or nonfinite samples raise an error. These
+conventions do not establish convergence.
+Efficiency ratios with a zero-ESS baseline are undefined and reported as
+<code class="docutils literal notranslate"><span class="pre">NaN</span></code>. Their bootstrap intervals remain undefined and provide no evidence
+of an efficiency gain.
+Bootstrap inputs must be one-dimensional with a positive integer draw
+budget. Empty, masked, or nonfinite comparisons remain undefined without
+resampling or dropping scenes. Valid seeded intervals are unchanged.
+Identical constant count chains have undefined R-hat (<code class="docutils literal notranslate"><span class="pre">NaN</span></code>), while
+disagreeing constant chains retain infinite R-hat. Efficiency claims require
+finite per-scene R-hat values for both compared methods.
+Gain claims require unmasked, aligned per-scene evidence and ordered
+two-bound confidence intervals. Missing or malformed inputs fail the claim
+check without filling values, dropping scenes, or changing the thresholds.
+ESS and R-hat share missing-sample validation. R-hat checks each full input
+trace before selecting equal-length tails, preserving the existing
+calculation for valid unequal-length chains.
+Aggregate count R-hat medians retain every validation scene. An undefined
+per-scene value leaves the corresponding median undefined, without dropping
+scenes or emitting an all-undefined median warning.
+Per-chain call counts must be positive integers, elapsed times finite and
+positive, and training overhead finite and nonnegative. Missing overhead
+retains its zero default. Invalid costs are rejected before aggregation,
+and integer call totals are accumulated without truncation.
+This benchmark’s capped ESS estimates must be finite real scalars from zero
+through the corresponding trace length. Invalid per-chain metadata is
+rejected without clipping or recomputation, preserving valid fractional and
+zero effective sample sizes.
+Per-chain birth/death acceptance rates must be finite real scalars in
+[0, 1]. Invalid rates are rejected before averaging, preserving valid zero
+and unit rates and the existing per-chain mean without clipping.
+Saved HDF5 acceptance flags are validated before Boolean conversion, with
+aligned flattened traces and finite nonnegative integer proposal IDs.
+Nonbinary flags or invalid IDs raise an error. Other integer move IDs and
+the existing zero-attempt rate convention remain supported.
+Posterior counts and log-likelihood samples must form nonempty aligned
+flattened traces. Counts are checked for integrality and the supported range
+before conversion, and likelihood samples must be finite real values.
+Invalid traces fail before metric calculation, without repairing or rewriting
+the saved HDF5 output.
+Count distributions retain equal per-chain weights. Input vectors must
+cover all supported counts, contain finite real probabilities in [0, 1],
+and sum to one within floating-point rounding tolerance. Missing or invalid
+distributions are rejected without clipping or renormalization.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/neural_proposal_efficiency/neural_proposal_efficiency.py<span class="w"> </span>--smoke<span class="w"> </span>--run-id<span class="w"> </span>fresh_comparison
+</pre></div>
+</div>
+</dd>
 <dt><code class="docutils literal notranslate"><span class="pre">simulated_hst_strong_lens</span></code></dt><dd><p>Hubble Space Telescope Wide Field Camera 3 image inference with lens mass,
 foreground lens-galaxy emission, source emission, and lensed emission.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/simulated_hst_strong_lens/simulated_hst_strong_lens.py
@@ -141,14 +197,14 @@ simulated Roman strong-lens posterior images, simulated radial-velocity and
 transit-timing series, the public JWST/MIRI spectrum, the proposal profiler,
 and the sampler comparison. The JWST example may retrieve public MAST data.
 Notebooks requiring authenticated services or interactive inspection are excluded.</p>
-<p>Eight changing inference views are synchronized around the PCAT logo. Each data
+<p>Eight changing inference views are synchronized with a static PCAT logo panel. Each data
 view starts from a nonempty catalog, follows burn-in for the first third of the
 animation, and shows posterior samples for the remaining two thirds. The views
 show an unbinned Gaussian mixture, point sources in a simulated Daylan et al.
 (2017) Fermi-LAT northern Galactic cap, the observed JWST/MIRI NGC 7027
 spectral fit, a stellar light curve with a variable number of rotating
 starspots, simulated Roman/WFI lensed arcs, stellar flares, radial velocities,
-and transit times. Time-series and spectral axes remain fixed; the GIF uses one
+and transit times. Time-series and spectral axes remain fixed. The GIF uses one
 shared color palette.</p>
 <a class="reference internal image-reference" href="_images/pcat_posterior_samples.gif"><img alt="Eight changing PCAT inference views and the centered PCAT logo" class="align-center" src="_images/pcat_posterior_samples.gif" style="width: 760px;" />
 </a>
@@ -196,7 +252,7 @@ injected planets. PCAT samples a catalog with zero to five Keplerian signals,
 using periodogram-weighted birth and jump proposals with Hastings
 corrections. Instrument offsets are marginalized analytically and stellar
 jitter on a 24-point log grid. All data are simulated. The full run uses
-100,000 sweeps; <code class="docutils literal notranslate"><span class="pre">--smoke</span></code> runs 1,000 sweeps as a pipeline check, not a
+100,000 sweeps. <code class="docutils literal notranslate"><span class="pre">--smoke</span></code> runs 1,000 sweeps as a pipeline check, not a
 convergence test.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/variable_number_exoplanets_radial_velocity/variable_number_exoplanets_radial_velocity.py<span class="w"> </span>--numbswep<span class="w"> </span><span class="m">100000</span>
 python<span class="w"> </span>examples/variable_number_exoplanets_radial_velocity/variable_number_exoplanets_radial_velocity.py<span class="w"> </span>--smoke
@@ -312,9 +368,8 @@ after Hall et al. (2026).</p>
 <h2>Analysis utilities<a class="headerlink" href="#analysis-utilities" title="Link to this heading"></a></h2>
 <dl>
 <dt><code class="docutils literal notranslate"><span class="pre">image_forward_model</span></code></dt><dd><p>Deterministic image formation with a normalized Gaussian point-spread
-function and uniform background. The explicitly simulated two-source scene
-is not observed data; this utility does not run inference or draw Poisson
-noise.</p>
+function and uniform background. This utility uses a simulated two-source
+scene. It performs no inference and draws no Poisson noise.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/image_forward_model/image_forward_model.py<span class="w"> </span>--typefileplot<span class="w"> </span>png
 </pre></div>
 </div>
@@ -365,7 +420,7 @@ every-candidate sequence labels within-model Gaussian, DE-MC, and Student-t
 steps as well as birth, death, split, merge, and jump moves before the
 accept/reject decision. The run reports proposal counts and is long enough to
 exercise the complete categorical move roster. The retained-state animation
-starts after burn-in; the candidate animation includes all 120 sweeps.</p>
+starts after burn-in. The candidate animation includes all 120 sweeps.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/proposal_state_animation/proposal_state_animation.py<span class="w"> </span>--numbswep<span class="w"> </span><span class="m">120</span>
 </pre></div>
 </div>
@@ -399,10 +454,24 @@ matching across a range of association radii.</p>
 <a class="reference internal image-reference" href="_images/catalog_association_completeness_purity.png"><img alt="Catalog completeness and purity across association radii" class="align-center" src="_images/catalog_association_completeness_purity.png" style="width: 640px;" />
 </a>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">kl_divergence_gaussian</span></code></dt><dd><p>PCAT samples a two-parameter conjugate Gaussian posterior. The same chains
+estimate posterior-to-prior KL divergence and mutual information between
+posterior parameters, using their normalized analytic densities. Each
+estimate is compared with its exact Gaussian value. The example reports
+autocorrelation-aware Monte Carlo standard errors rather than claiming
+that agreement alone demonstrates convergence.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/kl_divergence_gaussian/kl_divergence_gaussian.py
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="_images/kl_divergence_gaussian1.png"><img alt="Sampled posterior-to-prior KL with Monte Carlo uncertainty and its exact Gaussian value" class="align-center" src="_images/kl_divergence_gaussian1.png" style="width: 640px;" />
+</a>
+<a class="reference internal image-reference" href="_images/mutual_information_gaussian.png"><img alt="Sampled posterior mutual information with Monte Carlo uncertainty and its exact Gaussian value" class="align-center" src="_images/mutual_information_gaussian.png" style="width: 640px;" />
+</a>
+</dd>
 </dl>
 </section>
-<section id="scientific-interpretation">
-<h2>Scientific interpretation<a class="headerlink" href="#scientific-interpretation" title="Link to this heading"></a></h2>
+<section id="interpreting-examples">
+<h2>Interpreting examples<a class="headerlink" href="#interpreting-examples" title="Link to this heading"></a></h2>
 <p>Generated examples are deterministic pipeline demonstrations unless their
 README explicitly states otherwise. Synthetic outputs validate computation and
 visualization but do not constitute measurements of real astrophysical systems.

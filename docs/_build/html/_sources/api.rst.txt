@@ -4,14 +4,14 @@ Public API
 Sampling
 --------
 
-New integrations should use ``pcat.sampling``. The implementation currently
-remains in ``pcat.main`` for backward compatibility while the sampler engine is
-decomposed into smaller modules.
+PCAT exposes its sampling interfaces in ``pcat.sampling``. These functions
+support inference within one model, transdimensional inference over metamodels,
+and multiple-chain runs.
 
 .. py:function:: pcat.sampling.sample(**configuration)
 
-   Dispatch an image, catalog, or fixed-dimensional PCAT configuration, execute
-   sampling and final processing, and return the final global state object.
+   Dispatch an image, catalog, or arbitrary-likelihood PCAT configuration,
+   execute sampling and final processing, and return the final global state object.
 
    Frequently used configuration keys include:
 
@@ -58,6 +58,36 @@ decomposed into smaller modules.
    See :doc:`capabilities` for a complete example and the image and spectral
    model families.
 
+Neural transdimensional proposals
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. py:class:: pcat.NeuralElementProposal
+
+   Optional PyTorch-backed conditional mixture density for proposing catalog
+   elements in prior-transformed coordinates. Install ``pcat[neural]`` to use
+   it. Fit the model with paired observation features and unit-cube element
+   parameters, then pass ``proposal.callbacks()`` and the matching
+   ``neural_proposal_features`` to :func:`pcat.sampling.sample`. The fitted
+   density includes a uniform component and is used in PCAT's exact birth/death
+   and prior-redraw jump corrections. See :doc:`sampling` for the training
+   example and assumptions.
+
+   ``state_callbacks(retr_condition)`` supplies callbacks conditioned on both
+   the observation and an immutable :class:`pcat.ProposalContext`. The feature
+   builder must use the same catalog summaries used to create training
+   conditions. PCAT supplies the current catalog for births and the catalog
+   with the removed element omitted for death reverse densities.
+
+   The proposal can be checkpointed with ``save(path)`` and restored with
+   ``NeuralElementProposal.load(path)``. Fit it before sampling and keep its
+   parameters fixed during each chain.
+
+.. py:class:: pcat.ProposalContext
+
+   Immutable snapshot of active unit-prior element coordinates for each
+   population. State-conditioned callbacks receive this object for a birth,
+   death, or prior-redraw jump. Death contexts omit the element being removed.
+
 .. py:function:: pcat.sampling.init(dictglob, **options)
 
    Lower-level initialization and execution engine. ``dictglob`` contains
@@ -91,6 +121,10 @@ decomposed into smaller modules.
    shape (chains, samples, parameters) with their log posteriors. Extra
    options, such as ``booladaptstdp``, pass through to PCAT.
 
+   The returned sample axis follows the completed state's retained draws.
+   Convergence-based stopping can make it shorter than ``sample_count``.
+   Parameter draws and log posteriors retain the same worker and sweep order.
+
 .. py:function:: pcat.sampling.sample_posterior(gdat, numbsampwalk, retr_llik, listnamepara, listlablpara, scalpara, minmpara, maxmpara, **options)
 
    Sample a fixed-dimensional posterior with PCAT chains and return a
@@ -102,7 +136,7 @@ decomposed into smaller modules.
 
    Run the PCAT-backed fixed-dimensional adapter for an allesfitter data
    directory. This compatibility entry point is specialized for that external
-   package; new likelihood integrations should use
+   package. New likelihood integrations should use
    :func:`pcat.sampling.sample_fixed` or
    :func:`pcat.sampling.sample_fixed_chains`.
 
@@ -113,6 +147,13 @@ decomposed into smaller modules.
 
 Image formation
 ---------------
+
+.. py:function:: pcat.image.make_gaussian_scene(image_shape, source_parameters, intrinsic_sigma_pixels)
+
+   Render a two-dimensional scene from finite Gaussian sources. Each source is
+   given by ``(x_pixel, y_pixel, flux)`` with coordinates inside the image.
+   Every sampled profile is normalized to its requested in-frame flux. The
+   returned array uses the caller's flux units.
 
 .. py:function:: pcat.image.forward_model_image(source_image, psf_sigma_pixels, background=0.0)
 
@@ -135,8 +176,8 @@ Plotting
 --------
 
 Static figure-writing routines support PNG or PDF output and log their output
-paths. Animation and state helpers may instead return snapshots or write GIFs;
-their return values and products are described individually below. The
+paths. Animation and state helpers may instead return snapshots or write GIFs.
+Their return values and products are described individually below. The
 :doc:`gallery` shows representative outputs produced by
 ``docs/make_plot_gallery.py`` from PCAT runs.
 
@@ -144,8 +185,11 @@ The ``state`` argument of the sampler views is the final posterior object
 returned by :func:`pcat.sampling.sample` or read with
 :func:`pcat.main.readfile` from ``gdatfinlpost``. Per-proposal arrays such as
 ``listpostindxproptype`` hold every sweep including burn-in, ordered
-sweep-major across chains; per-sample arrays such as ``listpostnumbelem`` hold
+sweep-major across chains. Per-sample arrays such as ``listpostnumbelem`` hold
 retained samples ordered sample-major across chains.
+
+The :doc:`plotting gallery <gallery>` shows rendered output for every
+figure-producing routine documented below.
 
 Sampler operation
 ~~~~~~~~~~~~~~~~~
@@ -156,7 +200,16 @@ Sampler operation
    ``state`` and return a dictionary from view name to path. :func:`pcat.sampling.sample`
    calls it for each run with final plots enabled and writes to
    ``visuals/post/operation``. ``catalog_options`` are passed to
-   :func:`pcat.plotting.plot_catalog_trace`.
+   :func:`pcat.plotting.plot_catalog_trace`. Its returned ``sampler_trajectory``
+   view aligns proposal-level acceptance terms and likelihood temperature.
+
+.. py:function:: pcat.plotting.plot_sampler_trajectory(state, output_path, typefileplot="png")
+
+   Plot the signed log-compressed log-acceptance ratio for every evaluated
+   proposal, colored by move type and marked as accepted or rejected. Filtered
+   proposals appear along the panel baseline. The lower panel shows the
+   likelihood inverse temperature by sweep. The shaded interval marks burn-in.
+   See the :ref:`rendered sampler trajectory <sampler-trajectory-example>`.
 
 .. py:function:: pcat.plotting.plot_proposal_ledger(state, output_path, typefileplot="png", number_windows=120)
 
@@ -178,7 +231,7 @@ Sampler operation
 .. py:function:: pcat.plotting.plot_compute_budget(state, output_path, typefileplot="png")
 
    Map the mean wall time [ms] of each timed sampler stage for each move type.
-   Stages nest, so their times do not add to each move's total; stages timed
+   Stages nest, so their times do not add to each move's total. Stages timed
    once per sweep, such as frame plotting, are omitted.
 
 Catalogs and fits
@@ -207,17 +260,43 @@ Catalogs and fits
    Plot an observed lens image, a model image, and the standardized residual
    on a shared angular grid [arcsec].
 
-.. py:function:: pcat.plotting.plot_lens_parameter_recovery(output_path, draws, true_parameters, typefileplot="png")
+.. py:function:: pcat.plotting.plot_lens_parameter_recovery(output_path, draws, true_parameters, typefileplot="png", labels=("Einstein radius [arcsec]", "Source x [arcsec]", "Source y [arcsec]"))
 
-   Plot posterior histograms of the Einstein radius and source position
-   [arcsec] with the injected values and posterior medians.
+   Plot one posterior histogram per parameter with the injected value and
+   posterior median, using three panels per row. The default labels describe
+   the Einstein radius and source position [arcsec]. Draws must be a nonempty
+   sample-by-parameter array with one injected value and one label per column.
+   Supply custom labels for other parameter sets. To plot a subset, slice the
+   sample columns and injected values together and supply matching labels.
+   Each column must contain finite real unmasked samples. Histograms and
+   medians use the same unmasked samples independently for each parameter.
+   Injected values must be finite, real, and unmasked so every recovery
+   panel has a defined injected-value marker.
 
-.. py:function:: pcat.plotting.plot_detection_diagnostic(records, output_path, examples=None)
+.. py:function:: pcat.plotting.plot_detection_diagnostic(records, output_path, examples=None, detection_threshold=0.5, example_prefix=None)
 
    Plot representative detector, macro-model, and residual images with the
    per-lens posterior perturber probability against injected signal-to-noise
    and Wilson intervals on the detection rates. ``records`` and ``examples``
    come from :func:`pcat.roman_lens.simulate_population`.
+   Each ``injected_signal_to_noise`` value must be an unmasked finite
+   nonnegative real scalar. Zero values remain valid.
+   Set ``example_prefix="lens_2"`` to select the supplied ``lens_2_data``,
+   ``lens_2_macro``, and ``lens_2_residual`` images. The default uses the first
+   sorted data-image prefix. An explicit selection requires matching examples.
+   Representative data, macro-model, and residual images must have matching
+   nonempty two-dimensional shapes on the detector pixel grid.
+   Each panel must contain at least one unmasked pixel, and all unmasked
+   values must be finite and real. Color limits exclude explicitly masked
+   values while the displayed images retain their masks.
+   Integer residuals use floating-point color-limit arithmetic without
+   changing the supplied pixel arrays.
+   Posterior probabilities must be unmasked finite real scalars in [0, 1], as
+   required by :func:`pcat.roman_lens.summarize_population`.
+   ``detection_threshold`` defaults to 0.5 and controls both the horizontal
+   reference line and the reported detection rates and Wilson intervals.
+   It is passed to the shared population summary and must be an unmasked,
+   finite real scalar in [0, 1].
 
 Convergence
 ~~~~~~~~~~~
@@ -230,10 +309,35 @@ Convergence
    distributions are compared between the first and second halves of the
    retained samples. Returns a dictionary from figure name to path.
 
+.. py:function:: pcat.diagnostics.gelman_rubin(chains)
+
+   Compute classic, unsplit R-hat for a matrix with one row per draw and one
+   column per chain, requiring at least two draws and two chains. Masked,
+   nonfinite, complex, or undersized traces return ``NaN``. Missing samples
+   are not filled or dropped. Identical constant chains also return ``NaN``.
+   Separated constant chains return infinity.
+   Extreme magnitudes use power-of-two normalization before variance
+   calculations, shared with :func:`pcat.diagnostics.autocorrelation_time`.
+
 .. py:function:: pcat.plotting.plot_gelman_rubin(path, statistics, typefileplot="pdf", typeplotback="norm")
 
    Plot the distribution of potential scale reduction factors, for example
    ``state.gmrbstat`` over every data bin, to ``path + "gmrb"``.
+   All supplied statistics must be unmasked finite real values, with at least
+   one entry. Histogram bins include finite values below one and handle
+   identical values without dropping entries. Undefined results are rejected
+   before figure creation.
+
+.. py:function:: pcat.diagnostics.autocorrelation_time(samples, typeverb=0, atcrtype="maxm", verbtype=None)
+
+   Compute autocorrelation sequences and integrated times with draws on the
+   first axis and parameter channels on the remaining axes. Correlations have
+   the lag axis last. Times have the parameter-channel shape. Masked,
+   nonfinite, complex, or constant channels return ``NaN`` outputs without
+   discarding valid neighboring channels or filling or dropping samples.
+   Extreme input magnitudes use power-of-two normalization before forming
+   correlation products.
+   Compatibility arguments do not change the native estimator.
 
 .. py:function:: pcat.plotting.plot_autocorrelation(path, autocorrelation, correlation_time, strgextn="", typefileplot="pdf", typeplotback="norm")
 
@@ -288,7 +392,7 @@ Animations
    Combine posterior frame sequences of several examples into one synchronized
    GIF, as in ``examples/pcat_posterior_samples.gif``. Each
    :class:`pcat.plotting.PosteriorAnimationPanel` names a label and either a
-   glob ``pattern`` of frames or a ``static_image``; a sequence whose frames do
+   glob ``pattern`` of frames or a ``static_image``. A sequence whose frames do
    not change raises an error.
 
 Instrument response
@@ -319,7 +423,7 @@ Instrument response
 
    Return the uncertainty-weighted Gaussian log likelihood of matching
    one-dimensional transit-time arrays, up to a parameter-independent
-   normalization constant. Timing errors must be positive; nonfinite predicted
+   normalization constant. Timing errors must be positive. Nonfinite predicted
    times return negative infinity.
 
 .. py:function:: pcat.psf_poly_fit(gdat, psfnusam, factusam)
@@ -347,7 +451,15 @@ Catalog analysis
 .. py:function:: pcat.binomial_wilson_interval(successes, trials, z_score=1.0)
 
    Return the lower and upper Wilson interval for a binomial fraction. Counts
-   must satisfy ``0 <= successes <= trials`` and ``z_score`` must be positive.
+   must be unmasked integer-valued scalars satisfying
+   ``0 <= successes <= trials`` with positive ``trials``. The ``z_score``
+   must be an unmasked positive finite real scalar.
+   Closed-form boundary limits give an exact lower endpoint of 0 for zero
+   counts and an exact upper endpoint of 1 for full counts.
+   Very large finite scores use reciprocal scaling to avoid overflow when
+   squaring the score.
+   Large trial counts use a scaled form of the same equation without
+   squaring the trial count.
 
 .. py:function:: pcat.associate_catalogs(coordinates_source, values_source, coordinates_target, values_target, distance_maximum, value_difference_maximum, confidence_target=None, significance_target=None)
 
@@ -372,8 +484,30 @@ Catalog analysis
    return normalized log densities and accept a matrix of draws. Samples may
    have shape ``(draws, parameters)`` or ``(chains, draws, parameters)``. The
    result includes an autocorrelation-aware standard error and effective sample
-   size. A finite-sample estimate is not clipped at zero; if ``Q`` has zero
-   density at any draw from ``P``, the estimated divergence is infinite.
+   size. Finite-sample estimates may be negative. If ``Q`` has zero density at
+   any draw from ``P``, the estimated divergence is infinite.
+
+   Samples and log-density outputs must be unmasked real values. Each callback
+   must return one value per draw, rather than a scalar or column matrix.
+
+.. py:function:: pcat.diagnostics.estimate_mutual_information(samples, log_density_joint, log_density_x, log_density_y, split_index=1)
+
+   Estimate ``I(X;Y) = D_KL(p(X,Y) || p(X)p(Y))`` in nats using draws from the
+   joint distribution. Columns before ``split_index`` belong to ``X`` and the
+   remaining columns belong to ``Y``. Both groups must be nonempty. The sample
+   shape is ``(draws, parameters)`` or ``(chains, draws, parameters)``.
+
+   Supply normalized joint and marginal log-density callbacks for the same
+   distribution. The joint callback receives all columns. Marginal callbacks
+   receive only their respective columns and must each return one value per
+   row. The function does not estimate marginal densities from a sample cloud.
+
+   The returned dictionary contains ``mutual_information``, ``standard_error``,
+   and ``effective_sample_size``. Uncertainty accounts for within-chain
+   autocorrelation and variation between independent chains, as in the KL
+   estimator. Finite-sample estimates are not clipped at zero. Error estimates
+   do not establish that the chains have converged or that supplied density
+   callbacks are mutually consistent.
 
 Roman lens benchmark
 --------------------
@@ -385,8 +519,17 @@ Roman lens benchmark
 
 .. py:function:: pcat.roman_lens.summarize_population(records, detection_threshold=0.5)
 
-   Report detection, false-positive, and localization rates with Wilson
-   intervals for the simulated population. Plot the population with
+   Report true-positive, false-positive, and localization rates for the
+   simulated population. Wilson intervals apply to the true-positive and
+   false-positive rates. Each ``posterior_one`` value must be an unmasked
+   finite real scalar in [0, 1]. Each ``has_subhalo`` value must be an unmasked
+   Boolean or real scalar equal to 0 or 1. Text flags such as ``"False"``
+   are rejected. Both localization indices must be unmasked integer-valued
+   scalars. Exact integer-valued reals and integer strings are accepted,
+   including the ``-1`` null-injection sentinel. Values must fit the NumPy
+   platform integer type (``np.int_``). Fractional inputs are
+   rejected. ``detection_threshold`` must be an unmasked, finite real scalar
+   in [0, 1]. Plot the population with
    :func:`pcat.plotting.plot_detection_diagnostic`.
 
 mejiro lens inference

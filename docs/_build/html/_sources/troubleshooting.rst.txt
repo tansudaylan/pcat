@@ -48,7 +48,7 @@ Missing figures or animations
 Check ``boolmakeplot``, ``boolmakeplotinit``, ``boolmakeplotfram``,
 ``boolmakeplotfinlpost``, and ``makeanim``. Animations require at least two frame
 plots, controlled by chain length and ``numbswepplot``. Frames that are visually
-identical may collapse to a single-frame GIF; such a file is a static image and
+identical may collapse to a single-frame GIF. Such a file is a static image and
 should not be reported as an animation.
 
 For headless systems, set a writable Matplotlib cache before running:

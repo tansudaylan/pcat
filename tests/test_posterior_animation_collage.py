@@ -98,17 +98,25 @@ def test_miri_posterior_line_histogram_uses_blue_model(tmp_path, monkeypatch):
     )
     example["EXAMPLE_PATH"] = tmp_path
     colors = []
+    axes = []
     original_bar = plt.Axes.bar
+    original_subplots = plt.subplots
 
     def capture_bar(axis, *args, **kwargs):
         colors.append(kwargs.get("color"))
         return original_bar(axis, *args, **kwargs)
 
+    def capture_subplots(*args, **kwargs):
+        figure, axis = original_subplots(*args, **kwargs)
+        axes.append(axis)
+        return figure, axis
+
     monkeypatch.setattr(plt.Axes, "bar", capture_bar)
+    monkeypatch.setattr(plt, "subplots", capture_subplots)
     wavenumber = 1e6 / np.array([5.34, 5.5112])
     posterior = SimpleNamespace(listpostdictelem=[
         [{"elin": wavenumber}],
-        [{"elin": wavenumber}],
+        [{"elin": np.array([wavenumber[0], wavenumber[0], wavenumber[1]])}],
     ])
 
     paths = example["render_line_histogram_frames"](posterior)
@@ -116,12 +124,51 @@ def test_miri_posterior_line_histogram_uses_blue_model(tmp_path, monkeypatch):
     assert len(paths) == 2
     assert colors == ["#176B87", "#176B87"]
     assert all(path.is_file() for path in paths)
+    assert [axis.get_ylim() for axis in axes] == [pytest.approx((0.0, 2.3))] * 2
 
     second_paths = example["render_line_histogram_frames"](posterior)
 
     assert len(second_paths) == 2
     assert set(paths).isdisjoint(second_paths)
     assert all(path.is_file() for path in paths + second_paths)
+    assert [axis.get_ylim() for axis in axes[2:]] == [pytest.approx((0.0, 2.3))] * 2
+
+
+def test_flare_posterior_frames_keep_one_data_based_y_scale(tmp_path, monkeypatch):
+    from matplotlib import pyplot as plt
+    from types import SimpleNamespace
+
+    example = load_example_namespace(
+        "variable_number_stellar_flares/variable_number_stellar_flares.py"
+    )
+    example["EXAMPLE_PATH"] = tmp_path
+    axes = []
+    original_subplots = plt.subplots
+
+    def capture_subplots(*args, **kwargs):
+        figure, axis = original_subplots(*args, **kwargs)
+        axes.append(axis)
+        return figure, axis
+
+    monkeypatch.setattr(plt, "subplots", capture_subplots)
+    snapshots = [
+        {
+            "cntrswep": sweep,
+            "boolburn": sweep == 0,
+            "numbelem": np.array([1]),
+            "cntpmodl": np.full((4, 1, 1), level),
+        }
+        for sweep, level in ((0, 80.0), (10, 180.0))
+    ]
+    paths = example["render_flare_posterior_frames"](
+        np.linspace(1.0, 2.0, 4),
+        np.array([90.0, 110.0, 100.0, 120.0]),
+        SimpleNamespace(listanimstate=snapshots),
+    )
+
+    assert len(paths) == len(axes) == 2
+    for axis in axes:
+        assert axis.get_ylim() == pytest.approx((88.5, 127.5))
 
 
 def test_animation_frames_use_one_shared_palette():

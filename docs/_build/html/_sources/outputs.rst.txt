@@ -130,9 +130,10 @@ Animation output
 
 After building a model-specific ``configuration``, enable both retained-state
 and proposal-candidate animations. ``makeanim`` assembles the retained-state
-GIF from saved chain frames at ``numbswepplot`` cadence. ``boolmakeanimprop`` records one
-current-versus-candidate frame per sweep on worker zero before each proposal is
-accepted or rejected; it also enables ``makeanim``. Candidate recording must be
+GIF from saved chain frames at ``numbswepplot`` cadence. ``boolmakeanimprop``
+records one current-versus-candidate frame per sweep on worker zero before each
+proposal is accepted or rejected. Enabling it also enables ``makeanim``.
+Candidate recording must be
 enabled during sampling because the proposed states cannot be recovered from
 the final posterior alone.
 
@@ -148,8 +149,8 @@ the final posterior alone.
    result = sampling.sample(**configuration)
 
 After a completed, converged run, ``proposal_sequence.gif`` contains the saved
-retained states from sweeps at or after ``numbburn``. It is a visualization of
-the post-burn-in chain, not a claim that correlated states are independent.
+retained states from sweeps at or after ``numbburn``. It visualizes the
+post-burn-in chain, whose states remain correlated.
 ``proposal_candidates.gif`` contains every recorded worker-zero proposal,
 including rejected candidates and burn-in transitions. Both files are written
 under ``<run>/visuals/post/anim/``. The maintained
@@ -174,12 +175,13 @@ Before publishing or comparing runs, preserve and report:
 * ``cmndargs.txt`` and all explicit random seeds;
 * input filenames, versions, selections, units, and checksums;
 * ``gdatfinlpost.p`` and its matching ``gdatfinlpost.h5`` companion;
-* retained sample count, convergence thresholds, and measured diagnostics;
+* retained sample count, convergence thresholds, and measured convergence statistics;
 * proposal acceptance and model-count transition summaries;
 * posterior predictive data, model, and residual plots; and
-* whether the run used real data, a controlled simulation, or a smoke-test
+* whether the run used observations, simulated inputs, or a smoke-test
     configuration.
 
 Do not compare serialized states copied without their HDF5 companions. Avoid
 overwriting a completed run with a different configuration under the same run
-tag; use a new ``strgcnfg`` or remove both cached data and visuals deliberately.
+tag. Use a new ``strgcnfg`` for a separate run. Remove cached data and visuals
+only when you intend to replace that run.

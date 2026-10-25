@@ -151,10 +151,10 @@ point-spread functions, and instrument-specific response settings.</p>
 </section>
 <section id="user-supplied-likelihoods">
 <h2>User-supplied likelihoods<a class="headerlink" href="#user-supplied-likelihoods" title="Link to this heading"></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gener&quot;</span></code> runs a fixed-dimensional model with an arbitrary
-user-supplied log-likelihood function. The callback receives the run state, the
-model name, and the current parameter values, and returns one scalar log
-likelihood:</p>
+<p><code class="docutils literal notranslate"><span class="pre">typeexpr=&quot;gener&quot;</span></code> runs inference within one parameterized model using an
+arbitrary user-supplied log-likelihood function. The callback receives the run
+state, the model name, and the current parameter values, and returns one scalar
+log likelihood:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pcat.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample</span>
@@ -186,8 +186,8 @@ split, or merge proposals.</p>
 <h2>Poisson image likelihood<a class="headerlink" href="#poisson-image-likelihood" title="Link to this heading"></a></h2>
 <p>Point sources, extended emission, foreground light, and gravitational lenses
 are alternative model components within the same image-data likelihood. The
-catalog may contain one or several supported element populations; it does not
-change the likelihood family. With the default <code class="docutils literal notranslate"><span class="pre">boolcondcatl=True</span></code>, final
+catalog may contain one or several supported element populations. The
+likelihood family remains unchanged. With the default <code class="docutils literal notranslate"><span class="pre">boolcondcatl=True</span></code>, final
 processing creates a condensed catalog from the sampled catalogs before any
 optional association with a reference catalog.</p>
 <section id="point-source-and-extended-emission">

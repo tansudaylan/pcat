@@ -30,10 +30,10 @@ and ``strgexpo`` or read from a FITS map with ``typeexpo="file"`` and
 its configured units before evaluating the likelihood.
 
 ``typepixl="cart"`` selects a Cartesian image. Set ``numbsidecart`` to choose
-its side length; ``boolforccart=True`` forces a square grid when pixel
+its side length. ``boolforccart=True`` forces a square grid when pixel
 coordinates are supplied directly. ``typepixl="heal"`` selects HEALPix data
-and uses ``numbsideheal`` for its resolution. Fermi-LAT defaults to HEALPix;
-other image experiments default to Cartesian pixels.
+and uses ``numbsideheal`` for its resolution. Fermi-LAT defaults to HEALPix.
+Other image experiments default to Cartesian pixels.
 
 Poisson count-image likelihood
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -50,7 +50,7 @@ Gaussian image likelihood
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Set ``liketype="gaus"`` for the built-in Gaussian residual likelihood. Supply
-``varidata`` as a per-pixel variance map; if omitted, PCAT uses the observed
+``varidata`` as a per-pixel variance map. If omitted, PCAT uses the observed
 counts with a floor of one:
 
 .. math::
@@ -84,7 +84,7 @@ Background emission and exposure
 
 Experiment defaults define the available background components. Override their
 templates with ``sbrtbacknorm`` in ``dicttrue`` or ``dictfitt``. The
-``listnamediff`` entry selects the diffuse components added to the model; names
+``listnamediff`` entry selects the diffuse components added to the model. Names
 such as ``back0000`` refer to entries in the template list. ``boolspecback``
 controls whether a background amplitude is shared spectrally or varies by
 energy bin. Fermi-LAT configurations can use a uniform component, a diffuse
@@ -106,10 +106,10 @@ Point-spread functions
 The experiment selects a PSF profile family through ``typemodlpsfn``. Current
 experiment defaults include single Gaussian, single King, and double King
 profiles. Supply profile parameters through ``psfpexpr`` in ``dicttrue`` and
-``dictfitt``; set ``boolmodipsfn=True`` when PSF parameters should vary in the
+``dictfitt``. Set ``boolmodipsfn=True`` when PSF parameters should vary in the
 fit. Fermi-LAT can also use its energy- and event-class-dependent PSF scale
 ``fermscalfact``. PSF and source-kernel options depend on pixelization and
-element type; unsupported combinations should use ``typeevalpsfn="none"``.
+element type. Unsupported combinations should use ``typeevalpsfn="none"``.
 
 Unbinned event-level likelihood
 -------------------------------
@@ -118,9 +118,8 @@ PCAT can sample an unbinned likelihood through a user callback. The maintained
 ``unbinned_gaussian_mixture`` example passes the 140 simulated event coordinates
 directly to ``pcat.fixed.sample_fixed_chains`` and sums their Gaussian-mixture
 log densities with no spatial bins or count map. It samples the four center
-coordinates of two equal-weight Gaussian components; the component count and
-width are fixed. This is a fixed-dimensional custom-likelihood demonstration,
-not a native transdimensional Gaussian-mixture likelihood.
+coordinates of two equal-weight Gaussian components. The component count and
+width are fixed, so this callback demonstrates inference within one model.
 
 The native ``typeexpr="gmix"`` experiment remains the binned Poisson workflow
 shown in ``gaussian_mixture_catalog``. Its variable-width ``clusvari`` elements
@@ -135,7 +134,7 @@ The one-dimensional ``typeexpr="fire"`` workflow uses ``anlytype="spec"`` for
 spectral bins. Set ``binsenerfull`` to the monotonically increasing spectral
 axis edges and use ``typedata="inpt"``, ``strgexprsbrt``, ``typeexpo``, and
 ``strgexpo`` for supplied data and exposure. The built-in count likelihood is
-Poisson by default; ``liketype="gaus"`` selects the Gaussian residual
+Poisson by default. ``liketype="gaus"`` selects the Gaussian residual
 likelihood when ``varidata`` is supplied. A continuum or background template
 can be provided through ``dictfitt["sbrtbacknorm"]`` and activated with
 ``dictfitt["listnamediff"]``.
@@ -188,8 +187,8 @@ Binned photometric time-series likelihood
 Use ``typeexpr="fire"`` and ``anlytype="spec"`` for a time-binned photometric
 series, with time-bin edges in ``binsenerfull`` and observed counts/exposure
 configured as for other supplied one-dimensional data. This is the same
-one-dimensional binned likelihood used for spectra; flare and spot profiles
-are alternative element models, not separate likelihoods. Fixed baselines can
+one-dimensional binned likelihood used for spectra. Flare and spot profiles
+are alternative element models within this likelihood. Fixed baselines can
 be supplied with ``dictfitt["sbrtbacknorm"]`` and enabled with
 ``dictfitt["listnamediff"]``.
 
@@ -200,7 +199,7 @@ Davenport profiles, ``scalfall`` for one-sided exponential decay, and
 independent ``scalrise``/``scalfall`` for FRED. Set physical bounds with
 ``limtparaelem`` and proposal scales with ``stdvpropelemfire``. The
 ``variable_number_stellar_flares`` example accepts ``--profile`` with any of
-these four models; for example, ``--profile flardav`` selects the Davenport
+these four models. For example, ``--profile flardav`` selects the Davenport
 template. The generated time series remains FRED-injected, so alternate fits
 compare model misspecification against the same data.
 
@@ -226,7 +225,7 @@ and ``argp`` for argument of periastron.
 Set ``maxmnumbplan`` for the catalog-size limit, ``minmrvsa``/``maxmrvsa`` and
 ``minmperi``/``maxmperi`` for amplitude and period bounds, and ``maxmecce`` for
 the eccentricity ceiling. Per-instrument velocity offsets and an optional
-linear trend are marginalized analytically; enable the trend with
+linear trend are marginalized analytically. Enable the trend with
 ``boollinetren=True``. Stellar jitter is marginalized on the log-uniform grid
 ``listjittrvel``, configured through ``minmjitt``, ``maxmjitt``, and
 ``numbjitt``. The helper also supplies a data-informed period/amplitude/phase
@@ -239,23 +238,24 @@ Transit-timing likelihood
 -------------------------
 
 For transit-time data, use ``pcat.time_series.log_likelihood_transit_times``
-inside a fixed-dimensional PCAT likelihood callback. Pass observed transit
-times, predicted transit times from Ephesos, and positive timing errors in the
-same units. The function returns the uncertainty-weighted Gaussian log
-likelihood up to a parameter-independent normalization constant; it returns
-negative infinity for nonfinite model times. Ephesos supplies linear,
-sinusoidal-residual, and optional N-body time predictions. PCAT handles the
+inside a fixed-dimensional PCAT likelihood callback. The
+``pcat.time_series.make_transit_time_likelihood`` factory connects a forward
+predictor to PCAT's ``(parameters, data)`` callback. The data contain transit
+epochs, observed times, and positive timing errors. The Gaussian likelihood is
+uncertainty-weighted, up to a parameter-independent normalization constant, and
+returns negative infinity for nonfinite model times. Ephesos supplies linear,
+combined sinusoidal-TTV, and optional N-body time predictions. PCAT handles
 parameter priors and posterior sampling through ``sample_fixed`` or
-``sample_fixed_chains``. The predictor must align observed transit epochs with
-model epochs before evaluating this likelihood.
+``sample_fixed_chains``. The predictor must align observed epochs with model
+epochs. See ``transit_timing_variations`` for a posterior-sampling example.
 
 Generic user-supplied likelihood
 --------------------------------
 
-Use ``typeexpr="gener"`` for a fixed-dimensional custom likelihood. The
-``retr_llik(gdat, strgmodl, values)`` callback returns one log-likelihood value
-for the supplied parameter vector; PCAT handles configured priors, proposals,
-accept/reject steps, persistence, and diagnostics. This is the appropriate path
+Use ``typeexpr="gener"`` for inference within one model with a custom
+likelihood. The ``retr_llik(gdat, strgmodl, values)`` callback returns one
+log-likelihood value for the supplied parameter vector. PCAT handles configured priors, proposals,
+accept/reject steps, persistence, and saved sample summaries. Use this path
 when none of the built-in binned likelihoods matches the data model. See
 :doc:`capabilities` for a complete callback example and :doc:`sampling` for
 proposal and convergence controls.

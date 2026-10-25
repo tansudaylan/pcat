@@ -237,9 +237,10 @@ class _PCATMCMCCompat(object):
         if truepara is not None and np.isfinite(truepara):
             axis.axhline(truepara, color='g', ls='--', lw=1.)
         for indxdraw, draw in enumerate(listvarbdraw or []):
-            if np.isfinite(draw):
+            draw_value = np.asarray(draw).item()
+            if np.isfinite(draw_value):
                 color = 'r' if listcolrdraw is None else listcolrdraw[indxdraw]
-                axis.axhline(draw, color=color, ls='--', lw=1.)
+                axis.axhline(draw_value, color=color, ls='--', lw=1.)
         axis.set_xlabel('Sample')
         axis.set_ylabel(labl)
         if titl is not None:
@@ -262,8 +263,9 @@ class _PCATMCMCCompat(object):
         if truepara is not None and np.isfinite(truepara):
             axis.axvline(truepara, color='g', ls='--', lw=1.)
         for draw in kwargs.get('listvarbdraw', []) or []:
-            if np.isfinite(draw):
-                axis.axvline(draw, color='r', ls='--', lw=1.)
+            draw_value = np.asarray(draw).item()
+            if np.isfinite(draw_value):
+                axis.axvline(draw_value, color='r', ls='--', lw=1.)
         axis.set_xlabel(strg)
         axis.set_ylabel('N')
         if titl is not None:

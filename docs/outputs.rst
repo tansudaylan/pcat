@@ -1,10 +1,10 @@
-Outputs and diagnostics
+Outputs and plots
 =======================
 
 Directory layout
 ----------------
 
-A run with project root ``pathbase`` and tag ``strgcnfg`` writes:
+A run with project root ``pathbase`` and tag ``strgcnfg`` writes files in this layout.
 
 .. code-block:: text
 
@@ -42,7 +42,7 @@ State files
 ``gdatmodi####post`` stores worker-chain products. ``gdatfinlpost`` stores the
 aggregated posterior state and derived summaries. PCAT splits each state between
 a pickle file and an HDF5 companion, and :func:`pcat.main.readfile` reconstructs
-the object from the extension-free path:
+the object from the extension-free path shown below.
 
 .. code-block:: python
 
@@ -68,9 +68,9 @@ files as well as the markers before treating a run as complete.
 Visual products
 ---------------
 
-``init`` contains simulated data, reference-model, and initial diagnostics.
+``init`` contains simulated data, reference models, and initial-state figures.
 ``post/fram`` contains snapshots across the chain. ``post/finl`` contains final
-posterior summaries and diagnostics. ``post/anim`` contains GIFs assembled from
+posterior summaries and their plots. ``post/anim`` contains GIFs assembled from
 frame plots. When proposal metadata is present, it also contains
 ``proposal_activity.gif`` with cumulative attempts and acceptances and
 ``proposal_sequence.gif`` with proposal labels on saved chain-state frames.
@@ -114,15 +114,17 @@ acceptance probabilities, together with acceptance fractions by proposal type.
 It also stores the per-sweep inverse likelihood temperature in
 ``listpostfacttmpr``. This value is one for ordinary sampling and after tempered
 burn-in reaches the posterior target.
-Interpret these alongside chain movement and convergence rather than optimizing
-acceptance fraction alone. See :doc:`sampling` for the move-specific acceptance
-terms, tunable settings, burn-in, and stopping rules.
+Read acceptance fractions alongside chain movement and convergence measures.
+Maximizing acceptance alone can still leave the chain exploring poorly. See
+:doc:`sampling` for move-specific acceptance terms, tunable settings, burn-in,
+and stopping rules.
 
-When final plots are enabled, ``post/convergence`` holds the figures of
-:func:`pcat.plotting.plot_posterior_convergence` and ``post/operation`` those
-of :func:`pcat.plotting.plot_sampler_overview`: the proposal ledger, the
-acceptance-term decomposition, the compute budget, the catalog trace, and, for
-one-dimensional data, the posterior predictive check. The :doc:`gallery` shows
+When final plots are enabled, ``post/convergence`` holds the convergence
+figures from :func:`pcat.plotting.plot_posterior_convergence`, while
+``post/operation`` holds the sampler-activity views from
+:func:`pcat.plotting.plot_sampler_overview`. These include the proposal ledger,
+acceptance-term decomposition, compute budget, catalog trace, and, for
+one-dimensional data, the posterior-predictive check. The :doc:`gallery` shows
 examples of each.
 
 Animation output
@@ -158,7 +160,7 @@ under ``<run>/visuals/post/anim/``. The maintained
 
 If the GIFs are absent but the run still has ``gdatinit``, ``gdatfinlpost``,
 and its saved frame images, call :func:`pcat.main.proc_anim` with the run tag
-and project root to assemble them again:
+and project root to assemble them again.
 
 .. code-block:: python
 
@@ -169,17 +171,16 @@ and project root to assemble them again:
 Reproducibility checklist
 -------------------------
 
-Before publishing or comparing runs, preserve and report:
+For reproducible comparisons, keep these details with each run.
 
-* the PCAT and TDpy repository revisions and Python environment;
-* ``cmndargs.txt`` and all explicit random seeds;
-* input filenames, versions, selections, units, and checksums;
-* ``gdatfinlpost.p`` and its matching ``gdatfinlpost.h5`` companion;
-* retained sample count, convergence thresholds, and measured convergence statistics;
-* proposal acceptance and model-count transition summaries;
-* posterior predictive data, model, and residual plots; and
-* whether the run used observations, simulated inputs, or a smoke-test
-    configuration.
+* PCAT and TDpy revisions and the Python environment.
+* Command-line arguments from ``cmndargs.txt`` and all random seeds.
+* Input filenames, versions, selections, units, and checksums.
+* ``gdatfinlpost.p`` and its matching ``gdatfinlpost.h5`` companion.
+* The retained sample count, convergence thresholds, and measured convergence statistics.
+* Proposal acceptance and model-count transition summaries.
+* Posterior-predictive data, model, and residual plots.
+* Whether the run used observations, simulated inputs, or the smoke-test configuration.
 
 Do not compare serialized states copied without their HDF5 companions. Avoid
 overwriting a completed run with a different configuration under the same run

@@ -137,16 +137,13 @@ def _plot_population_pair(k, l, axis, limt, listmantlabl, listpara, truepara, li
                     print('Determining the elements to be annotated...')
                     from sklearn.neighbors import LocalOutlierFactor
                     numbsamp = listparapairoutl.shape[0]
-                    
-                    numboutf = min(0, numbsamp)
-                    if numboutf > 0:
-                        if numbsamp > numboutf:
-                            n_neighbors = min(numbsamp, 100)
-                            objtfore = LocalOutlierFactor(n_neighbors=n_neighbors)
-                            objtfore.fit(listparapairoutl)
-                            louf = objtfore.negative_outlier_factor_
-                        else:
-                            louf = np.zeros(numbsamp)
+
+                    numboutf = min(10, numbsamp)
+                    if numbsamp > 2:
+                        n_neighbors = min(numbsamp - 1, 100)
+                        objtfore = LocalOutlierFactor(n_neighbors=n_neighbors)
+                        objtfore.fit(listparapairoutl)
+                        louf = objtfore.negative_outlier_factor_
                         listindxsamplouf = np.argsort(louf)[:numboutf]
                     else:
                         listindxsamplouf = np.array([], dtype=int)
@@ -558,6 +555,9 @@ def plot_population_grid(
     
     '''
     Make a corner plot of a multivariate distribution.
+
+    With ``typeannosamp='LOF'``, annotate up to ten lowest-scoring samples when
+    at least three finite samples are available.
     '''
     if typeplotback is not None:
         tdpy.configure_plot_style(typeplotback)

@@ -17,7 +17,7 @@ are one application of metamodel inference. Their variable-size populations
 can be inferred alongside shared parameters such as backgrounds and population
 hyperparameters.
 
-PCAT supports two complementary inference modes:
+PCAT supports two complementary inference modes.
 
 - inference within one model for physical, nuisance, and shared parameters
 - inference over metamodels whose candidate models can have different
@@ -58,8 +58,8 @@ simulated events, Daylan+2017 northern Galactic cap Fermi-LAT point sources,
 the observed JWST/MIRI NGC 7027 spectral fit, a stellar light curve with a
 variable number of rotating starspots, and the Roman/WFI lens's outer arc and
 compact inner counterimage, plus stellar flares, radial velocities, and transit
-times. The Roman source is one extended Gaussian; no independent point source is
-included. Time-series and spectral axes remain fixed across frames. The
+times. The Roman source is one extended Gaussian. The simulation includes no
+independent point source. Time-series and spectral axes remain fixed across frames. The
 publication-inspired simulations illustrate PCAT's sampling behavior and do not
 reproduce published posterior values.
 
@@ -156,9 +156,9 @@ The benchmark separates setup time from repeated evaluation cost. In the
 synthetic double-King case, 600 evaluations were 1.4x faster for 3 energy bins
 and 3.7x faster for 16, with maximum held-out errors of $4.8\times10^{-4}$ of
 the profile peak. That case uses two quality classes, an 81-pixel cutout, a
-0.01-degree pixel scale, and core and tail widths of two and four pixels. This
-result is configuration- and workload-dependent; it does not establish
-posterior equivalence or adequacy for observed data. Savings depend on the
+0.01-degree pixel scale, and core and tail widths of two and four pixels.
+These synthetic timings vary with configuration and workload. They do not
+establish posterior equivalence or adequacy for observed data. Savings depend on the
 energy/quality axes, source cutout size, and how often the PSF changes. The
 coefficient table grows with Cartesian grid span, so large images can have
 substantial memory and construction costs.
@@ -269,8 +269,8 @@ apply to fixed-dimensional parameters and existing catalog elements without
 changing catalog size. ``probdemc + probstud`` must be at most one. In a seeded
 8,000-sweep comparison on the bimodal target, the Student-t mixture improved
 mode switches from 5 to 17 and ESS per second from 0.2 to 1.8. On the correlated
-Gaussian target it reduced ESS per second from 3.9 to 2.2, so it is a targeted
-option rather than a universal replacement.
+Gaussian target it reduced ESS per second from 3.9 to 2.2. Its performance
+depends on the target.
 
 ### Neural birth proposals
 
@@ -337,18 +337,21 @@ result = sampling.sample(
 The training conditions must use the same observation features and catalog
 summary. A death's reverse-birth density uses the catalog after the removed
 element is omitted. The default radial-velocity efficiency benchmark uses the
-data-only callback. A flat-likelihood regression does verify recovery of a uniform zero-to-three
-element count prior with a normalized count-conditioned proposal. This checks
-one controlled target, not general efficiency or calibration. A 400-sweep
-state-conditioned smoke run on one held-out scene failed count-posterior
-agreement, with total-variation distances 0.32 from the prior and 0.75 from the
-data-informed baseline. It checks benchmark execution only, not performance.
+data-only callback. A flat-likelihood regression recovers a uniform
+zero-to-three-element count prior with a normalized count-conditioned proposal.
+This verifies posterior recovery for one target configuration. Proposal
+efficiency and posterior coverage across other targets remain unmeasured. A
+400-sweep state-conditioned smoke run on one held-out scene failed count-posterior
+agreement. Total-variation distances were 0.32 from the prior and 0.75 from the
+data-informed baseline. The run confirms that the benchmark executes.
+Comparative performance remains unmeasured.
 For a multi-scene comparison, use a fresh run ID and pass
 ``--proposal-conditioning state`` to the benchmark script.
 To test the residual-conditioned variant, add
 ``--state-feature-mode residual``. It computes the periodogram from the
-velocity residual after subtracting the current catalog model. The one-scene
-smoke run for this variant checks execution only.
+velocity residual after subtracting the current catalog model. A one-scene
+smoke run confirms that this mode executes. Comparative performance remains
+unmeasured.
 
 In a completed three-scene run with 12,000 sweeps per chain, state-conditioned
 count ESS per likelihood call was 0.029 times the prior value (95% scene-
@@ -357,9 +360,8 @@ to 1.53). Median count-posterior total variation was 0.44 from prior and 0.57
 from data-informed. The count ESS per call versus prior and the count-posterior
 agreement both failed the pre-specified criteria. Log-likelihood R-hat was
 1.35, 1.00, and 2.32 across the three scenes, exceeding 1.1 in two scenes.
-The gain check failed against both baselines. This is evidence against a gain
-for this training setup, not a broad conclusion about state-conditioned
-proposals.
+The gain check failed against both baselines for this training setup. Results
+for other state-conditioned proposals remain open.
 
 When building an RV configuration with ``retr_dictpcatrvel``, set
 ``boolmakepropelem=False`` before adding state callbacks. The helper otherwise
@@ -399,7 +401,7 @@ fixed sweep count. Relevant settings:
   sampling stops (guards against a single lucky check).
 
 With ``numbproc`` == 1, R-hat/ESS are computed by splitting the single chain
-in half. With ``numbproc`` > 1, each worker shares its running diagnostic
+in half. With ``numbproc`` > 1, each worker shares its running convergence
 statistics with the others via a ``multiprocessing.Manager``-backed
 dictionary, and R-hat/ESS are computed genuinely across all worker chains.
 Once every worker independently observes the shared stop signal, all workers
@@ -459,7 +461,7 @@ retains the sampled posterior, displays its summary, and generates both figures.
 ### Burn-in strategies
 
 `numbburn` sets the initial sweeps excluded from posterior products. PCAT offers
-two complementary burn-in controls through the same sampler pipeline:
+two complementary burn-in options through the same sampler pipeline.
 
 - `booladaptstdp=True` applies Robbins-Monro proposal-scale adaptation during
 	burn-in and freezes the scales afterward.
@@ -478,6 +480,17 @@ target-summary error, runtime, and the recorded inverse-temperature schedule.
 python examples/burn_in_strategies/burn_in_strategies.py --numbswep 1200
 ```
 
+Each execution keeps its sampler output under a distinct timestamped benchmark
+directory in the example's `data/` directory. The three comparison figures share
+that run tag and are written directly into `visuals/`. Earlier sampler results
+and figures are preserved, and repeated attempts to save the same figure refuse
+to overwrite it. Each run saves acceptance fractions, effective sample sizes,
+target-summary errors, runtimes, and relative sampler-cache paths in its
+`metrics.json` file. It also saves the sampled arrays and temperature histories
+in `posterior_arrays.npz`. The example's `load_benchmark()` function reads those
+two files for replotting without unpickling the likelihood callback. Use a new
+figure run tag when creating another layout so the earlier images stay intact.
+
 ![PCAT burn-in and proposal comparison](examples/burn_in_strategies/visuals/burn_in_posterior_comparison.png)
 
 ![PCAT burn-in performance comparison](examples/burn_in_strategies/visuals/burn_in_performance_comparison.png)
@@ -490,9 +503,9 @@ the retained-mean error from 0.97 to 0.24. The Student-t mixture also reaches
 the second mode more often, but is less efficient on the correlated Gaussian.
 These values describe short controlled simulations, not universal rankings.
 
-`typeopti="hess"` is an experimental finite-difference Hessian initializer for
-proposal scales. It is not gradient descent and does not optimize the starting
-state. PCAT currently has no gradient descent burn-in mode.
+`typeopti="hess"` estimates curvature with finite differences to initialize
+proposal scales. It leaves the starting state unchanged. PCAT has no
+gradient-based burn-in mode.
 
 ### Comparing samplers
 
@@ -503,9 +516,8 @@ likelihood calls, and evidence. A second experiment compares variable planet
 counts from zero to three. PCAT samples all counts in one run, while dynesty
 needs a separate evidence run per count. In this comparison, emcee requires one
 parameter dimension per chain and cannot make that comparison. The example reports count-posterior
-agreement, period recovery, likelihood evaluations, and wall time. These seeded
-simulations show different capabilities and costs rather than a universal
-sampler ranking.
+agreement, period recovery, likelihood evaluations, and wall time. No sampler
+leads on every metric in these two seeded simulations.
 
 Run both comparisons with:
 
@@ -545,8 +557,8 @@ the injected three planets in the recorded run. The model permits zero to five
 planets and represents each with period, semi-amplitude, eccentricity, argument
 of periastron, and mean anomaly. The simulation has seasonal gaps, two
 instrumental zero points, 1.5 m/s reported uncertainties, and 2 m/s added white
-jitter. All data are simulated, and the smoke run is a pipeline check rather
-than a convergence result.
+jitter. All data are simulated. The short smoke configuration checks that the
+pipeline runs. Use the full demonstration to assess convergence.
 
 Run the full demonstration or its short smoke configuration from the repository
 root:
@@ -618,8 +630,8 @@ likelihood.
 The example fixes the source morphology, total brightness, sky background, and
 seeing at their injected values. It omits foreground galaxy light, neighboring
 cluster members, correlated sky noise, and point-spread-function uncertainty.
-The figure therefore demonstrates parameter recovery in a controlled simulation
-rather than a forecast for Rubin Observatory or an analysis of observed data.
+This controlled simulation demonstrates parameter recovery. It makes no
+prediction about Rubin Observatory performance or real observed data.
 
 ## Installation
 

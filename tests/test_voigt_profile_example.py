@@ -43,6 +43,34 @@ def test_voigt_profile_configuration_calls_pcat_pipeline(monkeypatch):
     assert configuration["dictfitt"]["spectype"] == ["voig"]
 
 
+@pytest.mark.parametrize("verbosity", ["0", "1"])
+def test_cache_cleanup_messages_follow_tdpy_verbosity(verbosity, tmp_path, monkeypatch, capsys):
+    run_root = tmp_path / "pcat_runs" / "voigt_nomi"
+    cached_state = run_root / "data" / "outp" / "voigt_nomi"
+    frame_directory = run_root / "visuals" / "post" / "fram"
+    previous_frame = frame_directory / "frame_swep000000001.png"
+    removed_states = []
+    removed_frames = []
+
+    monkeypatch.setattr(example, "__file__", str(tmp_path / "voigt_spectral_line_catalog.py"))
+    monkeypatch.setenv("TDPY_VERBOSITY", verbosity)
+    monkeypatch.setattr(example.Path, "exists", lambda path: path == cached_state)
+    monkeypatch.setattr(example.Path, "glob", lambda path, pattern: [previous_frame] if path == frame_directory else [])
+    monkeypatch.setattr(example.Path, "unlink", lambda path: removed_frames.append(path))
+    monkeypatch.setattr(example.shutil, "rmtree", lambda path: removed_states.append(path))
+    monkeypatch.setattr(example.sampling, "sample", lambda **configuration: None)
+
+    example.run_voigt_profile_detection()
+
+    expected_output = [
+        f"Removing cached PCAT state {cached_state}...",
+        f"Removing previous frame {previous_frame}...",
+    ] if verbosity == "1" else []
+    assert capsys.readouterr().out.splitlines() == expected_output
+    assert removed_states == [cached_state]
+    assert removed_frames == [previous_frame]
+
+
 def test_spectral_example_exposes_each_profile_specific_parameter_set():
     from pcat.spectral import spectral_profile_parameters
 

@@ -17,7 +17,7 @@ from tdpy.verbosity import print
 
 import argparse
 from tdpy.cli import add_plot_arguments
-import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -37,6 +37,7 @@ from pcat.time_series import (
     retr_dictpropelemtmpl,
 )
 from pcat.plotting import animation_phase_label, animation_states
+from pcat.main import retr_pathrun
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
 RUN_NAME = EXAMPLE_PATH.name
@@ -130,14 +131,24 @@ def build_birth_proposal(edges, observed_counts, flare_profile="flarfred"):
     )
 
 
-def run_pcat(edges, template, numbswep, proposal, flare_profile="flarfred"):
+def _fresh_run_root(run_name):
+    root = Path(retr_pathrun(EXAMPLE_PATH, run_name))
+    legacy = EXAMPLE_PATH / "data" / "outp" / run_name
+    if legacy.exists() or (root / "data" / "outp").exists() or (root / "visuals").exists():
+        raise FileExistsError(f"Refusing to overwrite cached flare run {run_name}")
+    return root
+
+
+def run_pcat(edges, template, numbswep, proposal, flare_profile="flarfred", *,
+             run_name=None, number_chains=NUMBER_CHAINS):
     from pcat import sampling
 
-    run_name = RUN_NAME if flare_profile == "flarfred" else f"{RUN_NAME}_{flare_profile}"
-    path_cache = EXAMPLE_PATH / "data" / "outp" / run_name
-    if path_cache.exists():
-        print(f"Removing cached PCAT state {path_cache}...")
-        shutil.rmtree(path_cache)
+    run_name = run_name or (RUN_NAME if flare_profile == "flarfred" else f"{RUN_NAME}_{flare_profile}")
+    if Path(run_name).name != run_name or run_name in {".", ".."}:
+        raise ValueError("run_name must be a single directory name")
+    if not isinstance(number_chains, int) or number_chains < 1:
+        raise ValueError("number_chains must be a positive integer")
+    _fresh_run_root(run_name)
     limits, proposal_scales = flare_profile_configuration(flare_profile)
     return sampling.sample(
         typeexpr="fire",
@@ -160,7 +171,7 @@ def run_pcat(edges, template, numbswep, proposal, flare_profile="flarfred"):
         inittype="rand",
         typeseed=0,
         numbframanim=24,
-        numbproc=NUMBER_CHAINS,
+        numbproc=number_chains,
         probtran=0.5,
         probspmr=0.3,
         probjump=0.3,
@@ -269,26 +280,41 @@ def plot_flare_count_posterior(catalog, posterior, typefileplot, colrfore):
 
 
 def main():
+    global EXAMPLE_PATH, PATH_INPT
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=100_000)
+    parser.add_argument("--output-root", type=Path, default=EXAMPLE_PATH)
+    parser.add_argument("--run-name", help="Existing run to replot or a new flare run name.")
+    parser.add_argument("--chains", type=int, default=NUMBER_CHAINS)
     parser.add_argument("--profile", choices=tuple(FLARE_PROFILE_PARAMETERS), default="flarfred")
     parser.add_argument("--smoke", action="store_true", help="Run a short pipeline check.")
     add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--skip-sampling", action="store_true", help="Replot an existing chain.")
     arguments = parser.parse_args()
+    EXAMPLE_PATH = arguments.output_root.resolve()
+    base_name = RUN_NAME if arguments.profile == "flarfred" else f"{RUN_NAME}_{arguments.profile}"
+    run_name = arguments.run_name or (
+        base_name if arguments.skip_sampling
+        else f"{base_name}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+    )
+    run_root = Path(retr_pathrun(EXAMPLE_PATH, run_name))
+    if not arguments.skip_sampling:
+        _fresh_run_root(run_name)
+    PATH_INPT = run_root / "data" / "inpt"
     numbswep = 4000 if arguments.smoke else arguments.numbswep
 
     rng = np.random.default_rng(0)
     catalog = simulate_flare_catalog(rng)
     edges, meantime, obsvcnts, expcnts = simulate_light_curve(catalog, rng)
-    template = write_time_series_fits(PATH_INPT, edges, obsvcnts, BASELINE_COUNT_RATE)
+    template = (write_time_series_fits(PATH_INPT, edges, obsvcnts, BASELINE_COUNT_RATE)
+                if not arguments.skip_sampling else None)
     if not arguments.skip_sampling:
         run_pcat(edges, template, numbswep, build_birth_proposal(edges, obsvcnts, arguments.profile),
-                 arguments.profile)
-    run_name = RUN_NAME if arguments.profile == "flarfred" else f"{RUN_NAME}_{arguments.profile}"
+                 arguments.profile, run_name=run_name, number_chains=arguments.chains)
     posterior = load_example_posterior(
-        f"{EXAMPLE_PATH.name}/data/outp/{run_name}/gdatfinlpost"
+        f"{EXAMPLE_PATH.name}/data/outp/{run_name}/gdatfinlpost", output_root=EXAMPLE_PATH,
     )
     colrfore = configure_example_style(arguments.typeplotback)
     render_flare_posterior_frames(meantime, obsvcnts, posterior)

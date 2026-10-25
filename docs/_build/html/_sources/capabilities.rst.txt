@@ -59,10 +59,10 @@ point-spread functions, and instrument-specific response settings.
 User-supplied likelihoods
 -------------------------
 
-``typeexpr="gener"`` runs a fixed-dimensional model with an arbitrary
-user-supplied log-likelihood function. The callback receives the run state, the
-model name, and the current parameter values, and returns one scalar log
-likelihood:
+``typeexpr="gener"`` runs inference within one parameterized model using an
+arbitrary user-supplied log-likelihood function. The callback receives the run
+state, the model name, and the current parameter values, and returns one scalar
+log likelihood:
 
 .. code-block:: python
 
@@ -97,8 +97,8 @@ Poisson image likelihood
 
 Point sources, extended emission, foreground light, and gravitational lenses
 are alternative model components within the same image-data likelihood. The
-catalog may contain one or several supported element populations; it does not
-change the likelihood family. With the default ``boolcondcatl=True``, final
+catalog may contain one or several supported element populations. The
+likelihood family remains unchanged. With the default ``boolcondcatl=True``, final
 processing creates a condensed catalog from the sampled catalogs before any
 optional association with a reference catalog.
 

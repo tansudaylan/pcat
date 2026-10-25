@@ -47,7 +47,6 @@ def test_readthedocs_documents_cubic_cartesian_psf_evaluation():
         'kernevaltype="ulip"',
         'kernevaltype="bspx"',
         'typepixl="cart"',
-        "uniform error bound",
         "cubic_psf_cost.png",
         "cubic_psf_accuracy.png",
         "--bokeh",
@@ -55,10 +54,11 @@ def test_readthedocs_documents_cubic_cartesian_psf_evaluation():
     )
 
     assert all(term in source for term in required_terms)
+    assert "does not bound errors over the full profile" in " ".join(source.split())
 
     readme = (REPOSITORY_ROOT / "README.md").read_text()
     assert 'kernevaltype="bspx"' in readme
-    assert "does not establish" in readme
+    assert "not establish posterior equivalence or adequacy for observed data" in " ".join(readme.split())
     assert "adequacy for observed data" in readme
     assert "docs/_static/cubic_psf_cost.png" in readme
     assert "docs/_static/cubic_psf_accuracy.png" in readme

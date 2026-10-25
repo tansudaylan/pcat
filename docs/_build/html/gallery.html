@@ -107,6 +107,10 @@ each run with final plots enabled.</p>
 burn-in and sampling and summarizes its acceptance after burn-in.</p>
 <a class="reference internal image-reference" href="_images/proposal_ledger.png"><img alt="Acceptance fraction per move type through the run and per-move totals" src="_images/proposal_ledger.png" style="width: 100%;" />
 </a>
+<p><a class="reference internal" href="api.html#pcat.plotting.plot_sampler_trajectory" title="pcat.plotting.plot_sampler_trajectory"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_sampler_trajectory()</span></code></a> aligns proposal-level log
+acceptance terms with move type, decision, filtered proposals, and temperature.</p>
+<a class="reference internal image-reference" href="_images/sampler_trajectory.png" id="sampler-trajectory-example"><img alt="Proposal log acceptance ratios, decisions, filtered proposals, and likelihood temperature by sweep" id="sampler-trajectory-example" src="_images/sampler_trajectory.png" style="width: 100%;" />
+</a>
 <p><a class="reference internal" href="api.html#pcat.plotting.plot_acceptance_decomposition" title="pcat.plotting.plot_acceptance_decomposition"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_acceptance_decomposition()</span></code></a> splits each log
 acceptance ratio into the posterior change, the move-selection ratio, and the
 split/merge Jacobian.</p>

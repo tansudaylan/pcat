@@ -22,11 +22,15 @@ applications include `Portillo et al. (2017)
 PCAT supports arbitrary user-supplied likelihood functions, a unified Poisson
 image likelihood with point, extended, and lensed components, spectral-line
 models, time-series flare catalogs, Keplerian radial-velocity catalogs, and a
-transit-timing likelihood. It also runs fixed-dimensional models through the
-same sampler and persistence pipeline. Its transdimensional models infer the
-number and parameters of catalog elements jointly. Simulated and supplied data,
+transit-timing likelihood. Inference within one model and inference over
+metamodels use the same sampler and persistence pipeline. Transdimensional
+inference jointly samples a model index and its parameters, including the
+number and properties of catalog elements. Simulated and supplied data,
 population-level priors, posterior catalog summaries, convergence diagnostics,
 static figures, and posterior animations use a shared pipeline.
+An optional neural mixture-density proposal suggests catalog births while the
+same transdimensional sampler and Hastings correction retain the posterior
+target.
 
 .. image:: ../examples/pcat_posterior_samples.gif
    :alt: Posterior samples for Gaussian mixtures, point sources, strong lenses, and spectral lines
@@ -34,8 +38,9 @@ static figures, and posterior animations use a shared pipeline.
    :align: center
 
 The animation shows nine changing inference views, including unbinned mixtures,
-simulated gamma-ray point sources, Roman strong-lens arcs, observed JWST/MIRI
-line catalogs, radial velocities, transit timings, and stellar-flare photometry.
+simulated gamma-ray point sources, a Roman/WFI outer lensing arc and compact
+inner counterimage of one extended source, observed JWST/MIRI line catalogs,
+radial velocities, transit timings, and stellar-flare photometry.
 Time-series and histogram axes remain fixed across frames, and the GIF uses one
 shared color palette. Only the JWST/MIRI spectrum uses observed data.
 

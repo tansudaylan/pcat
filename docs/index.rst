@@ -70,9 +70,9 @@ backgrounds, population hyperparameters, or instrumental response.
 
 Within-model proposals update existing parameters. Birth and death proposals
 move between catalog dimensions while respecting detailed balance. Individual
-element labels are exchangeable, so scientific conclusions should generally use
-population summaries, condensed catalogs, associations to reference objects, or
-predictions in data space rather than raw element indices.
+element labels change as births and deaths occur, so summarize results across
+populations, form condensed catalogs, associate sources with reference objects,
+or evaluate predictions in data space.
 
 Current status
 --------------

@@ -9,6 +9,7 @@ import numpy as np
 
 from pcat import sampling
 from pcat.spectral import LINE_PROFILE_PARAMETERS, gaussian_lsf_kernel, spectral_profile_parameters
+from tdpy.verbosity import print
 
 SPECTRAL_EXAMPLE_PROFILES = tuple(profile for profile in LINE_PROFILE_PARAMETERS if profile != "edis")
 

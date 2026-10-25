@@ -133,9 +133,16 @@ def load_example_namespace(relative_path: str) -> dict[str, object]:
     return runpy.run_path(str(script), run_name=f"pcat_example_{script.stem}")
 
 
-def load_example_posterior(relative_path: str) -> object:
+def load_example_posterior(relative_path: str, *, output_root: Path | None = None) -> object:
     """Load a finalized PCAT posterior by its extensionless example-relative path."""
-    path = Path(__file__).resolve().parents[1] / "examples" / relative_path
+    relative = Path(relative_path)
+    example_directory = Path(__file__).resolve().parents[1] / "examples"
+    path = example_directory / relative
+    if len(relative.parts) >= 5 and relative.parts[1:3] == ("data", "outp"):
+        root = Path(output_root) if output_root is not None else example_directory / relative.parts[0]
+        native_root = Path(pcat_main.retr_pathrun(root, relative.parts[3]))
+        suffix = Path(*relative.parts[1:])
+        path = native_root / suffix if native_root.exists() else root / suffix
     print(f"Reading from {path}...")
     return pcat_main.readfile(str(path))
 

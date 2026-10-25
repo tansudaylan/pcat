@@ -13,7 +13,7 @@ from tdpy.verbosity import print
 
 import argparse
 from tdpy.cli import add_plot_arguments
-import shutil
+from datetime import datetime, timezone
 import sys
 import time
 from pathlib import Path
@@ -22,6 +22,7 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 from pcat.demo import configure_example_style, save_example_figure
+from pcat.main import retr_pathrun
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
 RUN_NAME = EXAMPLE_PATH.name
@@ -41,19 +42,20 @@ PHASE_LABELS = {
 }
 
 
-def run_sampler(numbswep):
+def run_sampler(numbswep, run_name=RUN_NAME):
     """Sample the simulated Voigt spectrum with all proposal types enabled."""
     from pcat import sampling
     from voigt_spectral_line_catalog import build_configurations
 
     configuration, _, _ = build_configurations()
-    # PCAT resumes from cached state, so remove it to profile a fresh run
-    path_cache = EXAMPLE_PATH / "data" / "outp" / RUN_NAME
-    if path_cache.exists():
-        print(f"Removing cached PCAT state {path_cache}...")
-        shutil.rmtree(path_cache)
+    if not run_name or Path(run_name).name != run_name or run_name in {".", ".."}:
+        raise ValueError("run_name must be a single directory name")
+    path_cache = EXAMPLE_PATH / "data" / "outp" / run_name
+    run_root = Path(retr_pathrun(EXAMPLE_PATH, run_name))
+    if path_cache.exists() or (run_root / "data" / "outp").exists() or (run_root / "visuals").exists():
+        raise FileExistsError(f"Refusing to overwrite cached profiling run {run_name}")
     configuration.update(
-        strgcnfg=RUN_NAME,
+        strgcnfg=run_name,
         # the run root equals the example folder, so PCAT writes visuals/ here
         pathbase=str(EXAMPLE_PATH),
         truenumbelempop0=2,
@@ -82,9 +84,12 @@ def run_sampler(numbswep):
     return time.perf_counter() - time_start
 
 
-def read_chain():
+def read_chain(run_name=RUN_NAME):
     """Return per-sweep proposal type, acceptance, prior filter, time, and pipeline-phase times."""
-    path = EXAMPLE_PATH / "data" / "outp" / RUN_NAME / "gdatmodi0000post.h5"
+    relative = Path("data") / "outp" / run_name / "gdatmodi0000post.h5"
+    path = Path(retr_pathrun(EXAMPLE_PATH, run_name)) / relative
+    if not path.is_file():
+        path = EXAMPLE_PATH / relative
     print(f"Reading from {path}...")
     with h5py.File(path, "r") as file:
         phase = {
@@ -159,17 +164,26 @@ def plot_time_breakdown_by_phase(chain, typefileplot):
 
 
 def main():
+    global EXAMPLE_PATH
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=20000)
+    parser.add_argument("--output-root", type=Path, default=EXAMPLE_PATH)
     add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--skip-sampling", action="store_true",
                         help="Replot from an existing chain without sampling again.")
+    parser.add_argument("--run-name", help="Existing run to replot or a new profiling run name.")
     arguments = parser.parse_args()
+    EXAMPLE_PATH = arguments.output_root.resolve()
+    run_name = arguments.run_name or (
+        RUN_NAME if arguments.skip_sampling
+        else f"{RUN_NAME}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+    )
     time_sampler = None
     if not arguments.skip_sampling:
-        time_sampler = run_sampler(arguments.numbswep)
-    chain = read_chain()
+        time_sampler = run_sampler(arguments.numbswep, run_name)
+    chain = read_chain(run_name)
     configure_example_style(arguments.typeplotback)
     plot_time_per_proposal(chain, arguments.typefileplot)
     plot_acceptance_and_cost(chain, arguments.typefileplot)

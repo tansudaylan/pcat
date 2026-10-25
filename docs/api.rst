@@ -31,9 +31,9 @@ and multiple-chain runs.
        that proposal is unsupported.
    * ``boolmakeplotinit``, ``boolmakeplotfram``, ``boolmakeplotfinlpost``, and
        ``makeanim`` for visual-output controls. Set ``boolmakeanimprop=True`` to
-       render every proposed candidate before its accept/reject decision and
-       assemble ``proposal_candidates.gif``. This expensive diagnostic is
-       disabled by default.
+         render every proposed candidate before its accept/reject decision and
+         assemble ``proposal_candidates.gif``. Recording every candidate can
+         produce a large file, so this option is disabled by default.
    * ``numbframanim`` to record that many chain-0 states for animations, one
        third spread over burn-in starting from the initial state and two
        thirds over sampling. With ``inittype="rand"`` (the default) the first
@@ -91,8 +91,8 @@ Neural transdimensional proposals
 .. py:function:: pcat.sampling.init(dictglob, **options)
 
    Lower-level initialization and execution engine. ``dictglob`` contains
-   model and data configuration overrides, while keyword options control
-   sampling, diagnostics, persistence, and plotting. Most analyses should call
+   model and data configuration overrides, while keyword options set sampling,
+   convergence reporting, persistence, and plotting. Most analyses should call
    :func:`pcat.sampling.sample`, which dispatches the experiment before
    invoking this function.
 
@@ -362,7 +362,7 @@ Posterior projections
 
    Plot marginal distributions and pairwise projections for one or more
    populations supplied either as arrays or a parameter dictionary. Optional
-   settings control triangular grids, histograms, pair plots, population
+   settings set triangular grids, histograms, pair plots, population
    labels, markers, limits, and annotations. The
    ``examples/population_grid`` workflow demonstrates the maintained interface.
 
@@ -450,8 +450,8 @@ Instrument response
    Native Cartesian sampling selects this evaluator with
    ``kernevaltype="bspx"``. The default ``"ulip"`` path remains direct.
    ``PointSpreadFunction`` radial consumers also use cached cubic radial
-   interpolation under ``bspx``. The subpixel table is trained against an
-   explicitly exact profile rather than another interpolator. HealPix is not
+   interpolation under ``bspx``. The subpixel table uses direct PSF evaluations
+   as its reference. HealPix is not
    supported by this option. Assess timing and approximation error for the
    intended workload before enabling it.
 
@@ -511,7 +511,7 @@ Catalog analysis
    any draw from ``P``, the estimated divergence is infinite.
 
    Samples and log-density outputs must be unmasked real values. Each callback
-   must return one value per draw, rather than a scalar or column matrix.
+   must return a one-dimensional array with one log-density value per draw.
 
 .. py:function:: pcat.diagnostics.estimate_mutual_information(samples, log_density_joint, log_density_x, log_density_y, split_index=1)
 
@@ -558,7 +558,9 @@ Roman lens benchmark
 mejiro lens inference
 ---------------------
 
-These functions import mejiro and lenstronomy only when called.
+These functions import mejiro and the selected imaging backend only when called.
+Current specifications record Mejiro's backend. Older specifications without
+that field default to Lenstronomy.
 
 .. py:function:: pcat.mejiro_lens.simulate_mejiro_exposure(strong_lens=None, band="F129", exposure_time=146.0, fov_arcsec=5.0, supersampling_factor=3, seed=2026)
 

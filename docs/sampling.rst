@@ -72,8 +72,8 @@ Install the optional backend with ``python -m pip install 'pcat[neural]'``.
 Fit ``NeuralElementProposal`` on simulated observation-feature vectors and
 element parameters transformed into the unit-prior cube. Each row must be one
 training pair. The proposal is a conditional mixture of truncated Gaussian
-density components plus a uniform component controlled by
-``uniform_fraction``. The uniform component gives every unit-cube element
+density components plus a uniform component whose weight is set by
+``uniform_fraction``. This uniform component gives every unit-cube element
 positive proposal density. The model is fitted before sampling and remains
 frozen during each chain.
 
@@ -140,25 +140,26 @@ When using ``retr_dictpcatrvel`` to build a radial-velocity configuration, set
 helper otherwise installs its data-only matched-filter proposal by default.
 
 A flat-likelihood regression uses a normalized count-conditioned proposal and
-checks recovery of the configured uniform count prior over zero to three
-elements. This is a controlled sampler-correctness test, not evidence of
-efficiency or calibration across astronomical models. A separate 400-sweep
-state-conditioned smoke run on one held-out scene failed count-posterior
-agreement and is only evidence that the benchmark path executes. A completed
-three-scene run with 12,000 sweeps per chain also failed the pre-specified gain
-check. State-conditioned count ESS per likelihood call was 0.029 times prior
-(95% scene-bootstrap interval 0.029 to 0.60) and 1.20 times data-informed
-(0.11 to 1.53). Median count-posterior total variation was 0.44 from prior and
-0.57 from data-informed. Neural log-likelihood R-hat was 1.35, 1.00, and 2.32
-across the scenes, exceeding 1.1 in two. This is evidence against a gain for
-this training setup, not a universal result. Run additional state-conditioned comparisons
-with a fresh ID using
+recovers the configured uniform count prior over zero to three elements. This
+establishes posterior recovery for that target. A separate 400-sweep
+state-conditioned run on one held-out scene failed to reproduce the count
+posterior. Total-variation distances were 0.32 from the prior and 0.75 from
+the data-informed baseline. This short run confirms that the benchmark path
+executes. It does not measure comparative performance. A three-scene run with
+12,000 sweeps per chain also failed the pre-specified gain check. State-conditioned
+count ESS per likelihood call was 0.029 times prior (95% scene-bootstrap
+interval 0.029 to 0.60) and 1.20 times data-informed (0.11 to 1.53).
+Median count-posterior total variation was 0.44 from prior and 0.57 from
+data-informed. Neural log-likelihood R-hat was 1.35, 1.00, and 2.32 across
+the scenes. Two exceeded 1.1. The gain check failed for both baselines with
+this training setup. Other state-conditioned proposals need separate
+comparisons. Run additional comparisons with a fresh ID using
 ``python examples/neural_proposal_efficiency/neural_proposal_efficiency.py
 --proposal-conditioning state --run-id state_conditioned_efficiency_v1``.
-The experimental ``--state-feature-mode residual`` instead computes the
-periodogram from the velocity residual after subtracting the catalog model
-represented in the current context. Its one-scene smoke run checks execution
-only; no performance result is established for this mode.
+The experimental ``--state-feature-mode residual`` computes the periodogram
+from the velocity residual after subtracting the catalog model in the current
+context. A one-scene smoke run confirms that this mode executes. Its
+performance remains unmeasured.
 
 Acceptance probability
 ----------------------
@@ -324,7 +325,7 @@ Burn-in and scale adaptation
 
 ``numbburn`` is the number of initial sweeps excluded from retained samples. If
 it is omitted, PCAT uses ten percent of ``numbswep``. Set ``numbsamp`` or
-``factthin`` to control the number of retained samples after burn-in.
+``factthin`` to choose how many retained samples to keep after burn-in.
 
 ``booladaptstdp=True`` adapts within-model proposal scales during burn-in only.
 The sampler uses a target acceptance of 0.44 for one-dimensional updates and
@@ -402,7 +403,7 @@ Early-versus-late distributions compare each sampled one-dimensional element
 feature without assigning identities to elements across birth or death moves.
 The approximate effective sample size uses a bounded autocorrelation window.
 Short runs can yield unstable estimates. A single worker has no cross-worker
-R-hat, which is shown as unavailable rather than assigned a value.
+R-hat, so PCAT omits that value.
 
 These figures show examples of the fixed-parameter ESS/R-hat summary and the
 catalog-size transitions used to inspect transdimensional mixing.
@@ -430,9 +431,9 @@ saved. With frame plotting enabled, PCAT writes the usual posterior animations
 from these retained chain states. It also writes ``proposal_activity.gif``,
 which shows cumulative proposal attempts and acceptances, and
 ``proposal_sequence.gif``, which labels each saved state frame with its sweep,
-proposal type, and acceptance result. The sequence animation uses saved frame
-intervals rather than every sweep. A rejected proposal remains represented by
-the retained chain state.
+proposal type, and acceptance result. The sequence animation uses the chosen
+frame interval and skips intervening sweeps. A rejected proposal remains
+represented by the retained chain state.
 
 Set ``boolmakeanimprop=True`` to additionally write one candidate frame for
 every sweep of worker zero. PCAT renders the frame after evaluating the
@@ -443,8 +444,9 @@ current and candidate predictions and unit-prior coordinates and reports the
 proposal type, acceptance probability, decision, log posterior values,
 proposal-density ratio, and Jacobian.
 
-Candidate frames are proposal diagnostics, not posterior samples. The option is
-off by default because it performs plotting and writes one PNG per sweep. Its
+Each frame shows a proposed state and its acceptance outcome. Only retained
+chain states enter posterior samples. The option is off by default because it
+plots and writes one PNG per sweep. Its
 runtime and storage scale linearly with ``numbswep``. Use short runs for proposal
 inspection, then disable it for production inference. The
 ``proposal_state_animation`` example produces both retained-state and

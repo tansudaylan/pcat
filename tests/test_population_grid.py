@@ -48,3 +48,50 @@ def test_population_grid_writes_corner_histogram_and_pair_plots(tmp_path, monkey
             pixels = np.asarray(image.convert('RGB'))
             assert tuple(pixels[0, 0]) == expected
             assert np.any(pixels != expected)
+
+
+def test_population_grid_lof_annotations_label_outliers(tmp_path, monkeypatch):
+    import matplotlib.axes
+    import sklearn.neighbors
+
+    generator = np.random.default_rng(4)
+    samples = generator.normal(size=(60, 2))
+    samples[-1] = [12.0, 12.0]
+    labels = np.array([f'sample_{index}' for index in range(samples.shape[0])])
+    annotations = []
+    estimators = []
+    original_annotate = matplotlib.axes.Axes.annotate
+
+    class DeterministicLocalOutlierFactor:
+        def __init__(self, n_neighbors):
+            self.n_neighbors = n_neighbors
+            estimators.append(self)
+
+        def fit(self, values):
+            self.negative_outlier_factor_ = np.arange(values.shape[0], dtype=float)
+            self.negative_outlier_factor_[-1] = -100.0
+            return self
+
+    def record_annotation(axis, text, *args, **kwargs):
+        annotations.append(text)
+        return original_annotate(axis, text, *args, **kwargs)
+
+    monkeypatch.setattr(matplotlib.axes.Axes, 'annotate', record_annotation)
+    monkeypatch.setattr(sklearn.neighbors, 'LocalOutlierFactor', DeterministicLocalOutlierFactor)
+    plot_population_grid(
+        [['x', ''], ['y', '']],
+        listpara=samples,
+        listlablsamp=[labels],
+        typeannosamp='LOF',
+        pathbase=f'{tmp_path}/',
+        strgextn='lof',
+        boolplottria=False,
+        boolplothistodim=True,
+        boolplotpair=True,
+        typeplottdim='scat',
+        typeverb=0,
+    )
+
+    assert len(annotations) == 10
+    assert 'sample_59' in annotations
+    assert estimators[0].n_neighbors == samples.shape[0] - 1

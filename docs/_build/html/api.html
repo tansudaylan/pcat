@@ -57,23 +57,30 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Public API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#sampling">Sampling</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#pcat.sampling.sample"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pcat.sampling.init"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.init()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pcat.sampling.init_image"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.init_image()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pcat.sampling.sample_parallel"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_parallel()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pcat.sampling.sample_fixed"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_fixed()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pcat.sampling.sample_fixed_chains"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_fixed_chains()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pcat.sampling.sample_posterior"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_posterior()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pcat.sampling.sample_allesfitter_pcat"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_allesfitter_pcat()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pcat.main.retr_listgdat"><code class="docutils literal notranslate"><span class="pre">pcat.main.retr_listgdat()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#neural-transdimensional-proposals">Neural transdimensional proposals</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.NeuralElementProposal"><code class="docutils literal notranslate"><span class="pre">pcat.NeuralElementProposal</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.ProposalContext"><code class="docutils literal notranslate"><span class="pre">pcat.ProposalContext</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.sampling.init"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.init()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.sampling.init_image"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.init_image()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.sampling.sample_parallel"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_parallel()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.sampling.sample_fixed"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_fixed()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.sampling.sample_fixed_chains"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_fixed_chains()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.sampling.sample_posterior"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_posterior()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.sampling.sample_allesfitter_pcat"><code class="docutils literal notranslate"><span class="pre">pcat.sampling.sample_allesfitter_pcat()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.main.retr_listgdat"><code class="docutils literal notranslate"><span class="pre">pcat.main.retr_listgdat()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#image-formation">Image formation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.image.make_gaussian_scene"><code class="docutils literal notranslate"><span class="pre">pcat.image.make_gaussian_scene()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pcat.image.forward_model_image"><code class="docutils literal notranslate"><span class="pre">pcat.image.forward_model_image()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#plotting">Plotting</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#sampler-operation">Sampler operation</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.plot_sampler_overview"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_sampler_overview()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.plot_sampler_trajectory"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_sampler_trajectory()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.plot_proposal_ledger"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_proposal_ledger()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.plot_acceptance_decomposition"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_acceptance_decomposition()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.plot_compute_budget"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_compute_budget()</span></code></a></li>
@@ -89,7 +96,9 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#convergence">Convergence</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.plot_posterior_convergence"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_posterior_convergence()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.diagnostics.gelman_rubin"><code class="docutils literal notranslate"><span class="pre">pcat.diagnostics.gelman_rubin()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.plot_gelman_rubin"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_gelman_rubin()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pcat.diagnostics.autocorrelation_time"><code class="docutils literal notranslate"><span class="pre">pcat.diagnostics.autocorrelation_time()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#pcat.plotting.plot_autocorrelation"><code class="docutils literal notranslate"><span class="pre">pcat.plotting.plot_autocorrelation()</span></code></a></li>
 </ul>
 </li>
@@ -127,6 +136,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#pcat.posterior_convergence"><code class="docutils literal notranslate"><span class="pre">pcat.posterior_convergence()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pcat.diagnostics.estimate_evidence"><code class="docutils literal notranslate"><span class="pre">pcat.diagnostics.estimate_evidence()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pcat.diagnostics.estimate_kl_divergence"><code class="docutils literal notranslate"><span class="pre">pcat.diagnostics.estimate_kl_divergence()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcat.diagnostics.estimate_mutual_information"><code class="docutils literal notranslate"><span class="pre">pcat.diagnostics.estimate_mutual_information()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#roman-lens-benchmark">Roman lens benchmark</a><ul>
@@ -180,14 +190,14 @@
 <h1>Public API<a class="headerlink" href="#public-api" title="Link to this heading"></a></h1>
 <section id="sampling">
 <h2>Sampling<a class="headerlink" href="#sampling" title="Link to this heading"></a></h2>
-<p>New integrations should use <code class="docutils literal notranslate"><span class="pre">pcat.sampling</span></code>. The implementation currently
-remains in <code class="docutils literal notranslate"><span class="pre">pcat.main</span></code> for backward compatibility while the sampler engine is
-decomposed into smaller modules.</p>
+<p>PCAT exposes its sampling interfaces in <code class="docutils literal notranslate"><span class="pre">pcat.sampling</span></code>. These functions
+support inference within one model, transdimensional inference over metamodels,
+and multiple-chain runs.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="pcat.sampling.sample">
 <span class="sig-prename descclassname"><span class="pre">pcat.sampling.</span></span><span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">configuration</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.sampling.sample" title="Link to this definition"></a></dt>
-<dd><p>Dispatch an image, catalog, or fixed-dimensional PCAT configuration, execute
-sampling and final processing, and return the final global state object.</p>
+<dd><p>Dispatch an image, catalog, or arbitrary-likelihood PCAT configuration,
+execute sampling and final processing, and return the final global state object.</p>
 <p>Frequently used configuration keys include:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">typeexpr</span></code> for the experiment family, including <code class="docutils literal notranslate"><span class="pre">&quot;chan&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;gmix&quot;</span></code>,
@@ -245,6 +255,37 @@ See <a class="reference internal" href="capabilities.html"><span class="doc">Cap
 model families.</p>
 </dd></dl>
 
+<section id="neural-transdimensional-proposals">
+<h3>Neural transdimensional proposals<a class="headerlink" href="#neural-transdimensional-proposals" title="Link to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="pcat.NeuralElementProposal">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pcat.</span></span><span class="sig-name descname"><span class="pre">NeuralElementProposal</span></span><a class="headerlink" href="#pcat.NeuralElementProposal" title="Link to this definition"></a></dt>
+<dd><p>Optional PyTorch-backed conditional mixture density for proposing catalog
+elements in prior-transformed coordinates. Install <code class="docutils literal notranslate"><span class="pre">pcat[neural]</span></code> to use
+it. Fit the model with paired observation features and unit-cube element
+parameters, then pass <code class="docutils literal notranslate"><span class="pre">proposal.callbacks()</span></code> and the matching
+<code class="docutils literal notranslate"><span class="pre">neural_proposal_features</span></code> to <a class="reference internal" href="#pcat.sampling.sample" title="pcat.sampling.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.sampling.sample()</span></code></a>. The fitted
+density includes a uniform component and is used in PCAT’s exact birth/death
+and prior-redraw jump corrections. See <a class="reference internal" href="sampling.html"><span class="doc">Sampling, proposals, and convergence</span></a> for the training
+example and assumptions.</p>
+<p><code class="docutils literal notranslate"><span class="pre">state_callbacks(retr_condition)</span></code> supplies callbacks conditioned on both
+the observation and an immutable <a class="reference internal" href="#pcat.ProposalContext" title="pcat.ProposalContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">pcat.ProposalContext</span></code></a>. The feature
+builder must use the same catalog summaries used to create training
+conditions. PCAT supplies the current catalog for births and the catalog
+with the removed element omitted for death reverse densities.</p>
+<p>The proposal can be checkpointed with <code class="docutils literal notranslate"><span class="pre">save(path)</span></code> and restored with
+<code class="docutils literal notranslate"><span class="pre">NeuralElementProposal.load(path)</span></code>. Fit it before sampling and keep its
+parameters fixed during each chain.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pcat.ProposalContext">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pcat.</span></span><span class="sig-name descname"><span class="pre">ProposalContext</span></span><a class="headerlink" href="#pcat.ProposalContext" title="Link to this definition"></a></dt>
+<dd><p>Immutable snapshot of active unit-prior element coordinates for each
+population. State-conditioned callbacks receive this object for a birth,
+death, or prior-redraw jump. Death contexts omit the element being removed.</p>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="pcat.sampling.init">
 <span class="sig-prename descclassname"><span class="pre">pcat.sampling.</span></span><span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dictglob</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.sampling.init" title="Link to this definition"></a></dt>
@@ -286,6 +327,9 @@ and persistence pipeline.</p>
 likelihood <code class="docutils literal notranslate"><span class="pre">log_likelihood(values,</span> <span class="pre">state)</span></code> and return them as arrays of
 shape (chains, samples, parameters) with their log posteriors. Extra
 options, such as <code class="docutils literal notranslate"><span class="pre">booladaptstdp</span></code>, pass through to PCAT.</p>
+<p>The returned sample axis follows the completed state’s retained draws.
+Convergence-based stopping can make it shorter than <code class="docutils literal notranslate"><span class="pre">sample_count</span></code>.
+Parameter draws and log posteriors retain the same worker and sweep order.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -302,7 +346,7 @@ posterior summary that later runs reuse.</p>
 <span class="sig-prename descclassname"><span class="pre">pcat.sampling.</span></span><span class="sig-name descname"><span class="pre">sample_allesfitter_pcat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datadir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.sampling.sample_allesfitter_pcat" title="Link to this definition"></a></dt>
 <dd><p>Run the PCAT-backed fixed-dimensional adapter for an allesfitter data
 directory. This compatibility entry point is specialized for that external
-package; new likelihood integrations should use
+package. New likelihood integrations should use
 <a class="reference internal" href="#pcat.sampling.sample_fixed" title="pcat.sampling.sample_fixed"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.sampling.sample_fixed()</span></code></a> or
 <a class="reference internal" href="#pcat.sampling.sample_fixed_chains" title="pcat.sampling.sample_fixed_chains"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.sampling.sample_fixed_chains()</span></code></a>.</p>
 </dd></dl>
@@ -315,8 +359,18 @@ family.</p>
 </dd></dl>
 
 </section>
+</section>
 <section id="image-formation">
 <h2>Image formation<a class="headerlink" href="#image-formation" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.image.make_gaussian_scene">
+<span class="sig-prename descclassname"><span class="pre">pcat.image.</span></span><span class="sig-name descname"><span class="pre">make_gaussian_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_parameters</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intrinsic_sigma_pixels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.image.make_gaussian_scene" title="Link to this definition"></a></dt>
+<dd><p>Render a two-dimensional scene from finite Gaussian sources. Each source is
+given by <code class="docutils literal notranslate"><span class="pre">(x_pixel,</span> <span class="pre">y_pixel,</span> <span class="pre">flux)</span></code> with coordinates inside the image.
+Every sampled profile is normalized to its requested in-frame flux. The
+returned array uses the caller’s flux units.</p>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="pcat.image.forward_model_image">
 <span class="sig-prename descclassname"><span class="pre">pcat.image.</span></span><span class="sig-name descname"><span class="pre">forward_model_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psf_sigma_pixels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.image.forward_model_image" title="Link to this definition"></a></dt>
@@ -338,16 +392,18 @@ source scene and background use the same image units.</p>
 <section id="plotting">
 <h2>Plotting<a class="headerlink" href="#plotting" title="Link to this heading"></a></h2>
 <p>Static figure-writing routines support PNG or PDF output and log their output
-paths. Animation and state helpers may instead return snapshots or write GIFs;
-their return values and products are described individually below. The
+paths. Animation and state helpers may instead return snapshots or write GIFs.
+Their return values and products are described individually below. The
 <a class="reference internal" href="gallery.html"><span class="doc">Plotting gallery</span></a> shows representative outputs produced by
 <code class="docutils literal notranslate"><span class="pre">docs/make_plot_gallery.py</span></code> from PCAT runs.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">state</span></code> argument of the sampler views is the final posterior object
 returned by <a class="reference internal" href="#pcat.sampling.sample" title="pcat.sampling.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.sampling.sample()</span></code></a> or read with
 <a class="reference internal" href="#pcat.main.readfile" title="pcat.main.readfile"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.main.readfile()</span></code></a> from <code class="docutils literal notranslate"><span class="pre">gdatfinlpost</span></code>. Per-proposal arrays such as
 <code class="docutils literal notranslate"><span class="pre">listpostindxproptype</span></code> hold every sweep including burn-in, ordered
-sweep-major across chains; per-sample arrays such as <code class="docutils literal notranslate"><span class="pre">listpostnumbelem</span></code> hold
+sweep-major across chains. Per-sample arrays such as <code class="docutils literal notranslate"><span class="pre">listpostnumbelem</span></code> hold
 retained samples ordered sample-major across chains.</p>
+<p>The <a class="reference internal" href="gallery.html"><span class="doc">plotting gallery</span></a> shows rendered output for every
+figure-producing routine documented below.</p>
 <section id="sampler-operation">
 <h3>Sampler operation<a class="headerlink" href="#sampler-operation" title="Link to this heading"></a></h3>
 <dl class="py function">
@@ -357,7 +413,18 @@ retained samples ordered sample-major across chains.</p>
 <code class="docutils literal notranslate"><span class="pre">state</span></code> and return a dictionary from view name to path. <a class="reference internal" href="#pcat.sampling.sample" title="pcat.sampling.sample"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.sampling.sample()</span></code></a>
 calls it for each run with final plots enabled and writes to
 <code class="docutils literal notranslate"><span class="pre">visuals/post/operation</span></code>. <code class="docutils literal notranslate"><span class="pre">catalog_options</span></code> are passed to
-<a class="reference internal" href="#pcat.plotting.plot_catalog_trace" title="pcat.plotting.plot_catalog_trace"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_catalog_trace()</span></code></a>.</p>
+<a class="reference internal" href="#pcat.plotting.plot_catalog_trace" title="pcat.plotting.plot_catalog_trace"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_catalog_trace()</span></code></a>. Its returned <code class="docutils literal notranslate"><span class="pre">sampler_trajectory</span></code>
+view aligns proposal-level acceptance terms and likelihood temperature.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.plotting.plot_sampler_trajectory">
+<span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_sampler_trajectory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typefileplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'png'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.plot_sampler_trajectory" title="Link to this definition"></a></dt>
+<dd><p>Plot the signed log-compressed log-acceptance ratio for every evaluated
+proposal, colored by move type and marked as accepted or rejected. Filtered
+proposals appear along the panel baseline. The lower panel shows the
+likelihood inverse temperature by sweep. The shaded interval marks burn-in.
+See the <a class="reference internal" href="gallery.html#sampler-trajectory-example"><span class="std std-ref">rendered sampler trajectory</span></a>.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -385,7 +452,7 @@ because of the proposal bookkeeping.</p>
 <dt class="sig sig-object py" id="pcat.plotting.plot_compute_budget">
 <span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_compute_budget</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typefileplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'png'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.plot_compute_budget" title="Link to this definition"></a></dt>
 <dd><p>Map the mean wall time [ms] of each timed sampler stage for each move type.
-Stages nest, so their times do not add to each move’s total; stages timed
+Stages nest, so their times do not add to each move’s total. Stages timed
 once per sweep, such as frame plotting, are omitted.</p>
 </dd></dl>
 
@@ -423,18 +490,44 @@ on a shared angular grid [arcsec].</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pcat.plotting.plot_lens_parameter_recovery">
-<span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_lens_parameter_recovery</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">true_parameters</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typefileplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'png'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.plot_lens_parameter_recovery" title="Link to this definition"></a></dt>
-<dd><p>Plot posterior histograms of the Einstein radius and source position
-[arcsec] with the injected values and posterior medians.</p>
+<span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_lens_parameter_recovery</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">draws</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">true_parameters</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typefileplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'png'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('Einstein</span> <span class="pre">radius</span> <span class="pre">[arcsec]',</span> <span class="pre">'Source</span> <span class="pre">x</span> <span class="pre">[arcsec]',</span> <span class="pre">'Source</span> <span class="pre">y</span> <span class="pre">[arcsec]')</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.plot_lens_parameter_recovery" title="Link to this definition"></a></dt>
+<dd><p>Plot one posterior histogram per parameter with the injected value and
+posterior median, using three panels per row. The default labels describe
+the Einstein radius and source position [arcsec]. Draws must be a nonempty
+sample-by-parameter array with one injected value and one label per column.
+Supply custom labels for other parameter sets. To plot a subset, slice the
+sample columns and injected values together and supply matching labels.
+Each column must contain finite real unmasked samples. Histograms and
+medians use the same unmasked samples independently for each parameter.
+Injected values must be finite, real, and unmasked so every recovery
+panel has a defined injected-value marker.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pcat.plotting.plot_detection_diagnostic">
-<span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_detection_diagnostic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">examples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.plot_detection_diagnostic" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_detection_diagnostic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">examples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detection_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">example_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.plot_detection_diagnostic" title="Link to this definition"></a></dt>
 <dd><p>Plot representative detector, macro-model, and residual images with the
 per-lens posterior perturber probability against injected signal-to-noise
 and Wilson intervals on the detection rates. <code class="docutils literal notranslate"><span class="pre">records</span></code> and <code class="docutils literal notranslate"><span class="pre">examples</span></code>
-come from <a class="reference internal" href="#pcat.roman_lens.simulate_population" title="pcat.roman_lens.simulate_population"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.roman_lens.simulate_population()</span></code></a>.</p>
+come from <a class="reference internal" href="#pcat.roman_lens.simulate_population" title="pcat.roman_lens.simulate_population"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.roman_lens.simulate_population()</span></code></a>.
+Each <code class="docutils literal notranslate"><span class="pre">injected_signal_to_noise</span></code> value must be an unmasked finite
+nonnegative real scalar. Zero values remain valid.
+Set <code class="docutils literal notranslate"><span class="pre">example_prefix=&quot;lens_2&quot;</span></code> to select the supplied <code class="docutils literal notranslate"><span class="pre">lens_2_data</span></code>,
+<code class="docutils literal notranslate"><span class="pre">lens_2_macro</span></code>, and <code class="docutils literal notranslate"><span class="pre">lens_2_residual</span></code> images. The default uses the first
+sorted data-image prefix. An explicit selection requires matching examples.
+Representative data, macro-model, and residual images must have matching
+nonempty two-dimensional shapes on the detector pixel grid.
+Each panel must contain at least one unmasked pixel, and all unmasked
+values must be finite and real. Color limits exclude explicitly masked
+values while the displayed images retain their masks.
+Integer residuals use floating-point color-limit arithmetic without
+changing the supplied pixel arrays.
+Posterior probabilities must be unmasked finite real scalars in [0, 1], as
+required by <a class="reference internal" href="#pcat.roman_lens.summarize_population" title="pcat.roman_lens.summarize_population"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.roman_lens.summarize_population()</span></code></a>.
+<code class="docutils literal notranslate"><span class="pre">detection_threshold</span></code> defaults to 0.5 and controls both the horizontal
+reference line and the reported detection rates and Wilson intervals.
+It is passed to the shared population summary and must be an unmasked,
+finite real scalar in [0, 1].</p>
 </dd></dl>
 
 </section>
@@ -451,17 +544,46 @@ retained samples. Returns a dictionary from figure name to path.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="pcat.diagnostics.gelman_rubin">
+<span class="sig-prename descclassname"><span class="pre">pcat.diagnostics.</span></span><span class="sig-name descname"><span class="pre">gelman_rubin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chains</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.diagnostics.gelman_rubin" title="Link to this definition"></a></dt>
+<dd><p>Compute classic, unsplit R-hat for a matrix with one row per draw and one
+column per chain, requiring at least two draws and two chains. Masked,
+nonfinite, complex, or undersized traces return <code class="docutils literal notranslate"><span class="pre">NaN</span></code>. Missing samples
+are not filled or dropped. Identical constant chains also return <code class="docutils literal notranslate"><span class="pre">NaN</span></code>.
+Separated constant chains return infinity.
+Extreme magnitudes use power-of-two normalization before variance
+calculations, shared with <a class="reference internal" href="#pcat.diagnostics.autocorrelation_time" title="pcat.diagnostics.autocorrelation_time"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.diagnostics.autocorrelation_time()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="pcat.plotting.plot_gelman_rubin">
 <span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_gelman_rubin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">statistics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typefileplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pdf'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typeplotback</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'norm'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.plot_gelman_rubin" title="Link to this definition"></a></dt>
 <dd><p>Plot the distribution of potential scale reduction factors, for example
-<code class="docutils literal notranslate"><span class="pre">state.gmrbstat</span></code> over every data bin, to <code class="docutils literal notranslate"><span class="pre">path</span> <span class="pre">+</span> <span class="pre">&quot;gmrb&quot;</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">state.gmrbstat</span></code> over every data bin, to <code class="docutils literal notranslate"><span class="pre">path</span> <span class="pre">+</span> <span class="pre">&quot;gmrb&quot;</span></code>.
+All supplied statistics must be unmasked finite real values, with at least
+one entry. Histogram bins include finite values below one and handle
+identical values without dropping entries. Undefined results are rejected
+before figure creation.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.diagnostics.autocorrelation_time">
+<span class="sig-prename descclassname"><span class="pre">pcat.diagnostics.</span></span><span class="sig-name descname"><span class="pre">autocorrelation_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typeverb</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atcrtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'maxm'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.diagnostics.autocorrelation_time" title="Link to this definition"></a></dt>
+<dd><p>Compute autocorrelation sequences and integrated times with draws on the
+first axis and parameter channels on the remaining axes. Correlations have
+the lag axis last. Times have the parameter-channel shape. Masked,
+nonfinite, complex, or constant channels return <code class="docutils literal notranslate"><span class="pre">NaN</span></code> outputs without
+discarding valid neighboring channels or filling or dropping samples.
+Extreme input magnitudes use power-of-two normalization before forming
+correlation products.
+Compatibility arguments do not change the native estimator.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="pcat.plotting.plot_autocorrelation">
 <span class="sig-prename descclassname"><span class="pre">pcat.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_autocorrelation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autocorrelation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correlation_time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strgextn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typefileplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pdf'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">typeplotback</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'norm'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.plotting.plot_autocorrelation" title="Link to this definition"></a></dt>
 <dd><p>Plot one autocorrelation sequence and its integrated time to
-<code class="docutils literal notranslate"><span class="pre">path</span> <span class="pre">+</span> <span class="pre">&quot;atcr&quot;</span> <span class="pre">+</span> <span class="pre">strgextn</span></code>. <code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.diagnostics.autocorrelation_time()</span></code>
+<code class="docutils literal notranslate"><span class="pre">path</span> <span class="pre">+</span> <span class="pre">&quot;atcr&quot;</span> <span class="pre">+</span> <span class="pre">strgextn</span></code>. <a class="reference internal" href="#pcat.diagnostics.autocorrelation_time" title="pcat.diagnostics.autocorrelation_time"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.diagnostics.autocorrelation_time()</span></code></a>
 returns both inputs.</p>
 </dd></dl>
 
@@ -523,7 +645,7 @@ and each label below its image.</p>
 <dd><p>Combine posterior frame sequences of several examples into one synchronized
 GIF, as in <code class="docutils literal notranslate"><span class="pre">examples/pcat_posterior_samples.gif</span></code>. Each
 <code class="xref py py-class docutils literal notranslate"><span class="pre">pcat.plotting.PosteriorAnimationPanel</span></code> names a label and either a
-glob <code class="docutils literal notranslate"><span class="pre">pattern</span></code> of frames or a <code class="docutils literal notranslate"><span class="pre">static_image</span></code>; a sequence whose frames do
+glob <code class="docutils literal notranslate"><span class="pre">pattern</span></code> of frames or a <code class="docutils literal notranslate"><span class="pre">static_image</span></code>. A sequence whose frames do
 not change raises an error.</p>
 </dd></dl>
 
@@ -565,7 +687,7 @@ Davenport empirical flare profiles.</p>
 <span class="sig-prename descclassname"><span class="pre">pcat.time_series.</span></span><span class="sig-name descname"><span class="pre">log_likelihood_transit_times</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">observed_times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">predicted_times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timing_errors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.time_series.log_likelihood_transit_times" title="Link to this definition"></a></dt>
 <dd><p>Return the uncertainty-weighted Gaussian log likelihood of matching
 one-dimensional transit-time arrays, up to a parameter-independent
-normalization constant. Timing errors must be positive; nonfinite predicted
+normalization constant. Timing errors must be positive. Nonfinite predicted
 times return negative infinity.</p>
 </dd></dl>
 
@@ -601,7 +723,15 @@ arguments.</p>
 <dt class="sig sig-object py" id="pcat.binomial_wilson_interval">
 <span class="sig-prename descclassname"><span class="pre">pcat.</span></span><span class="sig-name descname"><span class="pre">binomial_wilson_interval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">successes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trials</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_score</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.binomial_wilson_interval" title="Link to this definition"></a></dt>
 <dd><p>Return the lower and upper Wilson interval for a binomial fraction. Counts
-must satisfy <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;=</span> <span class="pre">successes</span> <span class="pre">&lt;=</span> <span class="pre">trials</span></code> and <code class="docutils literal notranslate"><span class="pre">z_score</span></code> must be positive.</p>
+must be unmasked integer-valued scalars satisfying
+<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;=</span> <span class="pre">successes</span> <span class="pre">&lt;=</span> <span class="pre">trials</span></code> with positive <code class="docutils literal notranslate"><span class="pre">trials</span></code>. The <code class="docutils literal notranslate"><span class="pre">z_score</span></code>
+must be an unmasked positive finite real scalar.
+Closed-form boundary limits give an exact lower endpoint of 0 for zero
+counts and an exact upper endpoint of 1 for full counts.
+Very large finite scores use reciprocal scaling to avoid overflow when
+squaring the score.
+Large trial counts use a scaled form of the same equation without
+squaring the trial count.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -634,8 +764,29 @@ evidence, relative error estimate, and importance effective sample size.</p>
 return normalized log densities and accept a matrix of draws. Samples may
 have shape <code class="docutils literal notranslate"><span class="pre">(draws,</span> <span class="pre">parameters)</span></code> or <code class="docutils literal notranslate"><span class="pre">(chains,</span> <span class="pre">draws,</span> <span class="pre">parameters)</span></code>. The
 result includes an autocorrelation-aware standard error and effective sample
-size. A finite-sample estimate is not clipped at zero; if <code class="docutils literal notranslate"><span class="pre">Q</span></code> has zero
-density at any draw from <code class="docutils literal notranslate"><span class="pre">P</span></code>, the estimated divergence is infinite.</p>
+size. Finite-sample estimates may be negative. If <code class="docutils literal notranslate"><span class="pre">Q</span></code> has zero density at
+any draw from <code class="docutils literal notranslate"><span class="pre">P</span></code>, the estimated divergence is infinite.</p>
+<p>Samples and log-density outputs must be unmasked real values. Each callback
+must return one value per draw, rather than a scalar or column matrix.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pcat.diagnostics.estimate_mutual_information">
+<span class="sig-prename descclassname"><span class="pre">pcat.diagnostics.</span></span><span class="sig-name descname"><span class="pre">estimate_mutual_information</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_density_joint</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_density_x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_density_y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.diagnostics.estimate_mutual_information" title="Link to this definition"></a></dt>
+<dd><p>Estimate <code class="docutils literal notranslate"><span class="pre">I(X;Y)</span> <span class="pre">=</span> <span class="pre">D_KL(p(X,Y)</span> <span class="pre">||</span> <span class="pre">p(X)p(Y))</span></code> in nats using draws from the
+joint distribution. Columns before <code class="docutils literal notranslate"><span class="pre">split_index</span></code> belong to <code class="docutils literal notranslate"><span class="pre">X</span></code> and the
+remaining columns belong to <code class="docutils literal notranslate"><span class="pre">Y</span></code>. Both groups must be nonempty. The sample
+shape is <code class="docutils literal notranslate"><span class="pre">(draws,</span> <span class="pre">parameters)</span></code> or <code class="docutils literal notranslate"><span class="pre">(chains,</span> <span class="pre">draws,</span> <span class="pre">parameters)</span></code>.</p>
+<p>Supply normalized joint and marginal log-density callbacks for the same
+distribution. The joint callback receives all columns. Marginal callbacks
+receive only their respective columns and must each return one value per
+row. The function does not estimate marginal densities from a sample cloud.</p>
+<p>The returned dictionary contains <code class="docutils literal notranslate"><span class="pre">mutual_information</span></code>, <code class="docutils literal notranslate"><span class="pre">standard_error</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">effective_sample_size</span></code>. Uncertainty accounts for within-chain
+autocorrelation and variation between independent chains, as in the KL
+estimator. Finite-sample estimates are not clipped at zero. Error estimates
+do not establish that the chains have converged or that supplied density
+callbacks are mutually consistent.</p>
 </dd></dl>
 
 </section>
@@ -651,8 +802,17 @@ then evaluate the zero-versus-one-perturber catalog probability.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="pcat.roman_lens.summarize_population">
 <span class="sig-prename descclassname"><span class="pre">pcat.roman_lens.</span></span><span class="sig-name descname"><span class="pre">summarize_population</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detection_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pcat.roman_lens.summarize_population" title="Link to this definition"></a></dt>
-<dd><p>Report detection, false-positive, and localization rates with Wilson
-intervals for the simulated population. Plot the population with
+<dd><p>Report true-positive, false-positive, and localization rates for the
+simulated population. Wilson intervals apply to the true-positive and
+false-positive rates. Each <code class="docutils literal notranslate"><span class="pre">posterior_one</span></code> value must be an unmasked
+finite real scalar in [0, 1]. Each <code class="docutils literal notranslate"><span class="pre">has_subhalo</span></code> value must be an unmasked
+Boolean or real scalar equal to 0 or 1. Text flags such as <code class="docutils literal notranslate"><span class="pre">&quot;False&quot;</span></code>
+are rejected. Both localization indices must be unmasked integer-valued
+scalars. Exact integer-valued reals and integer strings are accepted,
+including the <code class="docutils literal notranslate"><span class="pre">-1</span></code> null-injection sentinel. Values must fit the NumPy
+platform integer type (<code class="docutils literal notranslate"><span class="pre">np.int_</span></code>). Fractional inputs are
+rejected. <code class="docutils literal notranslate"><span class="pre">detection_threshold</span></code> must be an unmasked, finite real scalar
+in [0, 1]. Plot the population with
 <a class="reference internal" href="#pcat.plotting.plot_detection_diagnostic" title="pcat.plotting.plot_detection_diagnostic"><code class="xref py py-func docutils literal notranslate"><span class="pre">pcat.plotting.plot_detection_diagnostic()</span></code></a>.</p>
 </dd></dl>
 

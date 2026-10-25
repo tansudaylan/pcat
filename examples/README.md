@@ -76,6 +76,11 @@ The chain shown has 19 (+1/&minus;2) lines. Six lines appear in every sampled ca
 
 ## Variable number of stellar flares
 
+The example accepts `--output-root`, `--run-name`, and `--chains`. New runs use
+timestamped names and preserve earlier posteriors. The default remains 12 chains.
+Use `--skip-sampling --run-name NAME` to read an existing run without rewriting
+the simulated input files.
+
 The data are simulated: a quiescent star observed at a TESS-like 2 minute cadence for 1 day, with 3 to 6 injected fast-rise, exponential-decay (FRED) flares (`tdpy.retr_lcurmodl_flarsing`) at random peak times, amplitudes, and rise/decay time scales, and Poisson counts drawn around the expected count rate. PCAT reuses its one-dimensional element machinery for this time series. Time plays the role of the energy axis, and each flare is a native FRED component with a peak amplitude and independent rise and decay time scales on top of a fixed, flat quiescent baseline.
 
 The inference model therefore represents the injected asymmetry directly. The catalog posterior jointly constrains the number of flares, their peak times and excess counts, and their separate rise and decay scales.
@@ -135,7 +140,12 @@ Run the profile from the repository root with:
 python examples/proposal_profiling/proposal_profiling.py --numbswep 20000
 ```
 
-Use `--skip-sampling` to regenerate figures and the timing table from an existing chain.
+New sampling runs receive timestamped names and preserve earlier posteriors.
+Use `--run-name` to choose a name and `--output-root` to keep a comparison's
+chains and figures together in another directory. Existing run directories are
+protected against overwriting. Use `--skip-sampling --run-name NAME` to
+regenerate figures and the timing table from a named chain. Without a run name,
+`--skip-sampling` reads the original example chain, including its older directory layout.
 
 Most of the mean sweep time goes to bookkeeping around proposals (process, propose, parse, and save the state), not model evaluation, spectrum calculation, and likelihood together (0.075 ms per sweep in this run). A separate tertiary bookkeeping step that runs after each sweep, outside the recorded sweep total, costs 2.59 ms on average, about twice the mean sweep time, and remains a clear target for future speedups.
 
@@ -208,7 +218,8 @@ proposals.
 
 The experimental ``--state-feature-mode residual`` option recomputes the
 periodogram after subtracting the current catalog model. A one-scene smoke run
-checks execution only; performance remains untested for this feature mode.
+confirms execution. Comparative performance has not been measured for this
+feature mode.
 
 ![State-conditioned neural benchmark on three held-out scenes](neural_proposal_efficiency/visuals/state_conditioned_3scene_12k_20261018_v1_efficiency.png)
 

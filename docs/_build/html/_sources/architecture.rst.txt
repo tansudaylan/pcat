@@ -3,7 +3,7 @@ How PCAT works
 
 These schematics summarize how a run proceeds, how each data family becomes a
 likelihood, and which parts of PCAT a user can replace or tune. Regenerate them
-with ``python docs/make_diagrams.py``; the script fails if any label overflows
+with ``python docs/make_diagrams.py``. The script fails if any label overflows
 its box.
 
 Pipeline
@@ -25,7 +25,7 @@ Likelihoods
 
 The same parameter vector, fixed parameters plus a catalog of elements, feeds
 one forward model per data family. The likelihood of the predicted data and
-the prior form the posterior; the likelihood is tempered only during an
+the prior form the posterior. The likelihood is tempered only during an
 optional tempered burn-in. :doc:`likelihoods` documents each family and its
 settings.
 

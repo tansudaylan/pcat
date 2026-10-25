@@ -576,7 +576,9 @@ def test_documentation_distinguishes_posterior_and_candidate_animations():
     for source in (sampling, outputs, readme, example_guide, example_readme):
         assert "proposal_candidates.gif" in source
         assert "proposal_sequence.gif" in source
-    assert "Candidate frames are proposal diagnostics, not posterior samples" in sampling
+    sampling_text = " ".join(sampling.split())
+    assert "Each frame shows a proposed state and its acceptance outcome." in sampling_text
+    assert "Only retained chain states enter posterior samples." in sampling_text
     assert "including rejected candidates" in outputs
     assert "makeanim=True" in outputs
     assert "numbburn" in outputs
@@ -586,6 +588,22 @@ def test_documentation_distinguishes_posterior_and_candidate_animations():
     assert "examples/proposal_state_animation/visuals/post/anim/proposal_candidates.gif" in readme
     for animation_name in ("proposal_sequence.gif", "proposal_candidates.gif"):
         assert f"../examples/proposal_state_animation/visuals/post/anim/{animation_name}" in example_guide
+
+
+def test_point_source_example_accepts_isolated_output_and_seed(tmp_path, monkeypatch):
+    import runpy
+    from pcat import demo
+
+    script = REPOSITORY_ROOT / 'examples/chandra_point_source_catalog/chandra_point_source_catalog.py'
+    namespace = runpy.run_path(script)
+    calls = []
+    monkeypatch.setattr(demo, 'run_pipeline_demo', lambda output, **configuration: calls.append((output, configuration)))
+    namespace['main'](['--output-root', str(tmp_path), '--seed', '17'])
+    output, configuration = calls[0]
+    assert output == tmp_path and configuration['typeseed'] == 17
+    assert configuration['truenumbelempop0'] == 2
+    assert configuration['fittminmnumbelempop0'] == 1
+    assert configuration['fittmaxmnumbelempop0'] == 3
 
 
 def test_student_t_proposal_and_target_specific_efficiency_are_documented():
@@ -598,6 +616,63 @@ def test_student_t_proposal_and_target_specific_efficiency_are_documented():
     assert "their sum must not exceed one" in sampling
     assert "student_t" in example
     assert "ESS per second" in sampling
+
+
+def test_burn_in_benchmark_preserves_prior_runs_and_figures(tmp_path, monkeypatch):
+    import runpy
+    from types import SimpleNamespace
+    import numpy as np
+
+    namespace = runpy.run_path(REPOSITORY_ROOT / 'examples/burn_in_strategies/burn_in_strategies.py')
+    state = namespace['run_benchmark'].__globals__
+    monkeypatch.setitem(state, 'EXAMPLE_PATH', tmp_path)
+    monkeypatch.setitem(state, 'VISUAL_PATH', tmp_path / 'visuals')
+    monkeypatch.setitem(state, 'retr_pathrun', lambda base, name: str(base / name))
+    monkeypatch.setitem(state, '_effective_sample_size', lambda samples: float(len(samples)))
+    old_run = tmp_path / 'correlated_gaussian_fixed'
+    old_run.mkdir()
+    sentinel = old_run / 'retained.txt'
+    sentinel.write_text('earlier result', encoding='utf-8')
+    calls = []
+
+    def sample(**configuration):
+        directory = configuration['pathbase'] / configuration['strgcnfg']
+        directory.mkdir(parents=True)
+        calls.append(directory)
+        number = configuration['numbsamp']
+        samples = np.zeros((number, len(configuration['parameter_names'])))
+        return SimpleNamespace(listpostparagenrscalbase=samples,
+                               listpostboolpropaccp=np.ones(configuration['numbswep'], dtype=bool),
+                               listpostfacttmpr=np.ones(configuration['numbswep']))
+
+    monkeypatch.setattr(state['sampling'], 'sample_fixed', sample)
+    first = namespace['run_benchmark'](40)
+    first_runs = set(calls)
+    second = namespace['run_benchmark'](40)
+    assert len(set(calls)) == 16
+    assert first_runs.isdisjoint(calls[8:])
+    assert sentinel.read_text(encoding='utf-8') == 'earlier result'
+    for result in (first, second):
+        run_tag = next(iter(result.values()))['run_tag']
+        metrics_path = tmp_path / 'data' / f'benchmark_{run_tag}' / 'metrics.json'
+        metrics = json.loads(metrics_path.read_text(encoding='utf-8'))
+        assert metrics['run_tag'] == run_tag and len(metrics['results']) == 8
+        assert all(not Path(row['run_directory']).is_absolute() for row in metrics['results'].values())
+        restored = namespace['load_benchmark'](metrics_path.parent)
+        assert restored.keys() == result.keys()
+        for key in result:
+            np.testing.assert_array_equal(restored[key]['samples'], result[key]['samples'])
+            np.testing.assert_array_equal(restored[key]['inverse_temperature'], result[key]['inverse_temperature'])
+            assert restored[key]['elapsed_seconds'] == result[key]['elapsed_seconds']
+    first_path = namespace['plot_temperature_schedule'](first)
+    previous_bytes = first_path.read_bytes()
+    second_path = namespace['plot_temperature_schedule'](second)
+    assert first_path != second_path
+    assert first_path.read_bytes() == previous_bytes
+    assert namespace['plot_posterior_comparison'](second).is_file()
+    assert namespace['plot_performance_comparison'](second).is_file()
+    with pytest.raises(FileExistsError, match='Refusing to overwrite'):
+        namespace['plot_temperature_schedule'](first)
 
 
 def test_neural_proposal_extra_and_transdimensional_usage_are_documented():
@@ -811,7 +886,11 @@ def test_burn_in_options_and_comparison_are_documented():
     for source in (readme, sampling):
         for option in ("numbburn", "booladaptstdp", "boolburntmpr", "factburntmpr"):
             assert option in source
-        assert "gradient descent" in source.lower()
+        source_lower = " ".join(source.lower().split())
+        assert (
+            "gradient descent" in source_lower
+            or "no gradient-based burn-in mode" in source_lower
+        )
     assert "listpostfacttmpr" in sampling
     assert "listpostfacttmpr" in outputs
     assert "burn_in_strategies" in examples

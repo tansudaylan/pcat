@@ -53,6 +53,7 @@
 <li class="toctree-l1"><a class="reference internal" href="likelihoods.html">Likelihood configurations</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Sampling, proposals, and convergence</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#proposal-types">Proposal types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#neural-element-proposals">Neural element proposals</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#acceptance-probability">Acceptance probability</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#tuning-proposals">Tuning proposals</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#burn-in-and-scale-adaptation">Burn-in and scale adaptation</a></li>
@@ -93,82 +94,102 @@
              
   <section id="sampling-proposals-and-convergence">
 <h1>Sampling, proposals, and convergence<a class="headerlink" href="#sampling-proposals-and-convergence" title="Link to this heading"></a></h1>
-<p>PCAT uses one Metropolis-Hastings sampler for fixed-dimensional models and
-transdimensional catalogs. A sweep selects a proposal, evaluates its candidate
-state, and accepts or rejects that candidate. The realized proposal type,
+<p>PCAT uses one Metropolis-Hastings sampler for inference within one model or over
+a metamodel. A sweep selects a proposal, evaluates its candidate state, and
+accepts or rejects that candidate. The realized proposal type,
 acceptance probability, and accept/reject result are recorded for every sweep.</p>
 <section id="proposal-types">
 <h2>Proposal types<a class="headerlink" href="#proposal-types" title="Link to this heading"></a></h2>
-<table class="docutils align-default" id="id1">
-<caption><span class="caption-text">PCAT proposal families</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
-<colgroup>
-<col style="width: 18.0%" />
-<col style="width: 38.0%" />
-<col style="width: 44.0%" />
-</colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Type</p></th>
-<th class="head"><p>State change</p></th>
-<th class="head"><p>Main settings</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>Within-model</p></td>
-<td><p>Updates existing parameters without changing the number of elements.
-It is the only proposal used by default for fixed-dimensional models.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">stdvpropbase</span></code> and <code class="docutils literal notranslate"><span class="pre">stdvpropelemfire</span></code> set unit-coordinate step
-scales. <code class="docutils literal notranslate"><span class="pre">booladaptstdp=True</span></code> adapts these scales during burn-in.
-<code class="docutils literal notranslate"><span class="pre">probdemc</span></code> mixes in differential-evolution steps and <code class="docutils literal notranslate"><span class="pre">probstud</span></code>
-mixes in factorized Student-t(5) steps; both default to zero and their
-probabilities must sum to at most one.</p></td>
-</tr>
-<tr class="row-odd"><td><p>Birth</p></td>
-<td><p>Adds an element drawn from its prior or a configured data-informed
-proposal.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">probtran</span></code> enables transdimensional proposals. <code class="docutils literal notranslate"><span class="pre">factpriodoff</span></code>
-changes the prior penalty for added dimensions.</p></td>
-</tr>
-<tr class="row-even"><td><p>Death</p></td>
-<td><p>Removes one existing element.</p></td>
-<td><p>Selected with birth moves under <code class="docutils literal notranslate"><span class="pre">probtran</span></code> and the model-count
-bounds.</p></td>
-</tr>
-<tr class="row-odd"><td><p>Split</p></td>
-<td><p>Replaces an element with two elements when the element model supports
-reversible-jump splitting.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">probspmr</span></code> controls the split/merge share. <code class="docutils literal notranslate"><span class="pre">radispmr</span></code> sets the
-scale of the split displacement.</p></td>
-</tr>
-<tr class="row-even"><td><p>Merge</p></td>
-<td><p>Replaces a pair of elements with one element when the model supports
-reversible-jump merging.</p></td>
-<td><p>Uses the reverse-proposal probability and Jacobian correction of the
-split move.</p></td>
-</tr>
-<tr class="row-odd"><td><p>Jump</p></td>
-<td><p>Redraws one existing element from its prior without changing catalog
-size.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">probjump</span></code> controls the probability of attempting this move when a
-catalog is nonempty.</p></td>
-</tr>
-<tr class="row-even"><td><p>Differential evolution</p></td>
-<td><p>Proposes a symmetric within-model step from the difference between two
-states in a bounded history.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">probdemc</span></code> enables the move, <code class="docutils literal notranslate"><span class="pre">numbdemchist</span></code> sets the history length,
-and <code class="docutils literal notranslate"><span class="pre">factdemcgamma</span></code> optionally sets its jump scale.</p></td>
-</tr>
-<tr class="row-odd"><td><p>Correlated block</p></td>
-<td><p>Updates a configured set of fixed-dimensional parameters together.</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">probpropblock</span></code> sets its mixture probability;
-<code class="docutils literal notranslate"><span class="pre">proposal_correlation</span></code> and <code class="docutils literal notranslate"><span class="pre">proposal_blocks</span></code> define its shape, and
-<code class="docutils literal notranslate"><span class="pre">factpropblock</span></code> scales its step.</p></td>
-</tr>
-</tbody>
-</table>
 <p>Birth, death, split, and merge moves are available only for supported element
 models. Their direction can be restricted by the model’s minimum and maximum
 element counts. If split or merge is unsupported, set <code class="docutils literal notranslate"><span class="pre">probspmr=0</span></code>. At a
 catalog boundary, PCAT selects only moves that can leave the current state.</p>
+</section>
+<section id="neural-element-proposals">
+<h2>Neural element proposals<a class="headerlink" href="#neural-element-proposals" title="Link to this heading"></a></h2>
+<p>Install the optional backend with <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'pcat[neural]'</span></code>.
+Fit <code class="docutils literal notranslate"><span class="pre">NeuralElementProposal</span></code> on simulated observation-feature vectors and
+element parameters transformed into the unit-prior cube. Each row must be one
+training pair. The proposal is a conditional mixture of truncated Gaussian
+density components plus a uniform component controlled by
+<code class="docutils literal notranslate"><span class="pre">uniform_fraction</span></code>. The uniform component gives every unit-cube element
+positive proposal density. The model is fitted before sampling and remains
+frozen during each chain.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pcat</span><span class="w"> </span><span class="kn">import</span> <span class="n">NeuralElementProposal</span><span class="p">,</span> <span class="n">sampling</span>
+
+<span class="n">proposal</span> <span class="o">=</span> <span class="n">NeuralElementProposal</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+  <span class="n">condition_features</span><span class="p">,</span>
+  <span class="n">simulated_unit_elements</span><span class="p">,</span>
+  <span class="n">uniform_fraction</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+  <span class="n">seed</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">proposal</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"analysis/neural_birth.pt"</span><span class="p">)</span>
+<span class="n">proposal</span> <span class="o">=</span> <span class="n">NeuralElementProposal</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"analysis/neural_birth.pt"</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">sampling</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span>
+  <span class="o">**</span><span class="n">run_configuration</span><span class="p">,</span>
+  <span class="n">neural_proposal_features</span><span class="o">=</span><span class="n">features_for_this_run</span><span class="p">,</span>
+  <span class="n">probtran</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>
+  <span class="o">**</span><span class="n">proposal</span><span class="o">.</span><span class="n">callbacks</span><span class="p">(),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The run feature vector must use the same fixed-length representation and
+preprocessing as the training conditions. <code class="docutils literal notranslate"><span class="pre">callbacks()</span></code> supplies both the
+draw and normalized log-density functions required by PCAT. The Metropolis–
+Hastings correction includes that density for births, deaths, and prior-redraw
+jumps, along with the catalog-count prior, move-selection probabilities, and
+any Jacobian. The neural proposal does not replace the catalog sampler. Validate the fitted
+density and posterior recovery on held-out simulations before interpreting
+efficiency comparisons.</p>
+<p>For a proposal that depends on the live catalog, use <code class="docutils literal notranslate"><span class="pre">state_callbacks()</span></code> and
+provide a feature builder that combines the observation features with summaries
+of the supplied immutable <code class="docutils literal notranslate"><span class="pre">ProposalContext</span></code>. Training conditions must be
+computed from simulated catalog states using that same feature builder. PCAT
+evaluates a birth density at the current catalog and a death’s reverse-birth
+density at the catalog after removing the proposed element. Existing
+<code class="docutils literal notranslate"><span class="pre">callbacks()</span></code> retain their data-only behavior.</p>
+<p>The feature builder must be a module-level, picklable callable because PCAT
+serializes run configurations for worker chains. For example, if the run
+configuration contains a fixed observation feature vector, the builder can
+append the current element counts:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">retr_proposal_condition</span><span class="p">(</span><span class="n">gdat</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span>
+    <span class="n">gdat</span><span class="o">.</span><span class="n">neural_proposal_features</span><span class="p">,</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">element_counts</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+  <span class="p">))</span>
+
+<span class="n">state_callbacks</span> <span class="o">=</span> <span class="n">proposal</span><span class="o">.</span><span class="n">state_callbacks</span><span class="p">(</span><span class="n">retr_proposal_condition</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For prior-redraw jumps, the selected element is omitted from the context for
+both the proposed and reverse density evaluations. The default radial-velocity
+efficiency benchmark uses the data-only callbacks. Its short state-conditioned
+smoke run is described below.</p>
+<p>When using <code class="docutils literal notranslate"><span class="pre">retr_dictpcatrvel</span></code> to build a radial-velocity configuration, set
+<code class="docutils literal notranslate"><span class="pre">boolmakepropelem=False</span></code> before adding state-conditioned callbacks. That
+helper otherwise installs its data-only matched-filter proposal by default.</p>
+<p>A flat-likelihood regression uses a normalized count-conditioned proposal and
+checks recovery of the configured uniform count prior over zero to three
+elements. This is a controlled sampler-correctness test, not evidence of
+efficiency or calibration across astronomical models. A separate 400-sweep
+state-conditioned smoke run on one held-out scene failed count-posterior
+agreement and is only evidence that the benchmark path executes. A completed
+three-scene run with 12,000 sweeps per chain also failed the pre-specified gain
+check. State-conditioned count ESS per likelihood call was 0.029 times prior
+(95% scene-bootstrap interval 0.029 to 0.60) and 1.20 times data-informed
+(0.11 to 1.53). Median count-posterior total variation was 0.44 from prior and
+0.57 from data-informed. Neural log-likelihood R-hat was 1.35, 1.00, and 2.32
+across the scenes, exceeding 1.1 in two. This is evidence against a gain for
+this training setup, not a universal result. Run additional state-conditioned comparisons
+with a fresh ID using
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">examples/neural_proposal_efficiency/neural_proposal_efficiency.py</span>
+<span class="pre">--proposal-conditioning</span> <span class="pre">state</span> <span class="pre">--run-id</span> <span class="pre">state_conditioned_efficiency_v1</span></code>.
+The experimental <code class="docutils literal notranslate"><span class="pre">--state-feature-mode</span> <span class="pre">residual</span></code> instead computes the
+periodogram from the velocity residual after subtracting the catalog model
+represented in the current context. Its one-scene smoke run checks execution
+only; no performance result is established for this mode.</p>
 </section>
 <section id="acceptance-probability">
 <h2>Acceptance probability<a class="headerlink" href="#acceptance-probability" title="Link to this heading"></a></h2>
@@ -186,14 +207,14 @@ ratio is</p>
 proposal, and factorized Student-t proposal are symmetric in unit-prior
 coordinates, so their proposal-density ratio is one and their Jacobian is one.
 The Student-t(5) increments are scaled to have the same variance as the
-Gaussian step; they are independent by coordinate, including when a correlated
+Gaussian step. They are independent by coordinate, including when a correlated
 block is selected. Birth and death moves include model-count and
 auxiliary-parameter corrections. Split and merge moves include reverse-move
 probabilities and the split Jacobian. For a prior-redraw jump, the element
 prior cancels its proposal density, leaving the likelihood change plus any
 Hastings correction for a data-informed draw.</p>
-<table class="docutils align-default" id="id2">
-<caption><span class="caption-text">Proposal-specific terms added to the posterior change</span><a class="headerlink" href="#id2" title="Link to this table"></a></caption>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Proposal-specific terms added to the posterior change</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
 <colgroup>
 <col style="width: 24.0%" />
 <col style="width: 76.0%" />
@@ -205,7 +226,8 @@ Hastings correction for a data-informed draw.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p>Within-model Gaussian, differential-evolution, Student-t, or correlated block</p></td>
-<td><p>None for these symmetric proposals; their log proposal ratio and Jacobian are zero.</p></td>
+<td><p>None for these symmetric proposals. Their log proposal ratio and
+Jacobian are zero.</p></td>
 </tr>
 <tr class="row-odd"><td><p>Birth or death</p></td>
 <td><p>Model-count and move-selection corrections, the auxiliary element draw density when it does not cancel against the prior, and any configured dimension-prior offset such as <code class="docutils literal notranslate"><span class="pre">factpriodoff</span></code>.</p></td>
@@ -217,7 +239,9 @@ Hastings correction for a data-informed draw.</p>
 <td><p>Reverse split-selection probability, reverse auxiliary-variable density, and the negative split Jacobian, <code class="docutils literal notranslate"><span class="pre">-log(F)</span></code> for the transform below.</p></td>
 </tr>
 <tr class="row-even"><td><p>Prior-redraw jump</p></td>
-<td><p>The element prior cancels its proposal density. The remaining target change is the likelihood ratio; a data-informed draw adds its Hastings correction.</p></td>
+<td><p>The element prior cancels its proposal density. The remaining target
+change is the likelihood ratio. A data-informed draw adds its Hastings
+correction.</p></td>
 </tr>
 </tbody>
 </table>
@@ -228,22 +252,21 @@ accept/reject flags in <code class="docutils literal notranslate"><span class="p
 Final processing also computes <code class="docutils literal notranslate"><span class="pre">accpwith</span></code>, <code class="docutils literal notranslate"><span class="pre">accpbrth</span></code>,
 <code class="docutils literal notranslate"><span class="pre">accpdeth</span></code>, <code class="docutils literal notranslate"><span class="pre">accpsplt</span></code>, <code class="docutils literal notranslate"><span class="pre">accpmerg</span></code>, and <code class="docutils literal notranslate"><span class="pre">accpjump</span></code> from attempted moves.
 An acceptance fraction is accepted attempts divided by attempts of that type.
-It is a tuning diagnostic, not a target to maximize. Very small steps can have
-high acceptance but explore the posterior slowly; large steps can have low
+Use it to tune the sampler, not as a target to maximize. Very small steps can have
+high acceptance but explore the posterior slowly. Large steps can have low
 acceptance and waste evaluations.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">proposal_state_animation</span></code> example uses the native split/merge moves to
 show the Jacobian correction. Splitting parent amplitude <code class="docutils literal notranslate"><span class="pre">F</span></code> into <code class="docutils literal notranslate"><span class="pre">r</span> <span class="pre">F</span></code> and
-<code class="docutils literal notranslate"><span class="pre">(1-r)</span> <span class="pre">F</span></code> contributes <code class="docutils literal notranslate"><span class="pre">log|J|</span> <span class="pre">=</span> <span class="pre">log(F)</span></code>; merging applies its negative. The
-figure compares each valid proposal’s acceptance probability with a
-counterfactual that holds every other term fixed and removes only <code class="docutils literal notranslate"><span class="pre">log|J|</span></code>.
-This is an algebraic comparison of the same proposals, not a second MCMC chain.</p>
-<figure class="align-center" id="id3">
+<code class="docutils literal notranslate"><span class="pre">(1-r)</span> <span class="pre">F</span></code> contributes <code class="docutils literal notranslate"><span class="pre">log|J|</span> <span class="pre">=</span> <span class="pre">log(F)</span></code>. Merging applies its negative. The
+figure compares each valid proposal’s acceptance probability while holding
+every other term fixed and removing only <code class="docutils literal notranslate"><span class="pre">log|J|</span></code>. It uses the same proposals.</p>
+<figure class="align-center" id="id2">
 <a class="reference internal image-reference" href="_images/jacobian_acceptance_effect.png"><img alt="Split and merge acceptance changes from the Jacobian correction" src="_images/jacobian_acceptance_effect.png" style="width: 100%;" />
 </a>
 <figcaption>
 <p><span class="caption-text">The left panel shows the log-acceptance-ratio shift for each valid proposal.
 The right panel shows the acceptance curve with the median Jacobian from the
-run and its no-Jacobian counterfactual.</span><a class="headerlink" href="#id3" title="Link to this image"></a></p>
+run and its no-Jacobian counterfactual.</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
 </figcaption>
 </figure>
 <p>The same example also animates jumps between equivalent one-parameter models
@@ -256,23 +279,23 @@ biased occupancy of the two parameterizations.</p>
 <a class="reference internal image-reference" href="_images/parameterization_jacobian_jumps.gif"><img alt="Same-dimensional jumps between linear and logarithmic amplitude parameterizations, with and without the Jacobian" src="_images/parameterization_jacobian_jumps.gif" style="width: 100%;" />
 </a>
 </figure>
-<figure class="align-center" id="id4">
+<figure class="align-center" id="id3">
 <a class="reference internal image-reference" href="_images/proposal_acceptance_and_cost.png"><img alt="Acceptance fraction and computational cost by PCAT proposal type" src="_images/proposal_acceptance_and_cost.png" style="width: 100%;" />
 </a>
 <figcaption>
 <p><span class="caption-text">Proposal acceptance and evaluation cost in the simulated Voigt-line
-profiling example. The values depend on the model, prior, data, and tuning.</span><a class="headerlink" href="#id4" title="Link to this image"></a></p>
+profiling example. The values depend on the model, prior, data, and tuning.</span><a class="headerlink" href="#id3" title="Link to this image"></a></p>
 </figcaption>
 </figure>
 <p>The proposal ledger illustrates the observed acceptance of each move type
 through burn-in and sampling. Within-model subproposals such as Student-t and
 differential-evolution are pooled under the within-model identifier.</p>
-<figure class="align-center" id="id5">
+<figure class="align-center" id="id4">
 <a class="reference internal image-reference" href="_images/proposal_ledger.png"><img alt="Proposal attempts and acceptance by move type through burn-in and sampling" src="_images/proposal_ledger.png" style="width: 100%;" />
 </a>
 <figcaption>
 <p><span class="caption-text">Acceptance fractions are tuning summaries for diagnosing movement, not
-objectives to maximize.</span><a class="headerlink" href="#id5" title="Link to this image"></a></p>
+objectives to maximize.</span><a class="headerlink" href="#id4" title="Link to this image"></a></p>
 </figcaption>
 </figure>
 </section>
@@ -281,13 +304,14 @@ objectives to maximize.</span><a class="headerlink" href="#id5" title="Link to t
 <p><code class="docutils literal notranslate"><span class="pre">probtran</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">0.4</span></code> when a variable population is present and
 <code class="docutils literal notranslate"><span class="pre">0</span></code> otherwise. It is the probability of selecting a transdimensional move.
 <code class="docutils literal notranslate"><span class="pre">probspmr</span></code> defaults to half of <code class="docutils literal notranslate"><span class="pre">probtran</span></code> and sets the fraction of eligible
-transdimensional selections allocated to split and merge; the remaining share
+transdimensional selections allocated to split and merge. The remaining share
 is allocated to birth and death. Split and merge directions are balanced when
 both are available, with boundary restrictions taking precedence.
 <code class="docutils literal notranslate"><span class="pre">probjump</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">0.1</span></code> when a variable population is present, so
 catalog runs propose within-model, birth, death, split, merge, and jump moves
 by default. <code class="docutils literal notranslate"><span class="pre">probdemc</span></code> and <code class="docutils literal notranslate"><span class="pre">probstud</span></code> default to zero and must be enabled
-explicitly; their sum must not exceed one. <code class="docutils literal notranslate"><span class="pre">probstud</span></code> mixes in independent,
+explicitly. Both probabilities default to zero, and their sum must not exceed one.
+<code class="docutils literal notranslate"><span class="pre">probstud</span></code> mixes in independent,
 variance-matched Student-t(5) increments for the currently selected
 within-model parameters. The heavy tails can help traverse separated modes but
 can reduce efficiency on a locally Gaussian target. In a seeded 8,000-sweep
@@ -318,8 +342,8 @@ type, trace behavior, model-count transitions, residuals, and effective sample
 sizes. Adjust <code class="docutils literal notranslate"><span class="pre">stdvpropbase</span></code> or <code class="docutils literal notranslate"><span class="pre">stdvpropelemfire</span></code> when within-model moves
 are too large or too small. Set <code class="docutils literal notranslate"><span class="pre">probpropblock</span></code> only when correlated blocks
 and a matching <code class="docutils literal notranslate"><span class="pre">proposal_correlation</span></code> are configured. <code class="docutils literal notranslate"><span class="pre">probdemc</span></code> uses at
-least ten history states before it can propose; its default history length is
-1,000 and its default scale is <code class="docutils literal notranslate"><span class="pre">2.38</span> <span class="pre">/</span> <span class="pre">sqrt(2</span> <span class="pre">d)</span></code> for a <code class="docutils literal notranslate"><span class="pre">d</span></code>-parameter
+least ten history states before it can propose. Its default history length is
+1,000, and its default scale is <code class="docutils literal notranslate"><span class="pre">2.38</span> <span class="pre">/</span> <span class="pre">sqrt(2</span> <span class="pre">d)</span></code> for a <code class="docutils literal notranslate"><span class="pre">d</span></code>-parameter
 update.</p>
 </section>
 <section id="burn-in-and-scale-adaptation">
@@ -342,10 +366,9 @@ is not tempered. <code class="docutils literal notranslate"><span class="pre">be
 <code class="docutils literal notranslate"><span class="pre">listpostfacttmpr</span></code> and equals one before retained sampling begins. Tempering
 can help a chain cross likelihood barriers during burn-in, but it can reduce
 local effective sample size and does not guarantee discovery of every mode.</p>
-<p><code class="docutils literal notranslate"><span class="pre">typeopti=&quot;hess&quot;</span></code> is a separate experimental option. It estimates local
-finite-difference curvature to initialize proposal scales; it does not perform
-gradient descent or optimize the initial state. PCAT currently provides no
-gradient-descent burn-in mode.</p>
+<p><code class="docutils literal notranslate"><span class="pre">typeopti=&quot;hess&quot;</span></code> estimates local finite-difference curvature to initialize
+proposal scales. It does not take gradient steps or optimize the initial state.
+PCAT currently offers no gradient descent burn-in mode.</p>
 <p>The <a class="reference internal" href="examples.html"><span class="doc">Examples</span></a> page links <code class="docutils literal notranslate"><span class="pre">burn_in_strategies</span></code>, which compares fixed,
 adaptive, tempered plus adaptive burn-in, and adaptive Student-t within-model
 proposals on correlated and bimodal simulated targets. The figures below show
@@ -389,8 +412,8 @@ For transdimensional populations, the figures show catalog-size traces,
 autocorrelation, occupancy, within-worker size transitions, and mixing metrics.
 Early-versus-late distributions compare each sampled one-dimensional element
 feature without assigning identities to elements across birth or death moves.
-The approximate effective sample size uses a bounded autocorrelation window;
-short runs can yield unstable estimates. A single worker has no cross-worker
+The approximate effective sample size uses a bounded autocorrelation window.
+Short runs can yield unstable estimates. A single worker has no cross-worker
 R-hat, which is shown as unavailable rather than assigned a value.</p>
 <p>These figures show examples of the fixed-parameter ESS/R-hat summary and the
 catalog-size transitions used to inspect transdimensional mixing.</p>

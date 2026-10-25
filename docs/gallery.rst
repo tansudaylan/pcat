@@ -13,7 +13,7 @@ Sampler operation
 -----------------
 
 :func:`pcat.plotting.plot_sampler_overview` writes every view in this section
-and the next that applies to a run; :func:`pcat.sampling.sample` calls it for
+and the next that applies to a run. :func:`pcat.sampling.sample` calls it for
 each run with final plots enabled.
 
 :func:`pcat.plotting.plot_proposal_ledger` follows each move type through
@@ -147,8 +147,8 @@ shared stretch, here lensed arcs from six posterior draws.
    :alt: Lensed arcs of posterior draws
    :width: 50%
 
-:func:`pcat.plotting.make_posterior_animation_collage` combines the posterior
-frames of several examples; ``examples/run_all_examples.py`` writes the
+:func:`pcat.plotting.make_posterior_animation_collage` combines posterior
+frames from several examples. ``examples/run_all_examples.py`` writes the
 collage shown on the :doc:`index` page.
 
 .. image:: ../examples/pcat_posterior_samples.gif

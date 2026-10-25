@@ -6,7 +6,7 @@ Requirements
 
 PCAT requires Python 3.10 or newer. Its runtime dependencies are declared in
 ``pyproject.toml`` and include NumPy, SciPy, Astropy, Matplotlib, h5py, Numba,
-Pillow, Seaborn, cloudpickle, Chalcedon, and TDpy. The optional ``examples``
+Pillow, Seaborn, scikit-learn, cloudpickle, Chalcedon, and TDpy. The optional ``examples``
 dependency group adds Astroquery, Ephesos, dynesty, and emcee.
 Ephesos supplies the transit-time forward model used by the TTV posterior
 example. Astroquery downloads the public JWST spectrum from MAST. The other
@@ -94,6 +94,6 @@ Configuration principles
 * Keep true-model settings in ``dicttrue`` and fitted-model settings in
   ``dictfitt`` when defaults would otherwise overwrite the intended model.
 * Use ``boolmakeplotinit``, ``boolmakeplotfram``, ``boolmakeplotfinlpost``, and
-  ``makeanim`` to control visual products.
-* Treat short smoke configurations as integration checks rather than evidence
-  for scientific claims.
+   ``makeanim`` to choose which plots and animations PCAT writes.
+* Use short smoke configurations to catch setup and runtime errors. Base
+   scientific claims on full runs with adequate convergence.

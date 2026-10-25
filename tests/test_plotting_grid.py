@@ -4,6 +4,13 @@ import pytest
 from pcat.plotting import plot_grid
 
 
+def test_posterior_grid_is_owned_by_pcat():
+    import tdpy
+
+    assert plot_grid.__module__ == "pcat.plotting"
+    assert not hasattr(tdpy, "plot_grid")
+
+
 def test_plot_grid_writes_one_and_three_parameter_pdfs(tmp_path):
     random = np.random.default_rng(123)
     one_path = plot_grid(

@@ -27,6 +27,64 @@ Pipeline demonstrations
    mid-transit times. Its notebook reads the timing posterior and displays
    the sampled model against the simulated timing residuals.
 
+``neural_proposal_efficiency``
+   Compares prior, data-informed, and neural birth proposals on held-out
+   simulated radial-velocity scenes. Its companion notebook runs the actual
+   training-and-sampling smoke path and displays the saved summary and figure.
+   Two short chains per method check execution without establishing convergence
+   or an efficiency advantage. Choose a fresh ``--run-id`` for each comparison.
+   Existing benchmark artifacts or configured chain outputs are rejected before
+   training starts. Use one process per run ID.
+   Constant count traces receive zero ESS as a conservative reporting convention,
+   including short traces. Missing or nonfinite samples raise an error. These
+   conventions do not establish convergence.
+   Efficiency ratios with a zero-ESS baseline are undefined and reported as
+   ``NaN``. Their bootstrap intervals remain undefined and provide no evidence
+   of an efficiency gain.
+   Bootstrap inputs must be one-dimensional with a positive integer draw
+   budget. Empty, masked, or nonfinite comparisons remain undefined without
+   resampling or dropping scenes. Valid seeded intervals are unchanged.
+   Identical constant count chains have undefined R-hat (``NaN``), while
+   disagreeing constant chains retain infinite R-hat. Efficiency claims require
+   finite per-scene R-hat values for both compared methods.
+   Gain claims require unmasked, aligned per-scene evidence and ordered
+   two-bound confidence intervals. Missing or malformed inputs fail the claim
+   check without filling values, dropping scenes, or changing the thresholds.
+   ESS and R-hat share missing-sample validation. R-hat checks each full input
+   trace before selecting equal-length tails, preserving the existing
+   calculation for valid unequal-length chains.
+   Aggregate count R-hat medians retain every validation scene. An undefined
+   per-scene value leaves the corresponding median undefined, without dropping
+   scenes or emitting an all-undefined median warning.
+   Per-chain call counts must be positive integers, elapsed times finite and
+   positive, and training overhead finite and nonnegative. Missing overhead
+   retains its zero default. Invalid costs are rejected before aggregation,
+   and integer call totals are accumulated without truncation.
+   This benchmark's capped ESS estimates must be finite real scalars from zero
+   through the corresponding trace length. Invalid per-chain metadata is
+   rejected without clipping or recomputation, preserving valid fractional and
+   zero effective sample sizes.
+   Per-chain birth/death acceptance rates must be finite real scalars in
+   [0, 1]. Invalid rates are rejected before averaging, preserving valid zero
+   and unit rates and the existing per-chain mean without clipping.
+   Saved HDF5 acceptance flags are validated before Boolean conversion, with
+   aligned flattened traces and finite nonnegative integer proposal IDs.
+   Nonbinary flags or invalid IDs raise an error. Other integer move IDs and
+   the existing zero-attempt rate convention remain supported.
+   Posterior counts and log-likelihood samples must form nonempty aligned
+   flattened traces. Counts are checked for integrality and the supported range
+   before conversion, and likelihood samples must be finite real values.
+   Invalid traces fail before metric calculation, without repairing or rewriting
+   the saved HDF5 output.
+   Count distributions retain equal per-chain weights. Input vectors must
+   cover all supported counts, contain finite real probabilities in [0, 1],
+   and sum to one within floating-point rounding tolerance. Missing or invalid
+   distributions are rejected without clipping or renormalization.
+
+   .. code-block:: bash
+
+      python examples/neural_proposal_efficiency/neural_proposal_efficiency.py --smoke --run-id fresh_comparison
+
 ``simulated_hst_strong_lens``
    Hubble Space Telescope Wide Field Camera 3 image inference with lens mass,
    foreground lens-galaxy emission, source emission, and lensed emission.
@@ -63,14 +121,14 @@ transit-timing series, the public JWST/MIRI spectrum, the proposal profiler,
 and the sampler comparison. The JWST example may retrieve public MAST data.
 Notebooks requiring authenticated services or interactive inspection are excluded.
 
-Eight changing inference views are synchronized around the PCAT logo. Each data
+Eight changing inference views are synchronized with a static PCAT logo panel. Each data
 view starts from a nonempty catalog, follows burn-in for the first third of the
 animation, and shows posterior samples for the remaining two thirds. The views
 show an unbinned Gaussian mixture, point sources in a simulated Daylan et al.
 (2017) Fermi-LAT northern Galactic cap, the observed JWST/MIRI NGC 7027
 spectral fit, a stellar light curve with a variable number of rotating
 starspots, simulated Roman/WFI lensed arcs, stellar flares, radial velocities,
-and transit times. Time-series and spectral axes remain fixed; the GIF uses one
+and transit times. Time-series and spectral axes remain fixed. The GIF uses one
 shared color palette.
 
 .. image:: ../examples/pcat_posterior_samples.gif
@@ -139,7 +197,7 @@ Publication and instrument examples
    using periodogram-weighted birth and jump proposals with Hastings
    corrections. Instrument offsets are marginalized analytically and stellar
    jitter on a 24-point log grid. All data are simulated. The full run uses
-   100,000 sweeps; ``--smoke`` runs 1,000 sweeps as a pipeline check, not a
+   100,000 sweeps. ``--smoke`` runs 1,000 sweeps as a pipeline check, not a
    convergence test.
 
    .. code-block:: bash
@@ -311,9 +369,8 @@ Analysis utilities
 
 ``image_forward_model``
    Deterministic image formation with a normalized Gaussian point-spread
-   function and uniform background. The explicitly simulated two-source scene
-   is not observed data; this utility does not run inference or draw Poisson
-   noise.
+   function and uniform background. This utility uses a simulated two-source
+   scene. It performs no inference and draws no Poisson noise.
 
    .. code-block:: bash
 
@@ -333,7 +390,7 @@ Analysis utilities
 
       python examples/kl_divergence_gaussian/kl_divergence_gaussian.py --smoke
 
-   .. image:: ../examples/kl_divergence_gaussian/visuals/kl_divergence_gaussian.png
+   .. image:: _static/kl_divergence_gaussian.png
       :alt: PCAT posterior-to-prior KL estimate and the analytic Gaussian value
       :width: 640px
       :align: center
@@ -391,7 +448,7 @@ Analysis utilities
    steps as well as birth, death, split, merge, and jump moves before the
    accept/reject decision. The run reports proposal counts and is long enough to
    exercise the complete categorical move roster. The retained-state animation
-   starts after burn-in; the candidate animation includes all 120 sweeps.
+   starts after burn-in. The candidate animation includes all 120 sweeps.
 
    .. code-block:: bash
 
@@ -441,8 +498,30 @@ Analysis utilities
       :width: 640px
       :align: center
 
-Scientific interpretation
--------------------------
+``kl_divergence_gaussian``
+   PCAT samples a two-parameter conjugate Gaussian posterior. The same chains
+   estimate posterior-to-prior KL divergence and mutual information between
+   posterior parameters, using their normalized analytic densities. Each
+   estimate is compared with its exact Gaussian value. The example reports
+   autocorrelation-aware Monte Carlo standard errors rather than claiming
+   that agreement alone demonstrates convergence.
+
+   .. code-block:: bash
+
+      python examples/kl_divergence_gaussian/kl_divergence_gaussian.py
+
+   .. image:: ../examples/kl_divergence_gaussian/visuals/kl_divergence_gaussian.png
+      :alt: Sampled posterior-to-prior KL with Monte Carlo uncertainty and its exact Gaussian value
+      :width: 640px
+      :align: center
+
+   .. image:: _static/mutual_information_gaussian.png
+      :alt: Sampled posterior mutual information with Monte Carlo uncertainty and its exact Gaussian value
+      :width: 640px
+      :align: center
+
+Interpreting examples
+---------------------
 
 Generated examples are deterministic pipeline demonstrations unless their
 README explicitly states otherwise. Synthetic outputs validate computation and
