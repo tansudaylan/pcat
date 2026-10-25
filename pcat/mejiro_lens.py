@@ -124,11 +124,8 @@ def _image_model(specification: dict) -> object:
             "multi_plane": len(set(specification["lens_redshift_list"])) > 1,
         }
         if lens_model_kwargs["multi_plane"]:
-            from astropy.cosmology import Cosmology
-
             if not specification.get("cosmology_yaml"):
                 raise ValueError("Multi-plane Mejiro specifications must preserve their cosmology_yaml")
-            lens_model_kwargs["cosmo"] = Cosmology.from_format(specification["cosmology_yaml"], format="yaml")
     elif backend == "lenstronomy":
         from lenstronomy.Data.pixel_grid import PixelGrid
         from lenstronomy.Data.psf import PSF
@@ -147,6 +144,10 @@ def _image_model(specification: dict) -> object:
            tuple(specification["lens_model_list"]), tuple(specification["source_light_model_list"]),
            tuple(specification["lens_light_model_list"]))
     if key not in _IMAGE_MODELS:
+        if backend == "chalcedon" and lens_model_kwargs["multi_plane"]:
+            from astropy.cosmology import Cosmology
+
+            lens_model_kwargs["cosmo"] = Cosmology.from_format(specification["cosmology_yaml"], format="yaml")
         _IMAGE_MODELS[key] = ImageModel(
             PixelGrid(**specification["kwargs_pixel"]),
             PSF(psf_type="GAUSSIAN", fwhm=specification["psf_fwhm"]),

@@ -69,7 +69,13 @@ def test_native_mejiro_bridge_preserves_single_and_multiple_lens_planes(monkeypa
     for group in ("kwargs_lens", "kwargs_source", "kwargs_lens_light"):
         assert specification[group] == original[group]
     if halo_redshift != 0.3:
+        from astropy.cosmology import Cosmology
+
         renderer_before = mejiro_lens_module._image_model(specification)
+        with monkeypatch.context() as cached:
+            cached.setattr(Cosmology, "from_format", lambda *args, **kwargs: pytest.fail(
+                "Cached likelihood evaluations must reuse the restored cosmology"))
+            np.testing.assert_allclose(render_mejiro_counts(specification, parameters), expected)
         specification["cosmology_yaml"] = Planck18.clone(Om0=0.4, name="comparison").to_format("yaml")
         assert mejiro_lens_module._image_model(specification) is not renderer_before
         specification.pop("cosmology_yaml")
