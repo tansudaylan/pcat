@@ -437,6 +437,72 @@ def test_voigt_smoke_configuration_enables_animation(monkeypatch):
     assert captured["dictfitt"]["typeelem"] == ["lghtlinevoig"]
 
 
+def test_daylan2017_frames_sum_real_counts_and_preserve_earlier_files(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from pcat import plotting
+
+    path = REPOSITORY_ROOT / "examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py"
+    module = load_example_module("pcat_fermi_frame_check", path)
+    module.OUTPUT_ROOT = tmp_path
+    directory = tmp_path / "visuals"
+    directory.mkdir()
+    old = directory / "fermi_ngpc_sources_swep000000001.png"
+    old.write_bytes(b"preserved older frame")
+    counts = np.arange(24, dtype=float).reshape(3, 4, 2) + 20
+    original = counts.copy()
+    sources = {"flux": np.array([1.0, 2.0]), "xpos": np.array([0.01, -0.02]),
+               "ypos": np.array([0.02, 0.01])}
+    snapshots = [{"cntrswep": 1, "dictelem": [sources]},
+                 {"cntrswep": 2, "dictelem": [{**sources, "xpos": sources["xpos"] + 0.05}]}]
+    monkeypatch.setattr(plotting, "animation_states", lambda *args, **kwargs: snapshots)
+    monkeypatch.setattr(plotting, "animation_phase_label", lambda snapshot, **kwargs: "Posterior sample")
+    import matplotlib.pyplot as plt
+    save = plt.Figure.savefig
+    scales = []
+
+    def check_and_save(figure, destination, **kwargs):
+        image = figure.axes[0].images[0]
+        np.testing.assert_array_equal(image.get_array(), np.arcsinh(counts.sum(axis=(0, 2)).reshape(2, 2)).T)
+        scales.append(image.get_clim())
+        return save(figure, destination, **kwargs)
+
+    monkeypatch.setattr(plt.Figure, "savefig", check_and_save)
+    paths = module.render_source_frames(SimpleNamespace(cntpdata=counts), provenance={"kind": "test fixture"})
+    assert len(paths) == 2 and all(path.is_file() for path in paths)
+    assert scales[0] == scales[1]
+    assert scales[0] == (np.arcsinh(counts.sum(axis=(0, 2)).min()), np.arcsinh(counts.sum(axis=(0, 2)).max()))
+    assert old.read_bytes() == b"preserved older frame"
+    np.testing.assert_array_equal(counts, original)
+    import hashlib
+    import json
+    manifest = json.loads(next(directory.glob("fermi_ngpc_frames_*.json")).read_text())
+    assert manifest["native_frame_paths"] == [path.name for path in paths]
+    assert manifest["native_frame_sha256"] == {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
+    assert manifest["count_cube_shape"] == [3, 4, 2]
+    assert manifest["projected_count_max"] == counts.sum(axis=(0, 2)).max()
+    assert manifest["native_run_provenance"] == {"kind": "test fixture"}
+    panel = plotting.PosteriorAnimationPanel(
+        "Fermi fixture", "visuals/fermi_ngpc_sources_*_swep*.png",
+        manifest_pattern="visuals/fermi_ngpc_frames_*.json", manifest_key="native")
+    assert plotting._animation_frame_paths(panel, tmp_path) == paths
+
+
+def test_daylan2017_reproduction_uses_new_run_names_without_deleting_cache(tmp_path, monkeypatch):
+    from pcat import sampling
+    path = REPOSITORY_ROOT / "examples/daylan+2017_fermi_point_sources/daylan+2017_fermi_point_sources.py"
+    module = load_example_module("pcat_fermi_fresh_runs", path)
+    module.OUTPUT_ROOT = tmp_path
+    old = tmp_path / "earlier_posterior"
+    old.write_bytes(b"preserved scientific result")
+    calls = []
+    monkeypatch.setattr(sampling, "sample", lambda **kwargs: calls.append(kwargs) or kwargs)
+    module.run_reproduction(smoke=True)
+    module.run_reproduction(smoke=True)
+    assert calls[0]["strgcnfg"] != calls[1]["strgcnfg"]
+    assert all(call["strgcnfg"].startswith(module.RUN_NAME + "_") for call in calls)
+    assert old.read_bytes() == b"preserved scientific result"
+
+
 def test_daylan2017_configuration_preserves_published_mock_assumptions():
     script_path = (
         REPOSITORY_ROOT / "examples" / "daylan+2017_fermi_point_sources"

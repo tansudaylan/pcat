@@ -68,6 +68,12 @@ reproduce published posterior values.
 The flare sequence uses 720 simulated photometric bins. PCAT allows the catalog
 to contain zero sources while the observed counts remain in the data.
 
+The Fermi panel sums the saved mock counts over three energy bins and two event
+classes, with one fixed asinh scale across all frames. Its displayed sequence
+comes from worker 0 of a 40-source simulation with 10,000 sweeps and 1,000
+retained catalogs. Frame and source-state hashes identify that replay. A merged
+final state is absent, and this short chain carries no convergence claim.
+
 ## Every proposed state
 
 Enable `makeanim=True` for a retained-state animation and
@@ -117,12 +123,13 @@ The reverse merge uses the negative term. The example records the unclipped log
 acceptance ratio, then compares each prior-valid proposal with a counterfactual
 that omits only the Jacobian. Its acceptance curves show how the median
 split/merge Jacobians change acceptance probability at a fixed remainder of the
-ratio. The counterfactual is not a second chain.
+ratio. For each prior-valid proposal, the counterfactual removes only its
+Jacobian term from the saved log acceptance ratio.
 
-In the displayed short native run, the prior-valid split and merge probabilities
-are mostly clipped near zero or one, so their mean probabilities barely change
-in the counterfactual. The controlled parameterization example below isolates
-the acceptance effect without relying on those saturated ratios.
+In the displayed short native run, prior-valid split and merge probabilities
+are mostly clipped near zero or one, so removing the Jacobian barely changes
+their mean. A separate one-parameter example shows its effect without these
+saturated probabilities.
 
 ![Split and merge acceptance with and without the Jacobian](examples/proposal_state_animation/visuals/jacobian_acceptance_effect_20261025_181311.png)
 
@@ -167,11 +174,13 @@ evaluates the direct radial profile at each source-to-pixel separation. The
 selected-pixel calculation contracts the fitted coefficients, and they are
 rebuilt when the PSF changes.
 
-Sampled accuracy failures, negative or nonfinite polynomial values, and
-positions outside the table use direct evaluation. The sampled check uses
-0.1 percent of the profile peak and is not a uniform or likelihood-error
-bound. No flux renormalization or clipping is applied. Compare results with
-the direct path for the intended image, PSF width, and signal level.
+At the default relative tolerance, cells with errors above 0.1 percent of the
+profile peak at the interleaved validation phases use direct evaluation. PCAT
+also evaluates directly outside the table and whenever the polynomial gives
+negative or nonfinite values. These sampled phases do not bound errors between
+them or their effect on a fitted posterior. Predicted values pass through
+without clipping or flux renormalization. Compare results with the direct path
+for the intended image, PSF width, and signal level.
 
 The benchmark separates setup time from repeated evaluation cost. In the
 synthetic double-King case, 600 evaluations were 1.4x faster for 3 energy bins
@@ -217,8 +226,6 @@ shared parameters that remain in every candidate. For example, a source-catalog
 metamodel can vary the number of sources while also sampling background
 normalizations and population hyperparameters. Catalog inference is one
 transdimensional application of this more general approach.
-Each model fixes its parameter dimension. A metamodel combines candidate models
-with different dimensions.
 
 ## Custom likelihoods
 

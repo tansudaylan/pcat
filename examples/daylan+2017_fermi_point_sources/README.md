@@ -39,6 +39,19 @@ Reproducing the real-data figures requires the Pass 7 inputs and analysis
 templates, which are not included here. The quick run is intended for
 visualization rather than convergence claims.
 
+Every new execution uses a timestamped run name and preserves earlier caches.
+The retained `--fresh` option also preserves previous results. Source-display
+frames receive unique timestamps, a fixed scale spanning the actual summed
+count range, and a manifest containing the frame hashes and count-cube hash.
+They sum all three energy bins and both event classes. Their legend stays
+outside the image, and stage labels use padded monospaced text.
+
+The current README collage uses a saved 40-source worker-0 sequence with 24
+frames, 10,000 sweeps, and 1,000 retained catalogs. The projected counts span
+77 to 1,583 per pixel. The frame manifest records hashes for the paired initial
+and worker state files and explicitly identifies the absent merged final state.
+This replay preserves the simulation and does not establish convergence.
+
 The notebook runs PCAT, loads that run's finalized posterior and injected
 catalog, then creates figure-style comparisons from the actual samples. Its
 three figures follow the data/model/residual, source-flux distribution, and

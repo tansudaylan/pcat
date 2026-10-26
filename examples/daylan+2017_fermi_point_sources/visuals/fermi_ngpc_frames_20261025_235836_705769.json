@@ -1,0 +1,84 @@
+{
+  "input_kind": "simulated Daylan+2017 northern Galactic cap mock",
+  "projection": "sum over every energy bin and event class",
+  "count_cube_shape": [
+    3,
+    2304,
+    2
+  ],
+  "count_cube_sha256": "4eedf25c6fb033a99e0f58c5b438204690ef81999cf1b9dfb83e72ebec1de4d0",
+  "projected_count_min": 77.0,
+  "projected_count_max": 1583.0,
+  "display_limits_asinh": [
+    5.03699476537355,
+    8.060224340205936
+  ],
+  "native_frame_paths": [
+    "fermi_ngpc_sources_20261025_235836_705769_swep000000000.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000000416.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000000833.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000001249.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000001666.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000002083.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000002499.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000002916.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000003333.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000003777.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000004221.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000004666.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000005110.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000005555.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000005999.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000006443.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000006888.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000007332.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000007777.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000008221.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000008665.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000009110.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000009554.png",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000009999.png"
+  ],
+  "native_frame_sha256": {
+    "fermi_ngpc_sources_20261025_235836_705769_swep000000000.png": "9a1ddc4005bdc98b56c30f5ca280a629128e07ec7a7b5abcfe2d815c0186168d",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000000416.png": "dd700e699185fa1b3023b4ab06ad16ae270caed74601440f8dd2e9ebab2f17c4",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000000833.png": "acec5b23f8b48fc37761aa9fdfd7e7670c66c5b0e906f6c86ce4a320f543e627",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000001249.png": "0b49231fe3e2998b139ef5ce3ba3129ad95dd4ce27a2b0bb3a1d9029da4a3d29",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000001666.png": "0bb9df62fdc1d00f74e835e4a03073aefd6c70837cdbfd018994c08d003b4041",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000002083.png": "c6ffb080a73555cb5451feefe6714e339eda623a16dbf967b9c57c702b046c91",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000002499.png": "38bc079255cd4e59e8aefb9b5388c2b9ea2a916412d17f57d33edcc50cab5d27",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000002916.png": "3b7c402b0e478558edf7b5ff396836dcd9524b91be5664508e5bce5460ef9734",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000003333.png": "fb9c5a90b51bc43486e20369ed53fde4e22f9e21eb3d1cfd977e9e4e9eea7937",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000003777.png": "e2d77f156d463524ea59970f0280671e8019e3b9f880b3ae208d110cd82f7435",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000004221.png": "0586935b20de8605618680dcd4c2537ae4b52319825fe59f6f97e3298fc58e31",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000004666.png": "d197b20536387bd264779e6c4367cdbfba4cebdc747abd37bb0a9b4f678f4675",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000005110.png": "a175ee1a31f888df0e32bc196ac0cff6c413d506dd070c662a8db57a844a2d77",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000005555.png": "3971c3a78321eb5abbb84f5166b38ab916588e78a6f8b76ee768616f01f73b48",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000005999.png": "4415b7540d0ced27e5d11971702418e3f1a66b0476e1bbfeb6286b1e067a3fad",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000006443.png": "3670a6aafb057f36ec152cff7d37e9ee1b65ebde8aad741116d1864294e772a4",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000006888.png": "e3e6ff4c32ee43f0600e9e22f713a51c9a645863d6538a22013b63e8353cb63a",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000007332.png": "d41abbb3a91f2c44d090b18941e63129f8e35d5591b3c41765acb4ecab08078e",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000007777.png": "ddcddcea2a29e49a27722ae1096412cacad0d59808fa4521522b6fee2b99e747",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000008221.png": "00352e94960ff173345d3837519313dc8e3269622ccc0ef167c86886613cb8f6",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000008665.png": "e046a457209066c19676a0bf99e3e06c1e369db1b0c7f77a4c1f9e1f24740007",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000009110.png": "2638fc32c73cd1f075613bea0daaa9d446865863e9c6809c8c3d09f58e8e68cf",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000009554.png": "f42c39be4e946512e5cfaa4e8bec7845709628cacb96296dd491df2d96b1ba10",
+    "fermi_ngpc_sources_20261025_235836_705769_swep000009999.png": "27c4714bfc352df47a895b0519fe3abaf876cd7bbaf8b5f5f4a020ad2b58d6bc"
+  },
+  "source_sha256": "ac6fbb41c9fe6920770a6c8a9c666922796ac3d93c8014d5bd61dd36724ca9a2",
+  "native_run_provenance": {
+    "kind": "saved worker-0 chain replay; merged final state absent",
+    "source_sha256": {
+      "pcat_runs/daylan2017_mock/data/outp/daylan2017_mock/gdatinit.p": "3df7fe7b041fd1e3b1870d283e86d7f4daeb04d2aea44b1e16729347270278e8",
+      "pcat_runs/daylan2017_mock/data/outp/daylan2017_mock/gdatinit.h5": "42b17e9f633958ee4dd83095ea9371966ae53300c85d8212d21b58199c31e61e",
+      "pcat_runs/daylan2017_mock/data/outp/daylan2017_mock/gdatmodi0000post.p": "c05ecde960566b7ca66778a16da88162eed730f1d6fa1dd7ae9e8ce4157b1644",
+      "pcat_runs/daylan2017_mock/data/outp/daylan2017_mock/gdatmodi0000post.h5": "40918e1e98db5d1a2b0fb7888d605bfca6b0d6e112e732f6d9eb1d56dbdaf00b"
+    },
+    "worker_sweeps": 10000,
+    "burn_in_sweeps": 3333,
+    "retained_catalogs": 1000,
+    "true_source_counts": [
+      40
+    ]
+  }
+}

@@ -471,7 +471,9 @@ POSTERIOR_ANIMATION_PANELS = (
     ),
     PosteriorAnimationPanel(
         "Daylan+2017 NG cap mock | Fermi-LAT point sources",
-        "daylan+2017_fermi_point_sources/visuals/fermi_ngpc_sources_swep*.png",
+        "daylan+2017_fermi_point_sources/visuals/fermi_ngpc_sources_*_swep*.png",
+        manifest_pattern="daylan+2017_fermi_point_sources/visuals/fermi_ngpc_frames_*.json",
+        manifest_key="native",
     ),
     PosteriorAnimationPanel(
         "JWST/MIRI NGC 7027 | observed spectral fit",
