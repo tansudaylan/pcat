@@ -5,7 +5,8 @@ PCAT separates data likelihoods from transdimensional catalog postprocessing.
 Every transdimensional model produces a catalog at each retained draw. With
 the default ``boolcondcatl=True``, final processing builds a condensed posterior
 catalog by associating recurrent supported spatial elements across those
-sampled catalogs. Optional matching to an external reference catalog follows
+sampled catalogs. Associations stay within each population, even when elements
+from different populations overlap spatially. Optional matching to an external reference catalog follows
 this summary. Condensation and either kind of association are posterior
 products, not likelihoods. Set ``boolcondcatl=False`` to skip condensation.
 The current implementation does not spatially condense one-dimensional line,

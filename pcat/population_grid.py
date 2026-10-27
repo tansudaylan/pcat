@@ -42,8 +42,8 @@ def _plot_population_diag(k, axis, listpara, truepara, listparadraw, boolplotqua
     
     # draw the provided reference values
     if listparadraw is not None:
-        for m in indxdraw:
-            axis.axvline(listparadraw[m][k], color='r', lw=3)
+        for reference_draw in listparadraw:
+            axis.axvline(reference_draw[k], color='r', lw=3)
     
     if boolplotquan:
         quan = np.empty(4)
@@ -305,8 +305,8 @@ def _plot_population_pair(k, l, axis, limt, listmantlabl, listpara, truepara, li
     
     # draw the provided reference values
     if listparadraw is not None:
-        for m in indxdraw:
-            axis.scatter(listparadraw[m][l], listparadraw[m][k], color='r', marker='x', s=350)
+        for reference_draw in listparadraw:
+            axis.scatter(reference_draw[l], reference_draw[k], color='r', marker='x', s=350)
     
     if listvectplot is not None:
         for vectplot in listvectplot:
@@ -342,8 +342,8 @@ def _plot_population_histodim(listmantlabl, listpara, k, listlablparatotl, indxp
                                                                edgecolor=matplotlib.colors.to_rgba(listcolrpopl[u], 1.0), lw=2, ls='-', \
                                                                facecolor=matplotlib.colors.to_rgba(listcolrpopl[u], 0.2))
     if listparadraw is not None:
-        for m in indxdraw:
-            axis.axvline(listparadraw[m][k], color='orange', lw=3)
+        for reference_draw in listparadraw:
+            axis.axvline(reference_draw[k], color='orange', lw=3)
     
     axis.set_xlabel(listlablparatotl[k])
     if lablnumbsamp is not None:
@@ -770,10 +770,6 @@ def plot_population_grid(
                 print('Will reset its scaling to linear (self)...')
                 listscalpara[k] = 'self'
 
-    if listparadraw is not None:
-        numbdraw = len(listparadraw)
-        indxdraw = np.arange(numbdraw)
-    
     # list of Booleans for each parameter indicating whether it is a list of integers
     boolinte = [[] for k in indxpara]
     for k in indxpara:
@@ -1121,6 +1117,7 @@ def plot_population_grid(
                 print('Lower and upper limits of the bins are the same for %s. Grid plot can fail, but skipping the exception...' % listlablpara[k][0])
     else:
         bins = None
+        midpgrid = None
 
     # list of Booleans indicating whether a parameter is good to plot
     boolparagood = np.ones(numbpara, dtype=bool)

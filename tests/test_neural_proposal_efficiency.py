@@ -859,9 +859,13 @@ def test_paired_efficiency_plot_labels_state_conditioning(monkeypatch, tmp_path)
     monkeypatch.setattr(plt, "subplots", capture_figure)
     monkeypatch.setattr(BENCHMARK, "VISUALS_PATH", tmp_path)
 
-    path = BENCHMARK._plot_results(runs, "state_mode")
+    path = BENCHMARK._plot_results(runs, "state_mode", typefileplot="pdf")
 
     assert path.is_file()
+    assert path.suffix == ".pdf"
+    assert path.read_bytes().startswith(b"%PDF-")
     assert figures[0]._suptitle.get_text() == "State-conditioned, catalog summary neural proposal comparison"
     assert figures[0].axes[0].get_title() == "Count ESS/call\nvs prior"
+    assert figures[0].axes[0].title.get_fontsize() == pytest.approx(12.0)
+    assert figures[0].axes[0].xaxis.label.get_fontsize() == pytest.approx(12.0)
     assert set(plt.get_fignums()) == figures_before

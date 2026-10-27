@@ -2,7 +2,6 @@
 
 from tdpy.verbosity import print
 
-import argparse
 from pathlib import Path
 
 import matplotlib
@@ -13,7 +12,8 @@ from matplotlib.patches import Circle
 from scipy.special import logsumexp
 
 from pcat.fixed import sample_fixed_chains
-from pcat.plotting import animation_phase_label, animation_states
+from pcat.demo import run_example_cli
+from pcat.plotting import animation_phase_labels, animation_states
 
 
 ROOT = Path(__file__).resolve().parent
@@ -45,7 +45,8 @@ def render_posterior_frames(events, snapshots, output_directory: Path):
         print(f"Removing previous frame {old_frame}...")
         old_frame.unlink()
     paths = []
-    for snapshot in snapshots:
+    phase_labels = animation_phase_labels(snapshots)
+    for snapshot, phase_label in zip(snapshots, phase_labels):
         sweep = snapshot["cntrswep"]
         centers = np.asarray(snapshot["paragenrscalfull"][:4]).reshape(2, 2)
         figure, axis = plt.subplots(figsize=(5.2, 5.2), facecolor="white")
@@ -56,8 +57,8 @@ def render_posterior_frames(events, snapshots, output_directory: Path):
             axis.add_patch(Circle(center, 2 * WIDTH, fill=False, linewidth=2.0,
                                   edgecolor=color, label=f"PCAT component {index + 1}"))
             axis.plot(*center, marker="x", markersize=9, color=color)
-        axis.set(xlim=(-2, 2), ylim=(-2, 2), xlabel="Event coordinate x", ylabel="Event coordinate y",
-                 title=animation_phase_label(snapshot))
+        axis.set(xlim=(-2, 2), ylim=(-2, 2), xlabel="Event coordinate x", ylabel="Event coordinate y")
+        axis.set_title(phase_label, loc="left", fontfamily="monospace")
         axis.set_aspect("equal")
         axis.grid(False)
         axis.legend(loc="upper left", framealpha=1.0, facecolor="white", edgecolor="black", fontsize=8)
@@ -90,10 +91,7 @@ def run_example(smoke: bool = False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--smoke", action="store_true")
-    options = parser.parse_args()
-    run_example(smoke=options.smoke)
+    run_example_cli(run_example, description=__doc__)
 
 
 if __name__ == "__main__":

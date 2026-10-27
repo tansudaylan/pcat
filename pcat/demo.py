@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import argparse
+
+from tdpy.cli import add_smoke_argument
 from tdpy.verbosity import print
 
 import os
@@ -130,6 +133,14 @@ def run_example_script(relative_path: str, *arguments: str) -> None:
         runpy.run_path(str(script), run_name="__main__")
     finally:
         sys.argv = previous_arguments
+
+
+def run_example_cli(run_example, *, description: str | None = None) -> None:
+    """Run an example with the shared ``--smoke`` command-line option."""
+    parser = argparse.ArgumentParser(description=description)
+    add_smoke_argument(parser)
+    arguments = parser.parse_args()
+    run_example(smoke=arguments.smoke)
 
 
 def load_example_namespace(relative_path: str) -> dict[str, object]:

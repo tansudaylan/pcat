@@ -80,7 +80,16 @@ Neural transdimensional proposals
 
    The proposal can be checkpointed with ``save(path)`` and restored with
    ``NeuralElementProposal.load(path)``. Fit it before sampling and keep its
-   parameters fixed during each chain.
+   parameters fixed during each chain. Checkpoint file messages are silent by
+   default and shown when ``TDPY_VERBOSITY`` is positive.
+
+   ``log_prob_batch(condition, unit_elements)`` scores multiple elements for
+   one feature vector. A one-dimensional condition is evaluated once by the
+   network, and its mixture parameters are broadcast across the element rows.
+   A two-dimensional condition matrix retains independent per-row evaluation.
+   This reduces repeated network work for shared-condition batches without
+   changing proposal normalization or the birth/death corrections. It does not
+   by itself establish faster chain mixing or higher effective sample size.
 
 .. py:class:: pcat.ProposalContext
 
@@ -190,6 +199,13 @@ retained samples ordered sample-major across chains.
 
 The :doc:`plotting gallery <gallery>` shows rendered output for every
 figure-producing routine documented below.
+
+.. py:function:: pcat.plotting.animation_phase_labels(snapshots)
+
+   Return phase labels padded for the largest sweep in the complete snapshot
+   sequence. Render these labels left-aligned in a monospaced font to keep
+   title geometry fixed across the prior draw, burn-in, and posterior samples.
+   An empty sequence returns an empty list and writes no file.
 
 Sampler operation
 ~~~~~~~~~~~~~~~~~
@@ -468,6 +484,16 @@ Example analyses
    Run a repository example from a notebook while isolating its command-line
    arguments.
 
+.. py:function:: pcat.demo.add_smoke_argument(parser, help=None)
+
+   Compatibility re-export of :func:`tdpy.cli.add_smoke_argument`, which
+   registers the shared boolean ``--smoke`` option on an existing parser. An
+   optional help string preserves example-specific guidance.
+
+.. py:function:: pcat.demo.run_example_cli(run_example, description=None)
+
+   Run a smoke-capable example with the shared ``--smoke`` command-line option.
+
 Catalog analysis
 ----------------
 
@@ -512,6 +538,10 @@ Catalog analysis
 
    Samples and log-density outputs must be unmasked real values. Each callback
    must return a one-dimensional array with one log-density value per draw.
+   Exact power-of-two scaling protects representable means and uncertainties
+   at extreme magnitudes. If subtraction of two finite log densities overflows,
+   the operands are scaled before subtraction. This numerical fallback does
+   not change the supplied densities or check their normalization.
 
 .. py:function:: pcat.diagnostics.estimate_mutual_information(samples, log_density_joint, log_density_x, log_density_y, split_index=1)
 

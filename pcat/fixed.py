@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.stats
+from tdpy.numerics import has_masked_or_complex_values
 from tdpy.util import cdfn_gaus, cdfn_logt, cdfn_self, icdf_gaus, icdf_logt, icdf_self, retr_axis
 from tdpy.verbosity import tqdm
 
@@ -59,12 +60,17 @@ def sample_fixed_chains(state, log_likelihood, log_prior, names, scales, minima,
     arguments, e.g. booladaptstdp, are passed to PCAT.
     The returned draw axis follows retained samples, which can be shorter
     than requested when convergence-based stopping is enabled.
+    ``seed`` sets the native ``typeseed`` unless that option is supplied explicitly.
     """
     if estimate_log_evidence and log_prior is not None:
         raise ValueError('Evidence needs a normalized prior; custom priors require a density and sampler.')
     means = np.zeros(len(names)) if means is None else np.asarray(means)
     stdvs = np.ones(len(names)) if stdvs is None else np.asarray(stdvs)
     prior_types = tuple('self' if scale == 'logt' else scale for scale in scales)
+    if seed is not None:
+        dictpcat.setdefault('typeseed', seed)
+        native_seed = dictpcat['typeseed']
+        np.random.seed(None if native_seed == 'rand' else int(native_seed))
     output = nullcontext(pathbase) if pathbase is not None else TemporaryDirectory(prefix='pcat-fixed-')
     with output as root:
         result = sample_fixed(
@@ -301,10 +307,33 @@ def sample_posterior( \
     the thinned post-burn-in samples are returned as a dictionary with derived variables, if requested.
     '''
     
+    for count_name, count, minimum in (
+            ('numbsampwalk', numbsampwalk, 1),
+            ('numbsampburnwalk', numbsampburnwalk, 0),
+            ('numbsampburnwalkinit', numbsampburnwalkinit, 0),
+            ('numbsamppostwalk', numbsamppostwalk, 1)):
+        if count_name == 'numbsamppostwalk' and count is None:
+            continue
+        if isinstance(count, (bool, np.bool_)) or not isinstance(count, (int, np.integer)) or count < minimum:
+            raise ValueError('%s must be an integer >= %d.' % (count_name, minimum))
+    numbsampwalk = int(numbsampwalk)
+    numbsampburnwalk = int(numbsampburnwalk)
+    numbsampburnwalkinit = int(numbsampburnwalkinit)
+    if numbsamppostwalk is not None:
+        numbsamppostwalk = int(numbsamppostwalk)
+
     numbpara = len(listlablpara)
+    if len(listnamepara) != numbpara or len(scalpara) != numbpara:
+        raise ValueError('Parameter names, labels and scalings must have matching lengths.')
+    if len(set(listnamepara)) != numbpara:
+        raise ValueError('Parameter names must be unique.')
+    if any(not isinstance(scale, str) or scale not in ('self', 'logt', 'gaus') for scale in scalpara):
+        raise ValueError("Parameter scalings must be 'self', 'logt' or 'gaus'.")
    
     if numbsampwalk <= numbsampburnwalk:
         raise Exception('Burn-in samples cannot outnumber samples.')
+    if has_masked_or_complex_values(minmpara) or has_masked_or_complex_values(maxmpara):
+        raise ValueError('Parameter bounds must contain unmasked real values.')
     
     if isinstance(minmpara, list):
         minmpara = np.array(minmpara)
@@ -312,10 +341,30 @@ def sample_posterior( \
     if isinstance(maxmpara, list):
         maxmpara = np.array(maxmpara)
 
-    if numbpara != minmpara.size:
-        raise Exception('')
-    if numbpara != maxmpara.size:
-        raise Exception('')
+    if minmpara.ndim != 1 or maxmpara.ndim != 1:
+        raise ValueError('Parameter bounds must be one-dimensional arrays.')
+    if numbpara != minmpara.size or numbpara != maxmpara.size:
+        raise ValueError('Parameter-bound lengths must match the number of parameters.')
+    if np.isnan(minmpara).any() or np.isnan(maxmpara).any():
+        raise ValueError('Parameter bounds must not contain NaN.')
+    if np.any(minmpara >= maxmpara):
+        raise ValueError('Each parameter minimum must be less than its maximum.')
+    for scale, minimum, maximum in zip(scalpara, minmpara, maxmpara):
+        if scale == 'logt' and (
+                not np.isfinite(minimum) or not np.isfinite(maximum)
+                or minimum <= 0 or maximum <= 0):
+            raise ValueError('Logarithmic bounds must be finite and positive.')
+    gaussian_parameters = np.asarray(scalpara) == 'gaus'
+    if gaussian_parameters.any():
+        for parameter_values in (meangauspara, stdvgauspara):
+            if parameter_values is None or has_masked_or_complex_values(parameter_values):
+                raise ValueError('Gaussian means and standard deviations must contain unmasked real values.')
+            parameter_array = np.asarray(parameter_values, dtype=float)
+            if (parameter_array.ndim != 1 or parameter_array.size != numbpara
+                    or not np.isfinite(parameter_array[gaussian_parameters]).all()):
+                raise ValueError('Gaussian parameter arrays must have matching lengths and finite values.')
+        if np.any(np.asarray(stdvgauspara, dtype=float)[gaussian_parameters] <= 0):
+            raise ValueError('Gaussian standard deviations must be positive.')
     
     if dictlablscalparaderi is not None and retr_dictderi is None: 
         raise Exception('')
@@ -359,17 +408,6 @@ def sample_posterior( \
         
         binsgrid[:, k], midpgrid[:, k], deltgrid, numbpntsgrid[k], indx = retr_axis(limt=limtpara[:, k], numbpntsgrid=numbbins)
     
-    for k in indxpara:
-        if minmpara[k] >= maxmpara[k]:
-            print('')
-            print('')
-            print('')
-            print('manmpara')
-            print(maxxpara)
-            print('minmpara')
-            print(minmpara)
-            raise Exception('minmpara > maxmpara')
-    
     if numbsamppostwalk is None:
         numbsamppostwalk = 100
 
@@ -403,9 +441,18 @@ def sample_posterior( \
     if boolforcrepr or not boolforcrepr and (pathbase is None or not os.path.exists(pathdict)):
         
         # initialize
-        if pathbase is not None and os.path.exists(pathpost) and np.loadtxt(pathpost, delimiter=',').shape[0] == limtpara.shape[1]:
-            print('Reading the initial state from %s...' % pathpost)
-            parainitcent = np.loadtxt(pathpost, delimiter=',')[:, 0]
+        cached_summary = None
+        if pathbase is not None and os.path.exists(pathpost):
+            print('Reading from %s...' % pathpost)
+            cached_summary = np.loadtxt(pathpost, delimiter=',', ndmin=2)
+        if cached_summary is not None and cached_summary.shape[0] == limtpara.shape[1]:
+            parainitcent = cached_summary[:, 0]
+            if not np.isfinite(parainitcent).all():
+                raise ValueError('Cached warm-start medians must be finite.')
+            bounded_parameters = np.asarray(scalpara) != 'gaus'
+            if (np.any(parainitcent[bounded_parameters] < minmpara[bounded_parameters])
+                    or np.any(parainitcent[bounded_parameters] > maxmpara[bounded_parameters])):
+                raise ValueError('Cached warm-start medians must lie within parameter bounds.')
             paraunitinitcent = np.empty_like(parainitcent)
             for m in indxpara:
                 if scalpara[m] == 'self':
@@ -414,6 +461,8 @@ def sample_posterior( \
                     paraunitinitcent[m] = cdfn_logt(parainitcent[m], limtpara[0, m], limtpara[1, m])
                 if scalpara[m] == 'gaus':
                     paraunitinitcent[m] = cdfn_gaus(parainitcent[m], meangauspara[m], stdvgauspara[m])
+                    if not 0. < paraunitinitcent[m] < 1.:
+                        raise ValueError('Cached Gaussian warm-start medians must have representable interior prior coordinates.')
         else:
             paraunitinitcent = np.full(numbpara, 0.5)
         

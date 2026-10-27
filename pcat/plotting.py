@@ -1006,6 +1006,18 @@ def animation_phase_label(snapshot, maximum_sweeps=None):
     return label
 
 
+def animation_phase_labels(snapshots):
+    """Return equal-width phase labels for a complete animation snapshot sequence."""
+    snapshots = list(snapshots)
+    if not snapshots:
+        return []
+    maximum_sweeps = max(snapshot["cntrswep"] for snapshot in snapshots)
+    return [
+        animation_phase_label(snapshot, maximum_sweeps=maximum_sweeps)
+        for snapshot in snapshots
+    ]
+
+
 MOVE_LABELS = {"with": "Within-model", "brth": "Birth", "deth": "Death", "splt": "Split",
                "merg": "Merge", "jump": "Jump"}
 MOVE_COLORS = {"with": "#4D4D4D", "brth": "#1B7837", "deth": "#A50026", "splt": "#2166AC",

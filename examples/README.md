@@ -54,7 +54,7 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `variable_number_stellar_flares/`: transdimensional catalog of a variable number of stellar flares in a simulated photometric time series
 - `transit_timing_variations/`: fixed-dimensional posterior sampling of simulated transit times with PCAT's likelihood and Ephesos's forward model
 - `proposal_profiling/`: per-sweep execution time, acceptance, and runtime share for all six proposal types, plus pipeline-phase timings on the simulated Voigt spectrum
-- `neural_proposal_efficiency/`: paired prior, data-informed, and neural birth comparison on held-out simulated two-planet radial-velocity scenes, with count-posterior agreement and ESS per call/second
+- `neural_proposal_efficiency/`: point-source images with independent source-count probabilities and mixture-versus-diffusion source-flux comparisons
 - `proposal_state_animation/`: retained states, every Voigt-line proposal, and a split/merge Jacobian acceptance comparison
 - `burn_in_strategies/`: fixed, adaptive, likelihood-tempered, and Student-t within-model proposals on correlated and bimodal simulated targets
 - `kl_divergence_gaussian/`: PCAT's posterior-to-prior forward KL estimate on a conjugate Gaussian target, checked against its analytic value
@@ -119,10 +119,8 @@ python examples/variable_number_exoplanets_radial_velocity/variable_number_exopl
 python examples/variable_number_exoplanets_radial_velocity/variable_number_exoplanets_radial_velocity.py --smoke
 ```
 
-The full run takes about 1.5 minutes on the documented machine. In the recorded
-run, the injected three-planet model receives 92% posterior probability. The
-1,000-sweep smoke run checks the pipeline; the reported posterior comes from the
-100,000-sweep demonstration.
+In the recorded 100,000-sweep run, the injected three-planet model receives 92%
+posterior probability. The 1,000-sweep option checks that the pipeline runs.
 
 ![Posterior probability for the number of planets](variable_number_exoplanets_radial_velocity/visuals/variable_number_exoplanets_rv_count_posterior.png)
 
@@ -156,6 +154,25 @@ Most of the mean sweep time goes to bookkeeping around proposals (process, propo
 ![Time breakdown by internal pipeline phase](proposal_profiling/visuals/proposal_time_breakdown_by_phase.png)
 
 ## Neural proposal efficiency
+
+The current testbed is point-source detection in simulated images. Run
+`python examples/neural_proposal_efficiency/point_source_detection.py` for
+source-count recovery with two known candidate positions, or
+`python examples/neural_proposal_efficiency/neural_posterior_diffusion.py`
+for source-flux uncertainties with two specified sources. The first experiment
+compares prior-based and network-based source selection against numerical
+integration. With two chains of 20,000 iterations, the largest count-probability
+distance in three images was 0.027 for the network and 0.019 for prior selection.
+The separate 20-image flux experiment gave median distribution errors of 0.11
+for the mixture and 0.33 for diffusion. These are restricted known-position
+image experiments, not blind-search or speed claims.
+
+### Historical RV results
+
+The following records describe earlier RV runs and their statistical readers.
+They are retained as history, not the current testbed. The default command-line
+entry point now runs the point-source experiment. Earlier RV results cannot be
+used as point-source measurements.
 
 The benchmark trains a conditional neural density on simulated radial-velocity
 systems, then compares prior, existing data-informed, and neural births on
@@ -195,12 +212,11 @@ two chains. It did not pass count-posterior agreement, with total-variation
 distances of 0.32 from the prior baseline and 0.75 from the data-informed
 baseline. It verifies benchmark execution only and is not a performance result.
 
-To run a multi-scene state-conditioned comparison, provide a fresh run ID:
+For the current point-source comparison, provide a fresh run ID:
 
 ```bash
-python examples/neural_proposal_efficiency/neural_proposal_efficiency.py \
-	--proposal-conditioning state \
-	--run-id state_conditioned_efficiency_v1
+python examples/neural_proposal_efficiency/point_source_detection.py \
+	--run-id point_source_comparison_v1
 ```
 
 The run stores its conditioning mode, training dimensions, seeds, environment,
@@ -283,7 +299,7 @@ its floating-point rounding tolerance. Invalid or masked distributions raise
 `ValueError` before averaging. Probabilities are not filled, clipped, or
 renormalized.
 
-Run the five-scene comparison from the repository root with:
+Run the current three-image comparison from the repository root with:
 
 ```bash
 python examples/neural_proposal_efficiency/neural_proposal_efficiency.py

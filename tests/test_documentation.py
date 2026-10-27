@@ -145,6 +145,8 @@ def test_every_example_script_has_a_notebook():
     examples = REPOSITORY_ROOT / "examples"
     script_only_automation = set(examples.glob("run_all_examples*.py"))
     for script in examples.rglob("*.py"):
+        if "data" in script.relative_to(examples).parts:
+            continue
         if script in script_only_automation:
             continue
         if script.stem.endswith(" 2") and script.with_name(f"{script.stem[:-2]}{script.suffix}").is_file():
@@ -157,6 +159,22 @@ def test_every_example_script_has_a_notebook():
         assert {cell["cell_type"] for cell in document["cells"]} == {"code", "markdown"}
         for cell in document["cells"]:
             assert cell["id"]
+
+
+def test_notebook_requirement_ignores_archives_but_checks_active_examples(tmp_path, monkeypatch):
+    monkeypatch.setitem(globals(), "REPOSITORY_ROOT", tmp_path)
+    archive = tmp_path / "examples" / "image" / "data" / "frozen_source"
+    archive.mkdir(parents=True)
+    (archive / "sampler.py").write_text("pass\n")
+    active = tmp_path / "examples" / "image" / "example.py"
+    active.write_text("pass\n")
+    with pytest.raises(AssertionError, match="example.py"):
+        test_every_example_script_has_a_notebook()
+    active.with_suffix(".ipynb").write_text(json.dumps({
+        "nbformat": 4, "cells": [{"id": "intro", "cell_type": "markdown"},
+                                  {"id": "run", "cell_type": "code"}],
+    }))
+    test_every_example_script_has_a_notebook()
 
 
 def test_figure_examples_display_visuals_in_notebooks():

@@ -6,7 +6,7 @@ from __future__ import annotations
 from tdpy.verbosity import print
 
 import argparse
-from tdpy.cli import add_plot_arguments
+from tdpy.cli import add_plot_arguments, add_smoke_argument
 import shutil
 import sys
 from pathlib import Path
@@ -66,7 +66,7 @@ def run_reproduction(one_subhalo: bool = False, smoke: bool = False,
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--smoke", action="store_true", help="Run a short pipeline check.")
+    add_smoke_argument(parser, help="Run a short pipeline check.")
     parser.add_argument("--fresh", action="store_true", help="Remove cached output first.")
     parser.add_argument("--one-subhalo", action="store_true", help="Fit one subhalo instead of a variable catalog.")
     add_plot_arguments(parser)

@@ -560,6 +560,63 @@ def test_kl_divergence_reports_infinity_when_reference_has_zero_support():
     }
 
 
+@pytest.mark.parametrize('scale', [1e-200, 1e200])
+@pytest.mark.parametrize('chain_count', [1, 2])
+def test_kl_divergence_preserves_finite_log_ratio_scale(scale, chain_count):
+    samples = np.tile(np.array([0.5, 1.0, 0.5, 1.0])[None, :, None], (chain_count, 1, 1))
+    samples += 0.5 * np.arange(chain_count)[:, None, None]
+    original = samples.copy()
+    baseline = estimate_kl_divergence(
+        samples, lambda values: np.zeros(len(values)), lambda values: -values[:, 0],
+    )
+    with np.errstate(all='raise'):
+        actual = estimate_kl_divergence(
+            samples, lambda values: np.zeros(len(values)),
+            lambda values: -scale * values[:, 0],
+        )
+    assert actual['kl_divergence'] / scale == pytest.approx(baseline['kl_divergence'])
+    assert actual['standard_error'] / scale == pytest.approx(baseline['standard_error'])
+    assert actual['effective_sample_size'] == baseline['effective_sample_size']
+    np.testing.assert_array_equal(samples, original)
+
+
+@pytest.mark.parametrize('magnitude', [1e308, np.finfo(float).max])
+@pytest.mark.parametrize('chain_count', [1, 2])
+def test_kl_divergence_scales_before_overflowing_log_density_subtraction(magnitude, chain_count):
+    samples = np.arange(4.0 * chain_count).reshape(chain_count, 4, 1)
+    log_density = np.array([[1.0, -1.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]])[:chain_count].ravel()
+    original_samples = samples.copy()
+    original_density = log_density.copy()
+    baseline = estimate_kl_divergence(
+        samples, lambda draws: log_density, lambda draws: -log_density,
+    )
+    with np.errstate(all='raise'):
+        actual = estimate_kl_divergence(
+            samples, lambda draws: magnitude * log_density,
+            lambda draws: -magnitude * log_density,
+        )
+    assert actual['kl_divergence'] / magnitude == pytest.approx(baseline['kl_divergence'])
+    assert actual['standard_error'] / magnitude == pytest.approx(baseline['standard_error'])
+    assert actual['effective_sample_size'] == baseline['effective_sample_size']
+    np.testing.assert_array_equal(samples, original_samples)
+    np.testing.assert_array_equal(log_density, original_density)
+
+
+def test_kl_divergence_representable_constant_near_float_limit():
+    samples = np.zeros((2, 4, 1))
+    magnitude = np.finfo(float).max
+    with np.errstate(all='raise'):
+        actual = estimate_kl_divergence(
+            samples, lambda values: np.zeros(len(values)),
+            lambda values: np.full(len(values), -magnitude),
+        )
+    assert actual == {
+        'kl_divergence': magnitude,
+        'standard_error': 0.0,
+        'effective_sample_size': 8.0,
+    }
+
+
 @pytest.mark.parametrize('correlation', [-0.7, 0.0, 0.7])
 def test_mutual_information_matches_correlated_gaussian(correlation):
     from scipy.stats import multivariate_normal, norm

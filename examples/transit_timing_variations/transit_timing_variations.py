@@ -2,7 +2,6 @@
 
 from tdpy.verbosity import print
 
-import argparse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,7 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pcat.fixed import sample_fixed_chains
-from pcat.plotting import animation_phase_label, animation_states
+from pcat.demo import run_example_cli
+from pcat.plotting import animation_phase_labels, animation_states
 from pcat.time_series import make_transit_time_likelihood
 
 
@@ -64,14 +64,15 @@ def render_ttv_posterior_frames(data, snapshots, run_tag):
     output = ROOT / "visuals"
     output.mkdir(parents=True, exist_ok=True)
     paths = []
-    for snapshot, curve in zip(snapshots, curves):
+    phase_labels = animation_phase_labels(snapshots)
+    for snapshot, curve, phase_label in zip(snapshots, curves, phase_labels):
         figure, axis = plt.subplots(figsize=(5.8, 4.3), facecolor="white")
         axis.errorbar(transit_epoch, measured_minutes, yerr=errors * MINUTES_PER_DAY,
                       fmt="o", markersize=3.5, color="#465561", label="Simulated transit times")
         axis.plot(transit_epoch, curve, color="#B34735", lw=2, label="PCAT timing model")
         axis.set(xlim=(-1, transit_epoch[-1] + 1), ylim=(-maximum_minutes, maximum_minutes),
-                 xlabel="Transit epoch", ylabel="Observed - linear transit time [minute]",
-                 title=animation_phase_label(snapshot))
+                 xlabel="Transit epoch", ylabel="Observed - linear transit time [minute]")
+        axis.set_title(phase_label, loc="left", fontfamily="monospace")
         axis.grid(False)
         axis.legend(loc="upper right", framealpha=1, facecolor="white")
         path = output / f"ttv_posterior_{run_tag}_swep{snapshot['cntrswep']:09d}.png"
@@ -111,10 +112,7 @@ def run_example(smoke: bool = False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--smoke", action="store_true")
-    options = parser.parse_args()
-    run_example(smoke=options.smoke)
+    run_example_cli(run_example, description=__doc__)
 
 
 if __name__ == "__main__":

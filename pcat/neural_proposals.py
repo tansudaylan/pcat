@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 from scipy.special import expit, logsumexp, ndtr
 from scipy.stats import truncnorm
+from tdpy.verbosity import print
 
 
 def _require_torch():
@@ -233,7 +234,8 @@ class NeuralElementProposal:
             raise ValueError(
                 f"unit_elements must have shape (n, {self.element_dimension})."
             )
-        if conditions.ndim == 1:
+        shared_condition = conditions.ndim == 1
+        if shared_condition:
             conditions = np.broadcast_to(conditions, (unit_elements.shape[0], conditions.size))
         if conditions.shape != (unit_elements.shape[0], self.condition_dimension):
             raise ValueError(
@@ -250,7 +252,8 @@ class NeuralElementProposal:
 
         torch, _ = _require_torch()
         with torch.no_grad():
-            normalized_conditions = (conditions[valid] - self.condition_mean) / self.condition_scale
+            condition_rows = conditions[:1] if shared_condition else conditions[valid]
+            normalized_conditions = (condition_rows - self.condition_mean) / self.condition_scale
             condition_tensor = torch.as_tensor(normalized_conditions)
             element_tensor = torch.as_tensor(unit_elements[valid])
             result[valid] = self._log_prob_tensor(condition_tensor, element_tensor).numpy()

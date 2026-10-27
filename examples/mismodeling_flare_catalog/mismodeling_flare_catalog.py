@@ -28,7 +28,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from tdpy.cli import add_plot_arguments
+from tdpy.cli import add_plot_arguments, add_smoke_argument
 
 from pcat.demo import write_time_series_fits
 from pcat.main import readfile, retr_pathrun
@@ -381,7 +381,7 @@ def run_example(numbswep: int = 40000, typefileplot: str = "png", *, time_tag=No
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--numbswep", type=int, default=40000)
-    parser.add_argument("--smoke", action="store_true", help="Run a short pipeline check.")
+    add_smoke_argument(parser, help="Run a short pipeline check.")
     parser.add_argument("--time-tag")
     parser.add_argument("--chains", type=int, default=NUMBER_CHAINS)
     add_plot_arguments(parser)

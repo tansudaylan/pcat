@@ -4,6 +4,37 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 
+def _coordinate_pair(coordinates_source, coordinates_target):
+	coordinates_source = np.asarray(coordinates_source, dtype=float)
+	coordinates_target = np.asarray(coordinates_target, dtype=float)
+	if coordinates_source.size == 0 and coordinates_source.ndim == 1:
+		numbdimension = coordinates_target.shape[1] if coordinates_target.ndim == 2 else 0
+		coordinates_source = coordinates_source.reshape(0, numbdimension)
+	if coordinates_target.size == 0 and coordinates_target.ndim == 1:
+		numbdimension = coordinates_source.shape[1] if coordinates_source.ndim == 2 else 0
+		coordinates_target = coordinates_target.reshape(0, numbdimension)
+	if coordinates_source.ndim != 2 or coordinates_target.ndim != 2:
+		raise ValueError('Catalog coordinates must be two-dimensional arrays.')
+	if coordinates_source.shape[1] != coordinates_target.shape[1]:
+		raise ValueError('Catalog coordinates must have the same dimension.')
+	return coordinates_source, coordinates_target
+
+
+def neighbors_within_radius(coordinates_source, coordinates_target, distance_maximum):
+	"""Return sorted target indices within the radius of each source point."""
+	coordinates_source, coordinates_target = _coordinate_pair(
+		coordinates_source, coordinates_target,
+	)
+	if coordinates_source.shape[0] == 0:
+		return []
+	if coordinates_target.shape[0] == 0:
+		return [np.empty(0, dtype=int) for _ in coordinates_source]
+	nearby = cKDTree(coordinates_target).query_ball_point(
+		coordinates_source, r=distance_maximum,
+	)
+	return [np.sort(np.asarray(indices, dtype=int)) for indices in nearby]
+
+
 def associate_catalogs(
 	coordinates_source,
 	values_source,
@@ -20,20 +51,11 @@ def associate_catalogs(
 	match. Optional target confidence and significance arrays add the maximum
 	confidence and minimum significance among each source's valid matches.
 	"""
-	coordinates_source = np.asarray(coordinates_source, dtype=float)
-	coordinates_target = np.asarray(coordinates_target, dtype=float)
+	coordinates_source, coordinates_target = _coordinate_pair(
+		coordinates_source, coordinates_target,
+	)
 	values_source = np.asarray(values_source, dtype=float)
 	values_target = np.asarray(values_target, dtype=float)
-	if coordinates_source.size == 0 and coordinates_source.ndim == 1:
-		numbdimension = coordinates_target.shape[1] if coordinates_target.ndim == 2 else 0
-		coordinates_source = coordinates_source.reshape(0, numbdimension)
-	if coordinates_target.size == 0 and coordinates_target.ndim == 1:
-		numbdimension = coordinates_source.shape[1] if coordinates_source.ndim == 2 else 0
-		coordinates_target = coordinates_target.reshape(0, numbdimension)
-	if coordinates_source.ndim != 2 or coordinates_target.ndim != 2:
-		raise ValueError('Catalog coordinates must be two-dimensional arrays.')
-	if coordinates_source.shape[1] != coordinates_target.shape[1]:
-		raise ValueError('Catalog coordinates must have the same dimension.')
 	if coordinates_source.shape[0] != values_source.size:
 		raise ValueError('Source coordinates and values must have equal lengths.')
 	if coordinates_target.shape[0] != values_target.size:
@@ -52,8 +74,8 @@ def associate_catalogs(
 	)
 
 	if values_source.size and values_target.size:
-		nearby = cKDTree(coordinates_source).query_ball_tree(
-			cKDTree(coordinates_target), distance_maximum,
+		nearby = neighbors_within_radius(
+			coordinates_source, coordinates_target, distance_maximum,
 		)
 		for index_source, indices_target in enumerate(nearby):
 			indices_target = np.asarray(indices_target, dtype=int)

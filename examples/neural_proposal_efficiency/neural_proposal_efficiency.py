@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare prior and neural birth proposals on held-out simulated RV catalogs.
+"""Historical RV comparisons, retained for interpreting earlier saved results.
 
 Training systems and validation systems use disjoint random seeds. Both samplers
 target the same 0-to-3-planet posterior and differ only in the element density
@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pcat import NeuralElementProposal, sampling
 from pcat.demo import configure_example_style
+from tdpy.cli import add_smoke_argument
 from pcat.main import retr_pathrun
 from pcat.radial_velocity import retr_dictpcatrvel, retr_llik_rvel, retr_matrdesi, retr_perdcirc
 from tdpy.exoplanet import keplerian_radial_velocity
@@ -39,6 +40,7 @@ MEASUREMENT_UNCERTAINTY = 1.5  # [m s^-1]
 MAXIMUM_PLANETS = 3
 TRUE_PLANETS = np.array([[9.1, 6.0, 0.1, 1.0, 0.5], [61.0, 3.0, 0.0, 0.0, 2.0]])
 METHOD_COLORS = {"prior": "#6D7478", "neural": "#087F8C"}
+FIGURE_FONT_SIZE = 12.0  # [pt]
 
 
 def _draw_planets(unit, maximum_period):
@@ -637,7 +639,7 @@ def _json_safe(value):
     return value
 
 
-def _plot_results(results, run_id):
+def _plot_results(results, run_id, *, typefileplot="png"):
     paired = _paired_summary(results)
     neural_result = next(
         (result.get("proposal_conditioning") for result in results if result["method"] == "neural"),
@@ -656,8 +658,10 @@ def _plot_results(results, run_id):
         f"State-conditioned, {state_feature_mode} summary"
         if proposal_conditioning == "state" else "Data-only"
     )
-    figure, axes = plt.subplots(2, 3, figsize=(10.0, 5.4))
-    figure.suptitle(f"{neural_label} neural proposal comparison")
+    if typefileplot not in {"png", "pdf"}:
+        raise ValueError("typefileplot must be 'png' or 'pdf'.")
+    figure, axes = plt.subplots(3, 2, figsize=(6.3, 7.8))
+    figure.suptitle(f"{neural_label} neural proposal comparison", fontsize=FIGURE_FONT_SIZE)
     axes = axes.ravel()
     for axis, key, label in (
         (axes[0], "neural_to_prior_ess_per_call_ratio", "Count ESS/call\nvs prior"),
@@ -671,12 +675,14 @@ def _plot_results(results, run_id):
         axis.axhline(1.0 if "ratio" in key else 0.0, color="0.45", lw=0.8, ls="--")
         axis.scatter(np.arange(len(values)), values, color="#087F8C", s=28, zorder=3)
         axis.set_xticks(np.arange(len(values)), [str(item["validation_seed"]) for item in paired])
-        axis.set_xlabel("Scene seed")
-        axis.set_ylabel("")
-        axis.set_title(label, fontsize=9)
+        axis.set_xlabel("Scene seed", fontsize=FIGURE_FONT_SIZE)
+        axis.set_ylabel("ESS/call ratio" if "ratio" in key else "Count total variation",
+                        fontsize=FIGURE_FONT_SIZE)
+        axis.set_title(label, fontsize=FIGURE_FONT_SIZE)
+        axis.tick_params(labelsize=FIGURE_FONT_SIZE)
         axis.grid(False)
-    figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.92))
-    path = VISUALS_PATH / f"{run_id}_efficiency.png"
+    figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.96))
+    path = VISUALS_PATH / f"{run_id}_efficiency.{typefileplot}"
     VISUALS_PATH.mkdir(parents=True, exist_ok=True)
     print(f"Writing to {path}...")
     figure.savefig(path, dpi=300, bbox_inches="tight", facecolor="white")
@@ -686,6 +692,7 @@ def _plot_results(results, run_id):
 
 def run_benchmark(arguments):
     methods = ("prior", "data-informed", "neural")
+    typefileplot = getattr(arguments, "typefileplot", "png")
     proposal_conditioning = getattr(arguments, "proposal_conditioning", "data")
     state_feature_mode = getattr(arguments, "state_feature_mode", "catalog")
     if proposal_conditioning not in {"data", "state"}:
@@ -697,7 +704,7 @@ def run_benchmark(arguments):
     artifacts = [
         RUNS_PATH / f"{arguments.run_id}_proposal.pt",
         RUNS_PATH / f"{arguments.run_id}_results.json",
-        VISUALS_PATH / f"{arguments.run_id}_efficiency.png",
+        VISUALS_PATH / f"{arguments.run_id}_efficiency.{typefileplot}",
     ]
     for validation_seed in range(arguments.seed + 10, arguments.seed + 10 + arguments.validation_scenes):
         for chain_index in range(arguments.chains_per_scene):
@@ -794,6 +801,7 @@ def run_benchmark(arguments):
     ratios_end_to_end_data = [item["neural_to_data_informed_ess_per_end_to_end_second_ratio"] for item in paired]
     summary = {
         "run_id": arguments.run_id,
+        "typefileplot": typefileplot,
         "training_seed": arguments.seed + 1000,
         "validation_seeds": [item["validation_seed"] for item in paired],
         "chains_per_scene": arguments.chains_per_scene,
@@ -898,7 +906,7 @@ def run_benchmark(arguments):
     result_path.write_text(
         json.dumps(_json_safe({"summary": summary, "runs": results}), indent=2, allow_nan=False) + "\n"
     )
-    figure_path = _plot_results(results, arguments.run_id)
+    figure_path = _plot_results(results, arguments.run_id, typefileplot=typefileplot)
     print(
         "Paired median neural/prior ESS per call: "
         f"{summary['neural_to_prior_median_ess_per_call_ratio']:.3g} "
@@ -951,7 +959,7 @@ def run_benchmark(arguments):
     return summary
 
 
-def main():
+def historical_radial_velocity_main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-id", default="neural_proposal_efficiency")
     parser.add_argument("--seed", type=int, default=53)
@@ -974,8 +982,9 @@ def main():
         default="catalog",
         help="Use catalog summaries alone or periodogram features of the leave-one-out residual.",
     )
-    parser.add_argument("--smoke", action="store_true", help="Use a small run to check the pipeline.")
+    add_smoke_argument(parser, help="Use a small run to check the pipeline.")
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
+    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
     arguments = parser.parse_args()
     if arguments.smoke:
         arguments.training_scenes = 36
@@ -992,6 +1001,12 @@ def main():
         )
     configure_example_style(arguments.typeplotback)
     run_benchmark(arguments)
+
+
+def main():
+    from examples.neural_proposal_efficiency.point_source_detection import main as point_source_main
+
+    point_source_main()
 
 
 if __name__ == "__main__":

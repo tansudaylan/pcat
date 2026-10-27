@@ -9,7 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import multivariate_normal, norm
-from tdpy.cli import add_plot_arguments
+from tdpy.cli import add_plot_arguments, add_smoke_argument
 
 from pcat.demo import configure_example_style, save_example_figure
 from pcat.diagnostics import estimate_kl_divergence, estimate_mutual_information
@@ -155,7 +155,7 @@ def main():
     parser.add_argument("--numbsamp", type=int, default=3000)
     parser.add_argument("--numbburn", type=int, default=1000)
     parser.add_argument("--numbproc", type=int, default=4)
-    parser.add_argument("--smoke", action="store_true")
+    add_smoke_argument(parser)
     add_plot_arguments(parser)
     arguments = parser.parse_args()
     numbsamp = 250 if arguments.smoke else arguments.numbsamp

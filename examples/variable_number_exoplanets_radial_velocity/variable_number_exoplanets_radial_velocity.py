@@ -133,7 +133,7 @@ def retr_listplanpost(posterior, numbdraw=300):
 
 def render_rv_posterior_frames(time, rvel, stdv, indxinst, timerefr, posterior):
     """Show fixed-scale simulated RV data against PCAT catalogs from the prior draw to posterior samples."""
-    from pcat.plotting import animation_phase_label, animation_states
+    from pcat.plotting import animation_phase_labels, animation_states
 
     snapshots = animation_states(posterior, require_nonzero_catalog=True)
     model_time = np.linspace(time.min(), time.max(), 450)  # [day]
@@ -149,17 +149,20 @@ def render_rv_posterior_frames(time, rvel, stdv, indxinst, timerefr, posterior):
         print(f'Removing previous frame {old_frame}...')
         old_frame.unlink()
     paths = []
-    for snapshot, catalog, curve in zip(snapshots, catalogs, curves):
+    phase_labels = animation_phase_labels(snapshots)
+    count_width = len(str(max(len(catalog) for catalog in catalogs)))
+    for snapshot, catalog, curve, phase_label in zip(snapshots, catalogs, curves, phase_labels):
         index = snapshot['cntrswep']
         figure, axis = plt.subplots(figsize=(6.0, 4.5), facecolor='white')
         axis.errorbar(time - TIME_START, measured, yerr=stdv, fmt='.', markersize=3,
                       color='#47565E', alpha=0.65, label='Simulated RV')
         axis.plot(model_time - TIME_START, curve, color='#A51C30', lw=1.8,
-                  label=f'PCAT model ({len(catalog)} planets)')
+                  label=f'PCAT model ({len(catalog):{count_width}d} planets)')
         axis.set(xlim=(0, BASELINE), ylim=(-scale, scale), xlabel='Time since start [day]',
-                 ylabel='Radial velocity [m/s]', title=animation_phase_label(snapshot))
+                 ylabel='Radial velocity [m/s]')
+        axis.set_title(phase_label, loc="left", fontfamily="monospace")
         axis.grid(False)
-        axis.legend(loc='upper right', facecolor='white', framealpha=1)
+        axis.legend(loc='upper right', facecolor='white', framealpha=1, prop={'family': 'monospace'})
         path = output_directory / f'rv_posterior_swep{index:09d}.png'
         print(f'Writing to {path}...')
         figure.savefig(path, dpi=200, bbox_inches='tight', facecolor='white')

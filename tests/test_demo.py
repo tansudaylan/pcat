@@ -262,6 +262,30 @@ def test_notebook_example_launcher_restores_arguments(monkeypatch):
     assert os.sys.argv == original_arguments
 
 
+@pytest.mark.parametrize(("arguments", "smoke"), [([], False), (["--smoke"], True)])
+def test_example_cli_uses_shared_smoke_option(monkeypatch, arguments, smoke):
+    captured = []
+    monkeypatch.setattr(demo.sys, "argv", ["example", *arguments])
+
+    demo.run_example_cli(lambda **options: captured.append(options), description="Example")
+
+    assert captured == [{"smoke": smoke}]
+
+
+def test_add_smoke_argument_composes_with_custom_options():
+    import argparse
+
+    parser = demo.add_smoke_argument(
+        argparse.ArgumentParser(), help="Run a small pipeline check."
+    )
+    parser.add_argument("--steps", type=int, default=10)
+    arguments = parser.parse_args(["--smoke", "--steps", "3"])
+
+    assert arguments.smoke is True
+    assert arguments.steps == 3
+    assert "Run a small pipeline check." in parser.format_help()
+
+
 def test_notebook_visuals_display_saved_figures(tmp_path, monkeypatch):
     import IPython.display
 

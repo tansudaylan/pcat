@@ -155,7 +155,8 @@ def estimate_kl_divergence(samples, log_density_p, log_density_q):
     return one normalized log density per row. The estimate is the sample mean
     of ``log p - log q``. Its Monte Carlo standard error accounts for within-chain
     autocorrelation and variation between independent chains. Finite-sample
-    estimates are not clipped at zero.
+    estimates are not clipped at zero. Exact power-of-two scaling protects
+    representable means and uncertainties from intermediate overflow or underflow.
     """
     if np.ma.is_masked(samples) or np.iscomplexobj(samples):
         raise ValueError("samples must contain unmasked real values")
@@ -183,8 +184,19 @@ def estimate_kl_divergence(samples, log_density_p, log_density_q):
             "effective_sample_size": 0.0,
         }
 
-    logratio = (logprobp - logprobq).reshape(chain_count, draw_count)
-    divergence = float(np.mean(logratio))
+    with np.errstate(over='ignore'):
+        logratio = logprobp - logprobq
+    scale_exponent = 0
+    if not np.isfinite(logratio).all():
+        scale_exponent = int(np.frexp(max(np.max(np.abs(logprobp)), np.max(np.abs(logprobq))))[1])
+        with np.errstate(under='ignore'):
+            logratio = np.ldexp(logprobp, -scale_exponent) - np.ldexp(logprobq, -scale_exponent)
+    logratio = logratio.reshape(chain_count, draw_count)
+    ratio_exponent = int(np.frexp(np.max(np.abs(logratio)))[1])
+    with np.errstate(under='ignore'):
+        logratio = np.ldexp(logratio, -ratio_exponent)
+    scale_exponent += ratio_exponent
+    divergence = float(np.ldexp(np.mean(logratio), scale_exponent))
     means = np.mean(logratio, axis=1)
     variance_mean = 0.0
     effective_sample_size = 0.0
@@ -206,7 +218,7 @@ def estimate_kl_divergence(samples, log_density_p, log_density_q):
         variance_mean = max(variance_mean, between_chain_variance)
     return {
         "kl_divergence": divergence,
-        "standard_error": float(np.sqrt(variance_mean)),
+        "standard_error": float(np.ldexp(np.sqrt(variance_mean), scale_exponent)),
         "effective_sample_size": float(effective_sample_size),
     }
 

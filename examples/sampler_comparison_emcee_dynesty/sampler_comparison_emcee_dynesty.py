@@ -67,8 +67,11 @@ class Likelihood:
 
 
 def effective_sample_size(chain):
-    """Return the minimum ESS over parameters for a (steps, walkers, dims) chain."""
-    tau = emcee.autocorr.integrated_time(chain, quiet=True)
+    """Return the minimum ESS, or NaN when emcee's chain-length check fails."""
+    try:
+        tau = emcee.autocorr.integrated_time(chain, quiet=False)
+    except emcee.autocorr.AutocorrError:
+        return np.nan
     if not np.isfinite(tau).all() or np.any(tau <= 0.0):
         return np.nan
     return float(np.min(chain.shape[0] * chain.shape[1] / tau))
@@ -127,6 +130,7 @@ def run_pcat(likelihood, numbswep):
 
 
 def run_emcee(likelihood, numbstep, seed=3):
+    """Seed walker positions and transitions without changing NumPy's global state."""
     def log_probability(values):
         if np.any(values < MINIMA) or np.any(values > MAXIMA):
             return -np.inf
@@ -136,6 +140,7 @@ def run_emcee(likelihood, numbstep, seed=3):
     rng = np.random.default_rng(seed)
     initial = rng.uniform(MINIMA, MAXIMA, (numbwalk, 3))
     sampler = emcee.EnsembleSampler(numbwalk, 3, log_probability)
+    sampler.random_state = np.random.RandomState(rng.integers(0, 2**32)).get_state()
     start = time.perf_counter()
     sampler.run_mcmc(initial, numbstep)
     elapsed = time.perf_counter() - start

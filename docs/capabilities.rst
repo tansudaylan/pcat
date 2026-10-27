@@ -207,9 +207,19 @@ Every transdimensional run samples catalogs whose element labels can vary
 between states. With ``boolcondcatl=True``, PCAT condenses those samples into a
 persistent posterior catalog before associating inferred elements with a
 reference catalog or evaluating completeness and false-discovery summaries.
-The current condensation algorithm clusters elements by ``xpos`` and ``ypos``.
-One-dimensional spectral, flare, and radial-velocity catalogs retain their raw
-catalog samples but do not yet receive this condensed spatial summary.
+Automatic condensation clusters elements by ``xpos`` and ``ypos``. For a retained
+catalog state, ``pcat.main.retr_condcatl`` also accepts explicit one- or
+two-coordinate matching through ``coordinate_names`` and ``distance_maximum``.
+For example, ``coordinate_names=('center',), distance_maximum=0.1`` matches a
+one-dimensional feature named ``center`` within 0.1 of its input units. The
+tolerance must be finite and positive. Distinct populations stay separate, and
+summaries retain each feature's median, 16th and 84th percentiles, and the
+fraction of posterior draws containing the associated element.
+
+Nonspatial matching is opt-in. The caller supplies coordinates, units, and a
+finite positive tolerance suited to the feature. Periodic coordinates use
+ordinary distance without wrapping across the boundary. The result groups by
+the supplied coordinates and assigns no physical source identities.
 The public :func:`pcat.associate_catalogs` utility performs coordinate-and-value
 matching for external catalogs. :func:`pcat.posterior_convergence` reports
 Gelman-Rubin statistics and effective sample sizes from a completed state.

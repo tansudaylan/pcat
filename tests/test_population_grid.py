@@ -4,6 +4,61 @@ import pytest
 from pcat import plot_population_grid
 
 
+@pytest.mark.parametrize('plot_kind', ['corner', 'histogram', 'pair'])
+@pytest.mark.parametrize('container', [list, np.asarray])
+def test_population_grid_preserves_reference_draw_coordinates(tmp_path, monkeypatch, plot_kind, container):
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+    samples = np.random.default_rng(6).normal(size=(40, 2))
+    original_samples = samples.copy()
+    reference_values = np.array([[-0.7, 0.2], [0.8, -0.6]])
+    draws = container(reference_values)
+    figures = []
+    save = plt.Figure.savefig
+
+    def capture_and_save(figure, path, **kwargs):
+        FigureCanvasAgg(figure)
+        figures.append(figure)
+        return save(figure, path, **kwargs)
+
+    monkeypatch.setattr(plt.Figure, 'savefig', capture_and_save)
+    plot_population_grid(
+        [['x', ''], ['y', '']], listpara=samples,
+        listparadraw=draws, listnamepara=['x', 'y'],
+        pathbase=f'{tmp_path}/', strgextn='reference',
+        boolplottria=plot_kind == 'corner',
+        boolplothistodim=plot_kind == 'histogram',
+        boolplotpair=plot_kind == 'pair', boolplotpies=False,
+        typeplottdim='scat', typeplotback='white', typeverb=0,
+    )
+
+    assert figures
+    assert all(path.stat().st_size > 0 for path in tmp_path.glob('*.png'))
+    histogram_axes = [axis for figure in figures for axis in figure.axes if axis.patches]
+    pair_axes = [axis for figure in figures for axis in figure.axes if axis.collections]
+    if plot_kind != 'pair':
+        assert len(histogram_axes) == 2
+        actual_lines = []
+        for axis in histogram_axes:
+            assert len(axis.lines) == len(reference_values)
+            for line in axis.lines:
+                assert line.get_xdata()[0] == line.get_xdata()[1]
+            actual_lines.append(tuple(sorted(line.get_xdata()[0] for line in axis.lines)))
+        expected_lines = [tuple(sorted(reference_values[:, parameter])) for parameter in range(2)]
+        assert sorted(actual_lines) == sorted(expected_lines)
+    if plot_kind != 'histogram':
+        assert len(pair_axes) == 1
+        overlays = [collection for collection in pair_axes[0].collections
+                    if np.array_equal(collection.get_sizes(), [350])]
+        assert len(overlays) == len(reference_values)
+        actual_positions = np.vstack([collection.get_offsets() for collection in overlays])
+        np.testing.assert_array_equal(actual_positions, reference_values)
+        np.testing.assert_array_equal(pair_axes[0].collections[0].get_offsets(), samples)
+    np.testing.assert_array_equal(samples, original_samples)
+    np.testing.assert_array_equal(draws, reference_values)
+
+
 @pytest.mark.parametrize('typeplotback', ['white', 'dark'])
 @pytest.mark.parametrize('inherit', [False, True])
 def test_population_grid_writes_corner_histogram_and_pair_plots(tmp_path, monkeypatch, typeplotback, inherit):

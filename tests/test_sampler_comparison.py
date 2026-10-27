@@ -31,6 +31,25 @@ def test_sampler_comparison_preserves_existing_pcat_results(tmp_path, variable):
     assert marker.read_text() == "previous comparison"
 
 
+def test_emcee_comparison_seed_controls_transitions_without_global_rng_changes():
+    example = runpy.run_path(str(SCRIPT))
+    time_obs, velocity = example["simulate_data"]()
+    original_state = np.random.get_state()
+    draws = []
+    try:
+        for ambient_seed in (11, 777):
+            np.random.seed(ambient_seed)
+            ambient_state = np.random.get_state()
+            likelihood = example["Likelihood"](time_obs, velocity)
+            samples, _, _ = example["run_emcee"](likelihood, 40, seed=3)
+            draws.append(samples)
+            for expected, actual in zip(ambient_state, np.random.get_state()):
+                np.testing.assert_equal(actual, expected)
+    finally:
+        np.random.set_state(original_state)
+    np.testing.assert_array_equal(draws[0], draws[1])
+
+
 def test_dynesty_comparison_forwards_the_budget(tmp_path, monkeypatch):
     example = runpy.run_path(str(SCRIPT))
     captured = {}
@@ -67,12 +86,14 @@ def test_comparison_metrics_store_actual_arrays_and_preserve_output(tmp_path):
     namespace = example["write_comparison_metrics"].__globals__
     namespace["EXAMPLE_PATH"] = tmp_path
     namespace["DISPLAY_TAG"] = "20261025_120000"
-    values = {"PCAT": {"samples": np.array([[1.0, 2.0, 3.0]]), "calls": np.int64(7)}}
+    values = {"PCAT": {"samples": np.array([[1.0, 2.0, 3.0]]), "calls": np.int64(7),
+                       "ess": np.nan, "ess_per_second": np.nan, "ess_per_call": np.nan}}
     example["write_comparison_metrics"]("fixed", values, SimpleNamespace(part="fixed", maxcall=None))
     path = tmp_path / "visuals/sampler_comparison_fixed_20261025_120000.json"
     record = json.loads(path.read_text())
     assert record["results"]["PCAT"]["samples"] == [[1.0, 2.0, 3.0]]
     assert record["results"]["PCAT"]["calls"] == 7
+    assert all(record["results"]["PCAT"][name] is None for name in ("ess", "ess_per_second", "ess_per_call"))
     before = path.read_bytes()
     with pytest.raises(FileExistsError):
         example["write_comparison_metrics"]("fixed", values, SimpleNamespace(part="fixed", maxcall=None))
@@ -83,6 +104,22 @@ def test_unresolved_autocorrelation_is_not_reported_as_a_valid_ess(monkeypatch):
     example = runpy.run_path(str(SCRIPT))
     monkeypatch.setattr(example["emcee"].autocorr, "integrated_time", lambda *arguments, **options: np.array([-1.0, 2.0]))
     assert np.isnan(example["effective_sample_size"](np.ones((20, 1, 2))))
+
+
+def test_short_chain_ess_respects_emcee_autocorrelation_criterion():
+    example = runpy.run_path(str(SCRIPT))
+    chain = np.arange(100.0)[:, None, None]
+    with pytest.raises(example["emcee"].autocorr.AutocorrError):
+        example["emcee"].autocorr.integrated_time(chain, quiet=False)
+    assert np.isnan(example["effective_sample_size"](chain))
+
+
+def test_long_chain_ess_matches_the_emcee_estimator():
+    example = runpy.run_path(str(SCRIPT))
+    chain = np.random.default_rng(42).normal(size=(5000, 4, 3))
+    tau = example["emcee"].autocorr.integrated_time(chain, quiet=False)
+    expected = float(np.min(chain.shape[0] * chain.shape[1] / tau))
+    assert example["effective_sample_size"](chain) == pytest.approx(expected)
 
 
 def test_planet_period_plot_handles_a_short_run_without_two_planet_draws(tmp_path):

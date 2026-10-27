@@ -195,11 +195,28 @@ def render_line_histogram_frames(posterior):
 
 def render_spectrum_fit_frames(wavelength, flux, error, continuum, posterior):
     """Render observed spectral bins with actual retained model draws and residuals."""
+    inputs = (wavelength, flux, error, continuum, posterior.listpostcntpmodl)
+    if any(np.ma.is_masked(values) or np.iscomplexobj(values) for values in inputs):
+        raise ValueError("Spectral animation requires unmasked real inputs")
+    try:
+        wavelength, flux, error, continuum, count_models = (
+            np.asarray(values, dtype=float) for values in inputs
+        )
+    except (TypeError, ValueError) as exception:
+        raise ValueError("Spectral animation requires numeric inputs") from exception
+    if (wavelength.ndim != 1 or len(wavelength) < 2
+            or any(values.shape != wavelength.shape for values in (flux, error, continuum))
+            or any(not np.isfinite(values).all() for values in (wavelength, flux, error, continuum))
+            or np.any(wavelength <= 0) or np.any(np.diff(wavelength) <= 0)
+            or np.any(error <= 0) or np.any(continuum <= 0)):
+        raise ValueError("Spectral animation requires aligned finite bins with increasing positive "
+                         "wavelengths, positive errors and positive continuum")
+    if (count_models.ndim != 4 or count_models.shape[1:] != (len(wavelength), 1, 1)
+            or len(count_models) < 2):
+        raise ValueError("Spectral animation requires at least two aligned model draws")
     sigma = np.sqrt(error**2 + (FRACTIONAL_ERROR_FLOOR * continuum)**2)  # [Jy]
     countsperjansky = continuum / sigma**2  # [Jy^-1]
-    models = np.asarray(posterior.listpostcntpmodl)[:, ::-1, 0, 0] / countsperjansky[None, :]  # [Jy]
-    if models.ndim != 2 or models.shape[1] != len(wavelength) or len(models) < 2:
-        raise ValueError("Spectral animation requires at least two aligned model draws")
+    models = count_models[:, ::-1, 0, 0] / countsperjansky[None, :]  # [Jy]
     if not np.isfinite(models).all():
         raise ValueError("Spectral model draws must be finite")
     residuals = (flux[None, :] - models) / sigma[None, :]

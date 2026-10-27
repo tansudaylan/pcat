@@ -470,10 +470,10 @@ and the remaining columns form the second. No marginal density is fitted
 automatically. Its Monte Carlo error uses the same chain-aware calculation as
 the KL estimate, and finite-sample estimates can be negative.
 
-The same Gaussian example evaluates both quantities from its PCAT chains and
-compares each with its analytic value. The first measures change from prior to
-posterior, while the second measures dependence within the posterior. These
-calculations alone do not establish chain convergence.
+The same Gaussian example compares both estimates with their analytic values.
+The KL estimate measures how the data change the prior. Mutual information
+measures dependence between the two parameter groups in the posterior. Chain
+traces provide a separate view of convergence.
 
 ```bash
 python examples/kl_divergence_gaussian/kl_divergence_gaussian.py
@@ -659,11 +659,11 @@ posteriors and plots. The summary records the actual residual and predictive
 arrays, chain settings, and source hash. Existing native and legacy run outputs
 are protected from replacement.
 
-The two-chain, 600-sweep integration run `20261025_171151` executed all four
-fits. Its correct models still infer roughly ten components for four injected
-flares. These short chains need further mixing and convergence assessment
-before they can support catalog-recovery or bias conclusions. A small residual
-or a Gaussian-looking histogram alone does not establish an accurate catalog.
+The two-chain, 600-sweep run `20261025_171151` completed all four fits. Under the
+correct models, it infers roughly ten components for four injected flares.
+Small residuals and smooth marginal histograms can coexist with poor count
+recovery. Longer runs are needed to see whether the count posterior changes
+with further sampling.
 
 ![Injected and inferred flare catalogs under correct and misspecified models](examples/mismodeling_flare_catalog/visuals/mismodeling_catalog_samples_20261025_171855.png)
 

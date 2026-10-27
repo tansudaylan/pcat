@@ -36,7 +36,7 @@ from pcat.time_series import (
     flare_profile_parameters,
     retr_dictpropelemtmpl,
 )
-from pcat.plotting import animation_phase_label, animation_states
+from pcat.plotting import animation_phase_labels, animation_states
 from pcat.main import retr_pathrun
 
 EXAMPLE_PATH = Path(__file__).resolve().parent
@@ -231,18 +231,21 @@ def render_flare_posterior_frames(meantime, observed_counts, posterior):
     visual_root.mkdir(parents=True, exist_ok=True)
     tag = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
     paths = []
-    for snapshot, model in zip(snapshots, models):
+    phase_labels = animation_phase_labels(snapshots)
+    count_width = len(str(max(int(np.ravel(snapshot["numbelem"])[0]) for snapshot in snapshots)))
+    for snapshot, model, phase_label in zip(snapshots, models, phase_labels):
         figure, axis = plt.subplots(figsize=(6.0, 4.3), facecolor="white")
         hours = (meantime - TIME_OFFSET_DAYS) * 24.0  # [hour]
         axis.plot(hours, observed_counts, color="black", marker=".", markersize=2,
                   linestyle="none", alpha=0.75,
                   label="Simulated 2-min photometry")
         axis.plot(hours, model, color="#B04435", lw=1.6,
-                  label=f"PCAT model, {int(np.ravel(snapshot['numbelem'])[0])} flares")
+                  label=f"PCAT model, {int(np.ravel(snapshot['numbelem'])[0]):{count_width}d} flares")
         axis.set(xlim=(0, 24), ylim=(lower, upper), xlabel="Time [hour]",
-                 ylabel="Counts per 2 min bin", title=animation_phase_label(snapshot))
+                 ylabel="Counts per 2 min bin")
+        axis.set_title(phase_label, loc="left", fontfamily="monospace")
         axis.grid(False)
-        axis.legend(loc="upper right", framealpha=1, facecolor="white")
+        axis.legend(loc="upper right", framealpha=1, facecolor="white", prop={"family": "monospace"})
         path = visual_root / f"flare_photometry_{tag}_swep{snapshot['cntrswep']:09d}.png"
         print(f"Writing to {path}...")
         figure.savefig(path, dpi=200, bbox_inches="tight", facecolor="white")

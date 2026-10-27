@@ -129,6 +129,63 @@ def test_neural_density_is_normalized_and_callback_density_matches_draw(tmp_path
     )
 
 
+@pytest.mark.parametrize('shared_condition', [False, True])
+@pytest.mark.parametrize('invalid_rows', [False, True])
+def test_neural_batch_scores_shared_conditions_once_and_preserves_densities(shared_condition, invalid_rows):
+    from unittest.mock import patch
+
+    proposal = _fit_proposal()
+    elements = np.random.default_rng(47).uniform(size=(12, 2))
+    if invalid_rows:
+        elements[2, 0] = 1.1
+        elements[7, 1] = np.nan
+    condition = np.array([0.1, -0.2])
+    conditions = np.tile(condition, (len(elements), 1))
+    if not shared_condition:
+        conditions[:, 0] += np.linspace(-0.2, 0.2, len(elements))
+    supplied = condition if shared_condition else conditions
+    original_elements = elements.copy()
+    original_conditions = supplied.copy()
+    expected = np.array([
+        proposal.log_prob(row_condition, element)
+        for row_condition, element in zip(conditions, elements)
+    ])
+
+    with patch.object(proposal.network, 'forward', wraps=proposal.network.forward) as forward:
+        actual = proposal.log_prob_batch(supplied, elements)
+
+    valid_count = int(np.isfinite(expected).sum())
+    forward.assert_called_once()
+    assert forward.call_args.args[0].shape[0] == (1 if shared_condition else valid_count)
+    np.testing.assert_allclose(actual, expected, rtol=1e-6, atol=1e-6)
+    np.testing.assert_array_equal(elements, original_elements)
+    np.testing.assert_array_equal(supplied, original_conditions)
+
+
+@pytest.mark.parametrize('verbosity', [None, '0', '1'])
+def test_neural_checkpoint_narration_obeys_verbosity_without_changing_density(tmp_path, monkeypatch, capsys, verbosity):
+    proposal = _fit_proposal()
+    condition = np.array([0.1, -0.2])
+    elements = np.array([[0.2, 0.7], [0.8, 0.3]])
+    expected = proposal.log_prob_batch(condition, elements)
+    if verbosity is None:
+        monkeypatch.delenv('TDPY_VERBOSITY', raising=False)
+    else:
+        monkeypatch.setenv('TDPY_VERBOSITY', verbosity)
+    path = tmp_path / 'proposal.pt'
+    capsys.readouterr()
+
+    proposal.save(path)
+    restored = NeuralElementProposal.load(path)
+
+    output = capsys.readouterr().out
+    if verbosity == '1':
+        assert output == f'Writing to {path}...\nReading from {path}...\n'
+    else:
+        assert output == ''
+    np.testing.assert_array_equal(restored.log_prob_batch(condition, elements), expected)
+
+
 def test_neural_proposal_callbacks_drive_pcat_catalog_moves(tmp_path):
     pytest.importorskip("torch")
     from astropy.io import fits
@@ -200,6 +257,74 @@ def test_neural_proposal_callbacks_drive_pcat_catalog_moves(tmp_path):
         assert np.any(proposal_types == 1)
         assert np.any(proposal_types == 2)
         assert np.isfinite(output["listpostaccplprb"][()]).any()
+
+
+def test_point_source_validation_catalogs_are_reproducible():
+    from examples.neural_proposal_efficiency.point_source_detection import validation_catalogs
+
+    original = validation_catalogs(1, 73)
+    assert [count for count, _ in original] == [0, 1, 2]
+    np.testing.assert_array_equal(original[1][1], [[0.25, 180.0]])
+    np.testing.assert_array_equal(original[2][1], [[0.25, 180.0], [0.75, 120.0]])
+
+    repeated = validation_catalogs(3, 73)
+    repeated_again = validation_catalogs(3, 73)
+    assert [count for count, _ in repeated] == [0, 0, 0, 1, 1, 1, 2, 2, 2]
+    for (count, catalog), (_, repeated_catalog) in zip(repeated, repeated_again):
+        assert catalog.shape == (count, 2)
+        np.testing.assert_array_equal(catalog, repeated_catalog)
+        assert np.all((catalog[:, 0] >= 0.0) & (catalog[:, 0] < 1.0))
+        assert np.all((catalog[:, 1] >= 0.0) & (catalog[:, 1] < 500.0))
+
+
+def test_point_source_validation_summary_uses_paired_tv_differences():
+    from examples.neural_proposal_efficiency.point_source_detection import summarize_validation_cases
+
+    cases = [
+        {"injected_source_count": 0, "runs": [
+            {"method": "prior", "total_variation_from_reference": 0.4},
+            {"method": "neural", "total_variation_from_reference": 0.1},
+        ]},
+        {"injected_source_count": 0, "runs": [
+            {"method": "prior", "total_variation_from_reference": 0.2},
+            {"method": "neural", "total_variation_from_reference": 0.3},
+        ]},
+    ]
+
+    summary = summarize_validation_cases(cases, seed=9)
+    result = summary["by_injected_source_count"]["0"]
+    assert summary["validation_images"] == 2
+    assert result["prior_median_total_variation"] == pytest.approx(0.3)
+    assert result["neural_median_total_variation"] == pytest.approx(0.2)
+    assert result["neural_minus_prior_median_total_variation"] == pytest.approx(-0.1)
+    assert result["neural_lower_error_images"] == 1
+
+
+def test_point_source_validation_plot_saves_repeated_images(tmp_path):
+    from examples.neural_proposal_efficiency.point_source_detection import plot_efficiency, plot_results
+
+    cases, arrays = [], {}
+    for count in range(3):
+        for repeat in range(2):
+            arrays[f"case{len(cases)}_observed"] = np.full((9, 9), 100.0 + count)
+            cases.append({"injected_source_count": count, "runs": [
+                {"method": "prior", "total_variation_from_reference": 0.1 + 0.01 * repeat},
+                {"method": "neural", "total_variation_from_reference": 0.08 + 0.01 * repeat},
+            ]})
+    output = tmp_path / "validation.png"
+
+    plot_results({"cases": cases}, arrays, output)
+
+    assert output.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    for case in cases:
+        case["runs"].append({"method": "catalog", "total_variation_from_reference": 0.02})
+        case["runs"].append({"method": "catalog_prior", "total_variation_from_reference": 0.09})
+        for index, run in enumerate(case["runs"]):
+            run["combined_count_probability"] = [0.4, 0.4, 0.2]
+            run["log_posterior_ess_per_second"] = 10.0 + index
+    efficiency_output = tmp_path / "efficiency.png"
+    plot_efficiency({"cases": cases}, efficiency_output)
+    assert efficiency_output.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 def test_state_conditioned_neural_callbacks_drive_pcat_birth_death(tmp_path):
     pytest.importorskip("torch")

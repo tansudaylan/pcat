@@ -12,7 +12,7 @@ import numpy as np
 
 from pcat import sampling
 from pcat.demo import write_time_series_fits
-from pcat.plotting import animation_phase_label, animation_states
+from pcat.plotting import animation_phase_labels, animation_states
 from pcat.time_series import evaluate_rotating_spot_profile, retr_dictpropelemtmpl
 
 
@@ -163,7 +163,9 @@ def render_spot_posterior_frames(time_days, observed_counts, posterior):
         old_frame.unlink()
 
     output_paths = []
-    for snapshot, model in zip(snapshots, models):
+    phase_labels = animation_phase_labels(snapshots)
+    count_width = len(str(max(int(np.ravel(snapshot["numbelem"])[0]) for snapshot in snapshots)))
+    for snapshot, model, phase_label in zip(snapshots, models, phase_labels):
         frame_index = snapshot["cntrswep"]
         spot_count = int(np.ravel(snapshot["numbelem"])[0])
         figure, axes = plt.subplots(
@@ -173,12 +175,12 @@ def render_spot_posterior_frames(time_days, observed_counts, posterior):
         axes[0].scatter(hours, observed_counts, s=7, color="#60686B", alpha=0.65,
                         linewidths=0, label="Simulated photometry")
         axes[0].plot(hours, model, color="#A51C30", lw=1.5,
-                     label=f"PCAT model, {spot_count} spots")
+                 label=f"PCAT model, {spot_count:{count_width}d} spots")
         axes[0].set(xlim=(hours[0], hours[-1]), ylim=limits,
-                    ylabel="Counts per 0.1 day bin",
-                    title=animation_phase_label(snapshot))
+                ylabel="Counts per 0.1 day bin")
+        axes[0].set_title(phase_label, loc="left", fontfamily="monospace")
         axes[0].legend(loc="upper right", fontsize=8, frameon=True,
-                       fancybox=True, framealpha=1.0, ncol=2)
+                   fancybox=True, framealpha=1.0, ncol=2, prop={"family": "monospace", "size": 8})
         axes[1].axhline(0.0, color="black", lw=0.8, linestyle="dashed")
         axes[1].scatter(hours, observed_counts - model, s=6, color="#0072B2",
                         alpha=0.7, linewidths=0)

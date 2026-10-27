@@ -448,6 +448,14 @@ Analysis utilities
    settings, timings, call counts, source hash, and call-cap use. Figures
    replay those arrays without changing any measured metric.
 
+   New runs leave MCMC ESS unresolved unless emcee's default autocorrelation
+   chain-length criterion succeeds. The JSON stores unresolved estimates and
+   efficiency ratios as ``null``, and the efficiency plot labels them
+   ``unresolved``. This check is separate from finding every posterior mode.
+   The emcee seed controls both walker initialization and transition randomness
+   without changing NumPy's global random state. Earlier displayed runs retain
+   their original measurements and metadata.
+
    .. code-block:: bash
 
       python examples/sampler_comparison_emcee_dynesty/sampler_comparison_emcee_dynesty.py --part both
@@ -557,11 +565,10 @@ classes, and an 81-pixel cutout. It uses a synthetic 0.01-degree pixel scale
 with core and tail widths of two and four pixels. Construction cost and
 median repeated-evaluation times are reported separately. Random held-out
 subpixel shifts measure density error relative to the profile peak. Timing
-ratios are workload- and machine-dependent, and these kernel comparisons do
-not establish posterior equivalence or model adequacy for observed data.
+ratios are workload- and machine-dependent. These results describe the stated
+synthetic workload. Applying the evaluator to a fit requires comparing its
+posterior with the direct calculation for the chosen PSF and data.
 
-Generated examples are deterministic pipeline demonstrations unless their
-README explicitly states otherwise. Synthetic outputs validate computation and
-visualization but do not constitute measurements of real astrophysical systems.
-The daylan+2017_fermi_point_sources README distinguishes its scaled simulation from the
-archival Fermi-LAT analysis in the publication.
+The ``daylan+2017_fermi_point_sources`` example uses scaled simulated counts.
+Its README distinguishes those inputs from the archival Fermi-LAT analysis in
+the publication.

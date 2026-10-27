@@ -27,7 +27,7 @@ from pcat.diagnostics import gelman_rubin
 from pcat.main import retr_pathrun
 from pcat.mejiro_lens import LABELS, render_mejiro_counts, run_mejiro_lens_inference, simulate_mejiro_exposure
 from pcat.plotting import (
-    animation_phase_label, animation_states, make_image_sequence_animation,
+    animation_phase_labels, animation_states, make_image_sequence_animation,
     plot_lens_image_fit, plot_lens_parameter_recovery,
 )
 
@@ -120,13 +120,15 @@ def write_replicated_image_animation(posterior: object, specification: dict) -> 
     # one fixed noise realization, so frames differ only through the lens model
     noise_seed = 2027
     images, labels = [], []
-    for snapshot in animation_states(posterior):
+    snapshots = animation_states(posterior)
+    phase_labels = animation_phase_labels(snapshots)
+    for snapshot, phase_label in zip(snapshots, phase_labels):
         counts = render_mejiro_counts(specification, snapshot["paragenrscalfull"][:len(LABELS)])
         # counts in units of the sky level, with an arcsinh stretch to show faint arcs beside the bright lens
         replicated = np.arcsinh(np.random.default_rng(noise_seed).poisson(counts) / specification["sky_counts"])
         # GIF rows run top-down, so flip to match the origin='lower' figures
         images.append(np.flipud(replicated))
-        labels.append(animation_phase_label(snapshot))
+        labels.append(phase_label)
     return make_image_sequence_animation(
         images, labels, VISUAL_PATH / "mejiro_roman_lens_replicated.gif", duration_ms=300,
         title="mejiro Roman F129 lens, PCAT replicated exposure",

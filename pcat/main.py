@@ -2844,7 +2844,27 @@ def retr_eerrnorm(minmvarb, maxmvarb, meanvarb, stdvvarb):
     return cdfnminm, cdfndiff
     
 
-def retr_condcatl(gdat):
+def retr_condcatl(gdat, *, coordinate_names=('xpos', 'ypos'), distance_maximum=None):
+    """Condense posterior catalogs using one or two caller-selected coordinates.
+
+    Nonspatial coordinates require an explicit distance tolerance in their input
+    units. The default spatial pair retains the existing angular tolerance.
+    """
+    if isinstance(coordinate_names, str):
+        raise ValueError('coordinate_names must contain one or two distinct feature names')
+    coordinate_names = tuple(coordinate_names)
+    if (len(coordinate_names) not in (1, 2)
+            or any(not isinstance(name, str) or not name for name in coordinate_names)
+            or len(set(coordinate_names)) != len(coordinate_names)):
+        raise ValueError('coordinate_names must contain one or two distinct feature names')
+    if distance_maximum is None:
+        if coordinate_names != ('xpos', 'ypos'):
+            raise ValueError('Nonspatial coordinates require an explicit distance tolerance')
+        distance_maximum = gdat.anglassc
+    if (not isinstance(distance_maximum, (int, float, np.integer, np.floating))
+            or isinstance(distance_maximum, (bool, np.bool_))
+            or not np.isfinite(distance_maximum) or distance_maximum <= 0):
+        raise ValueError('distance_maximum must be finite and positive')
     gmod = gdat.fitt
 
     # setup
@@ -2875,24 +2895,36 @@ def retr_condcatl(gdat):
         print('numbstks')
         print(numbstks)
 
-    cntr = 0 
-    arrystks = np.zeros((numbstks, gmod.numbparagenrelem))
-    for n in gdat.indxsamptotl:
-        for l in gmod.indxpopl:
-            for k in np.arange(len(gdat.listpostindxelemfull[n][l])):
-                for m, nameparagenrelem in enumerate(gmod.namepara.genrelem[l]):
-                    arrystks[indxstks[n][l][k], m] = gdat.listpostdictelem[n][l][nameparagenrelem][k]
+    coordinates = np.zeros((numbstks, 2))
+    for stacked_index, (draw_index, population_index, element_index) in enumerate(indxtupl):
+        catalog = gdat.listpostdictelem[draw_index][population_index]
+        for coordinate_index, name in enumerate(coordinate_names):
+            coordinates[stacked_index, coordinate_index] = catalog[name][element_index]
 
+    populations = np.asarray([sample[1] for sample in indxtupl])
     if gdat.typeverb > 0:
-        print('Constructing the distance matrix for %d stacked samples...' % arrystks.shape[0])
+        print('Finding radius neighbors for %d stacked samples...' % numbstks)
         timeinit = gdat.functime()
-    
-    indxposx = gmod.namepara.genrelem[0].index('xpos')
-    indxposy = gmod.namepara.genrelem[0].index('ypos')
-    distspat = np.hypot(
-        arrystks[:, None, indxposx] - arrystks[None, :, indxposx],
-        arrystks[:, None, indxposy] - arrystks[None, :, indxposy],
-    )
+
+    from .associate import neighbors_within_radius
+
+    neighbors = [np.empty(0, dtype=int) for _ in range(numbstks)]
+    for population_index in np.unique(populations):
+        population_samples = np.flatnonzero(populations == population_index)
+        finite = np.isfinite(coordinates[population_samples]).all(axis=1)
+        valid_samples = population_samples[finite]
+        if valid_samples.size == 0:
+            continue
+        local_neighbors = neighbors_within_radius(
+            coordinates[valid_samples], coordinates[valid_samples], distance_maximum,
+        )
+        for stacked_index, local_indices in zip(valid_samples, local_neighbors):
+            candidate_indices = valid_samples[local_indices]
+            distances = np.hypot(
+                coordinates[candidate_indices, 0] - coordinates[stacked_index, 0],
+                coordinates[candidate_indices, 1] - coordinates[stacked_index, 1],
+            )
+            neighbors[stacked_index] = candidate_indices[distances < distance_maximum]
 
     if gdat.typeverb > 0:
         timefinl = gdat.functime()
@@ -2909,9 +2941,11 @@ def retr_condcatl(gdat):
         
         # count number of associations
         numbdist = np.zeros(numbstks, dtype=int) - 1
-        for p in range(len(indxstksleft)):
-            indxindx = np.where(distspat[indxstksleft[p], :] < gdat.anglassc)[0]
-            numbdist[indxstksleft[p]] = indxindx.size
+        available_samples = set(indxstksleft)
+        for stacked_index in indxstksleft:
+            numbdist[stacked_index] = sum(
+                neighbor in available_samples for neighbor in neighbors[stacked_index]
+            )
             
         prvlmaxmesti = np.amax(numbdist) / float(gdat.numbsamptotl)
         
@@ -2948,10 +2982,13 @@ def retr_condcatl(gdat):
                     continue
                 
                 if indxstkstemp.size > 0:
-                    indxleft = np.argmin(distspat[indxstkscntr, indxstkstemp])
-                    
-                    indxstksthis = indxstkstemp[indxleft]
-                    if distspat[indxstkscntr, indxstksthis] < gdat.anglassc:
+                    nearby = np.intersect1d(indxstkstemp, neighbors[indxstkscntr])
+                    if nearby.size > 0:
+                        distances = np.hypot(
+                            coordinates[nearby, 0] - coordinates[indxstkscntr, 0],
+                            coordinates[nearby, 1] - coordinates[indxstkscntr, 1],
+                        )
+                        indxstksthis = nearby[np.argmin(distances)]
                         indxstksassc[cntr].append(indxstksthis)
                         indxstksleft.remove(indxstksthis)
             cntr += 1

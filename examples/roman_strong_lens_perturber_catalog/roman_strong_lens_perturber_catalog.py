@@ -11,7 +11,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pcat.plotting import animation_phase_label, animation_states, plot_detection_diagnostic
+from pcat.plotting import animation_phase_labels, animation_states, plot_detection_diagnostic
 from pcat.roman_lens import (
     RomanLensConfig, render_lens, render_lens_counts,
     run_lens_image_pipeline, simulate_population, summarize_population,
@@ -55,7 +55,9 @@ def render_posterior_lens_frames(smoke: bool = False) -> list[Path]:
         print(f"Removing previous frame {old_frame}...")
         old_frame.unlink()
     paths = []
-    for snapshot in animation_states(result.posterior):
+    snapshots = animation_states(result.posterior)
+    phase_labels = animation_phase_labels(snapshots)
+    for snapshot, phase_label in zip(snapshots, phase_labels):
         model_counts = render_lens_counts(config, snapshot["paragenrscalfull"][:3], source_size,
                                           axis_ratio, source_angle)
         replicated = np.random.default_rng(noise_seed).poisson(model_counts)
@@ -64,8 +66,8 @@ def render_posterior_lens_frames(smoke: bool = False) -> list[Path]:
                             vmax=upper, extent=(-half_width, half_width, -half_width, half_width))
         figure.colorbar(image, ax=axis, shrink=0.8,
                         label=r"arcsinh(counts / $3\sigma_{\rm sky}$)")
-        axis.set(xlabel="Field offset 1 [arcsec]", ylabel="Field offset 2 [arcsec]",
-                 title=animation_phase_label(snapshot))
+        axis.set(xlabel="Field offset 1 [arcsec]", ylabel="Field offset 2 [arcsec]")
+        axis.set_title(phase_label, loc="left", fontfamily="monospace")
         axis.grid(False)
         path = visual_root / f"roman_wfi_lensed_posterior_swep{snapshot['cntrswep']:09d}.png"
         print(f"Writing to {path}...")

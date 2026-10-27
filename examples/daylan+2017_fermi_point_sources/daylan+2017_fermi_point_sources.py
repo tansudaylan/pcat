@@ -9,7 +9,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
-from tdpy.cli import add_plot_arguments
+from tdpy.cli import add_plot_arguments, add_smoke_argument
 import sys
 from pathlib import Path
 
@@ -163,7 +163,7 @@ def read_posterior(run: object) -> object:
 def render_source_frames(posterior: object, *, provenance: dict | None = None) -> list[Path]:
     """Overlay PCAT source catalogs, from the prior draw to posterior samples, on the simulated count map."""
     import matplotlib.pyplot as plt
-    from pcat.plotting import animation_phase_label, animation_states
+    from pcat.plotting import animation_phase_labels, animation_states
 
     if np.ma.is_masked(posterior.cntpdata):
         raise ValueError("Fermi source frames require complete count data")
@@ -182,11 +182,11 @@ def render_source_frames(posterior: object, *, provenance: dict | None = None) -
     time_tag = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
     paths = []
     snapshots = animation_states(posterior, require_nonzero_catalog=True)
-    maximum_sweep = max(snapshot["cntrswep"] for snapshot in snapshots)
+    phase_labels = animation_phase_labels(snapshots)
     count_width = max(3, len(str(max(len(snapshot["dictelem"][0]["xpos"]) for snapshot in snapshots))))
     fluxes = np.concatenate([np.asarray(snapshot["dictelem"][0]["flux"]) for snapshot in snapshots])
     low, high = np.log10(fluxes.min()), np.log10(fluxes.max())
-    for snapshot in snapshots:
+    for snapshot, phase_label in zip(snapshots, phase_labels):
         sources = snapshot["dictelem"][0]
         sizes = 20 + 120 * (np.log10(sources["flux"]) - low) / max(high - low, 1e-9)  # [point^2]
         figure, axis = plt.subplots(figsize=(5.2, 5.2), facecolor="white")
@@ -198,8 +198,7 @@ def render_source_frames(posterior: object, *, provenance: dict | None = None) -
         axis.set(xlim=(-FIELD_HALF_WIDTH_DEG, FIELD_HALF_WIDTH_DEG),
                  ylim=(-FIELD_HALF_WIDTH_DEG, FIELD_HALF_WIDTH_DEG),
                   xlabel="Field offset 1 [deg]", ylabel="Field offset 2 [deg]")
-        axis.set_title(animation_phase_label(snapshot, maximum_sweeps=maximum_sweep),
-                       loc="left", fontfamily="monospace", fontsize=10)
+        axis.set_title(phase_label, loc="left", fontfamily="monospace", fontsize=10)
         axis.legend(loc="upper center", bbox_to_anchor=(0.5, -0.18), facecolor="white", framealpha=1,
                     prop={"family": "monospace"})
         axis.grid(False)
@@ -233,7 +232,7 @@ def render_source_frames(posterior: object, *, provenance: dict | None = None) -
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--smoke", action="store_true", help="Run a small pipeline check.")
+    add_smoke_argument(parser, help="Run a small pipeline check.")
     parser.add_argument("--quick", action="store_true", help="Run the 300-source mock at reduced resolution and depth.")
     parser.add_argument("--fresh", action="store_true", help="Use a fresh run; earlier output is preserved.")
     add_plot_arguments(parser)

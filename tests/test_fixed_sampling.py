@@ -108,6 +108,505 @@ def constant_legacy_likelihood(values, state):
     return np.log(3.)
 
 
+@pytest.mark.parametrize('bounds', [(1.0, 1.0), (2.0, 1.0)])
+@pytest.mark.parametrize('container', [list, np.array])
+@pytest.mark.parametrize('scale', ['self', 'logt'])
+def test_sample_posterior_rejects_invalid_bounds_before_outputs(tmp_path, monkeypatch, bounds, container, scale):
+    from unittest.mock import Mock
+    import pcat.fixed as fixed
+
+    minima = container([bounds[0]])
+    maxima = container([bounds[1]])
+    original_minima = np.array(minima, copy=True)
+    original_maxima = np.array(maxima, copy=True)
+    output = tmp_path / 'invalid_bounds'
+    sampler = Mock(side_effect=AssertionError('Sampling must not start for invalid bounds'))
+    monkeypatch.setattr(fixed, 'sample_fixed_chains', sampler)
+
+    with np.errstate(all='raise'):
+        with pytest.raises(ValueError, match='minimum.*less.*maximum'):
+            fixed.sample_posterior(
+                None, 4, constant_legacy_likelihood,
+                ['x'], [['x', '']], [scale], minima, maxima,
+                pathbase=str(output) + '/', boolplot=False,
+                booltqdm=False, typeverb=0,
+            )
+
+    sampler.assert_not_called()
+    assert not output.exists()
+    np.testing.assert_array_equal(minima, original_minima)
+    np.testing.assert_array_equal(maxima, original_maxima)
+
+
+@pytest.mark.parametrize('bound_name', ['minmpara', 'maxmpara'])
+@pytest.mark.parametrize('kind', ['masked', 'complex'])
+def test_sample_posterior_rejects_masked_or_complex_bounds_before_outputs(tmp_path, monkeypatch, bound_name, kind):
+    import pcat.fixed as fixed
+
+    bounds = {'minmpara': np.array([-1.0]), 'maxmpara': np.array([1.0])}
+    if kind == 'masked':
+        invalid = np.ma.array(bounds[bound_name], mask=[True])
+    else:
+        invalid = bounds[bound_name].astype(complex) + 0.1j
+    bounds[bound_name] = invalid
+    original_data = np.ma.getdata(invalid).copy()
+    original_mask = np.ma.getmaskarray(invalid).copy()
+    output = tmp_path / 'invalid_physical_bounds'
+    monkeypatch.setattr(fixed, 'retr_limtpara',
+                        lambda *args: pytest.fail('Invalid bounds reached plotting preparation'))
+    monkeypatch.setattr(fixed, 'sample_fixed_chains',
+                        lambda *args, **kwargs: pytest.fail('Invalid bounds reached the sampler'))
+
+    with pytest.raises(ValueError, match='unmasked real'):
+        fixed.sample_posterior(
+            None, 4, constant_legacy_likelihood,
+            ['x'], [['x', '']], ['self'], **bounds,
+            pathbase=str(output) + '/', boolplot=False,
+            booltqdm=False, typeverb=0,
+        )
+
+    assert not output.exists()
+    np.testing.assert_array_equal(np.ma.getdata(invalid), original_data)
+    np.testing.assert_array_equal(np.ma.getmaskarray(invalid), original_mask)
+
+
+@pytest.mark.parametrize('container', ['list', 'array', 'unmasked'])
+def test_sample_posterior_accepts_real_bounds_without_modifying_inputs(tmp_path, container):
+    import pcat.fixed as fixed
+
+    minima, maxima = np.array([-1.0]), np.array([1.0])
+    if container == 'list':
+        minima, maxima = minima.tolist(), maxima.tolist()
+    elif container == 'unmasked':
+        minima, maxima = np.ma.array(minima, mask=False), np.ma.array(maxima, mask=False)
+    original_minima, original_maxima = np.asarray(minima).copy(), np.asarray(maxima).copy()
+    random_state = np.random.get_state()
+    try:
+        np.random.seed(123)
+        samples = fixed.sample_posterior(
+            None, 8, constant_legacy_likelihood,
+            ['x'], [['x', '']], ['self'], minima, maxima,
+            pathbase=str(tmp_path) + '/', boolforcrepr=True, boolplot=False,
+            numbsamppostwalk=4, numbsampburnwalk=2, booltqdm=False,
+            booldiag=False, typeverb=0,
+        )
+    finally:
+        np.random.set_state(random_state)
+
+    assert samples['x'].size > 0
+    assert np.isfinite(samples['x']).all()
+    assert np.all((samples['x'] >= -1.0) & (samples['x'] <= 1.0))
+    np.testing.assert_array_equal(minima, original_minima)
+    np.testing.assert_array_equal(maxima, original_maxima)
+    assert not np.ma.getmaskarray(minima).any()
+    assert not np.ma.getmaskarray(maxima).any()
+
+
+@pytest.mark.parametrize('bound_name', ['minmpara', 'maxmpara'])
+@pytest.mark.parametrize('kind', ['matrix', 'nan', 'wrong_length'])
+def test_sample_posterior_rejects_malformed_bounds_before_outputs(tmp_path, monkeypatch, bound_name, kind):
+    import pcat.fixed as fixed
+
+    bounds = {'minmpara': np.array([-1.0, -2.0]), 'maxmpara': np.array([1.0, 2.0])}
+    if kind == 'matrix':
+        invalid = bounds[bound_name].reshape(1, 2)
+    elif kind == 'nan':
+        invalid = bounds[bound_name].copy()
+        invalid[0] = np.nan
+    else:
+        invalid = bounds[bound_name][:1]
+    bounds[bound_name] = invalid
+    original = invalid.copy()
+    output = tmp_path / 'malformed_bounds'
+    monkeypatch.setattr(fixed, 'retr_limtpara',
+                        lambda *args: pytest.fail('Malformed bounds reached plotting preparation'))
+    monkeypatch.setattr(fixed, 'sample_fixed_chains',
+                        lambda *args, **kwargs: pytest.fail('Malformed bounds reached the sampler'))
+
+    with pytest.raises(ValueError, match='one-dimensional|length|NaN'):
+        fixed.sample_posterior(
+            None, 4, constant_legacy_likelihood,
+            ['x', 'y'], [['x', ''], ['y', '']], ['self', 'self'], **bounds,
+            pathbase=str(output) + '/', boolplot=False,
+            booltqdm=False, typeverb=0,
+        )
+
+    assert not output.exists()
+    np.testing.assert_array_equal(invalid, original)
+
+
+@pytest.mark.parametrize('lower,upper', [(0.0, 1.0), (-1.0, 1.0), (-2.0, -1.0), (1.0, np.inf)])
+def test_sample_posterior_rejects_invalid_log_bounds_before_outputs(tmp_path, monkeypatch, lower, upper):
+    import pcat.fixed as fixed
+
+    minima, maxima = np.array([lower]), np.array([upper])
+    original_minima, original_maxima = minima.copy(), maxima.copy()
+    output = tmp_path / 'invalid_log_bounds'
+    monkeypatch.setattr(fixed, 'retr_limtpara',
+                        lambda *args: pytest.fail('Invalid logarithmic bounds reached plotting preparation'))
+    monkeypatch.setattr(fixed, 'sample_fixed_chains',
+                        lambda *args, **kwargs: pytest.fail('Invalid logarithmic bounds reached sampling'))
+
+    with pytest.raises(ValueError, match='[Ll]og.*finite.*positive'):
+        fixed.sample_posterior(
+            None, 4, constant_legacy_likelihood,
+            ['x'], [['x', '']], ['logt'], minima, maxima,
+            pathbase=str(output) + '/', boolplot=False, booltqdm=False, typeverb=0,
+        )
+
+    assert not output.exists()
+    np.testing.assert_array_equal(minima, original_minima)
+    np.testing.assert_array_equal(maxima, original_maxima)
+
+
+def test_sample_posterior_runs_with_valid_positive_log_bounds(tmp_path):
+    import pcat.fixed as fixed
+
+    minima, maxima = np.array([1.0]), np.array([10.0])
+    random_state = np.random.get_state()
+    try:
+        np.random.seed(123)
+        samples = fixed.sample_posterior(
+            None, 8, constant_legacy_likelihood,
+            ['x'], [['x', '']], ['logt'], minima, maxima,
+            pathbase=str(tmp_path) + '/', boolforcrepr=True, boolplot=False,
+            numbsamppostwalk=4, numbsampburnwalk=2, booltqdm=False,
+            booldiag=False, typeverb=0,
+        )
+    finally:
+        np.random.set_state(random_state)
+
+    assert samples['x'].size > 0
+    assert np.isfinite(samples['x']).all()
+    assert np.all((samples['x'] >= 1.0) & (samples['x'] <= 10.0))
+    np.testing.assert_array_equal(minima, [1.0])
+    np.testing.assert_array_equal(maxima, [10.0])
+
+
+@pytest.mark.parametrize('field,invalid', [
+    ('listnamepara', ['x']),
+    ('listnamepara', ['x', 'y', 'z']),
+    ('scalpara', ['self']),
+    ('scalpara', ['self', 'self', 'self']),
+    ('listnamepara', ['x', 'x']),
+])
+def test_sample_posterior_rejects_misaligned_metadata_before_outputs(tmp_path, monkeypatch, field, invalid):
+    from copy import deepcopy
+    import pcat.fixed as fixed
+
+    arguments = dict(
+        listnamepara=['x', 'y'], listlablpara=[['x', ''], ['y', '']],
+        scalpara=['self', 'self'],
+    )
+    arguments[field] = invalid
+    original = deepcopy(arguments)
+    output = tmp_path / 'invalid_metadata'
+    monkeypatch.setattr(fixed, 'retr_limtpara',
+                        lambda *args: pytest.fail('Invalid metadata reached plotting preparation'))
+    monkeypatch.setattr(fixed, 'sample_fixed_chains',
+                        lambda *args, **kwargs: pytest.fail('Invalid metadata reached sampling'))
+
+    with pytest.raises(ValueError, match='length|unique'):
+        fixed.sample_posterior(
+            None, 4, constant_legacy_likelihood, **arguments,
+            minmpara=np.array([-1.0, -2.0]), maxmpara=np.array([1.0, 2.0]),
+            pathbase=str(output) + '/', boolplot=False, booltqdm=False, typeverb=0,
+        )
+
+    assert not output.exists()
+    assert arguments == original
+
+
+@pytest.mark.parametrize('scaling', ['unknown', 'linear', '', None, 1, ['self']])
+def test_sample_posterior_rejects_unsupported_scaling_before_outputs(tmp_path, monkeypatch, scaling):
+    from copy import deepcopy
+    import pcat.fixed as fixed
+
+    scalings = [scaling]
+    original = deepcopy(scalings)
+    output = tmp_path / 'unsupported_scaling'
+    monkeypatch.setattr(fixed, 'retr_limtpara',
+                        lambda *args: pytest.fail('Unsupported scaling reached uninitialized plot limits'))
+    monkeypatch.setattr(fixed, 'sample_fixed_chains',
+                        lambda *args, **kwargs: pytest.fail('Unsupported scaling reached sampling'))
+
+    with pytest.raises(ValueError, match='scalings.*self.*logt.*gaus'):
+        fixed.sample_posterior(
+            None, 4, constant_legacy_likelihood,
+            ['x'], [['x', '']], scalings, np.array([1.0]), np.array([2.0]),
+            pathbase=str(output) + '/', boolplot=False, booltqdm=False, typeverb=0,
+        )
+
+    assert not output.exists()
+    assert scalings == original
+
+
+@pytest.mark.parametrize('field,invalid', [
+    ('meangauspara', None), ('stdvgauspara', None),
+    ('meangauspara', np.array([np.nan])), ('meangauspara', np.array([np.inf])),
+    ('stdvgauspara', np.array([0.0])), ('stdvgauspara', np.array([-1.0])),
+    ('stdvgauspara', np.array([np.nan])), ('stdvgauspara', np.array([np.inf])),
+    ('meangauspara', np.array([[0.0]])), ('stdvgauspara', np.array([[1.0]])),
+    ('meangauspara', np.array([0.0, 1.0])), ('stdvgauspara', np.array([1.0, 2.0])),
+    ('meangauspara', np.ma.array([0.0], mask=[True])),
+    ('stdvgauspara', np.ma.array([1.0], mask=[True])),
+    ('meangauspara', np.array([0.0 + 0.1j])),
+    ('stdvgauspara', np.array([1.0 + 0.1j])),
+])
+def test_sample_posterior_rejects_invalid_gaussian_parameters_before_outputs(tmp_path, monkeypatch, field, invalid):
+    import pcat.fixed as fixed
+
+    parameters = {'meangauspara': np.array([0.0]), 'stdvgauspara': np.array([1.0])}
+    parameters[field] = invalid
+    original_data = None if invalid is None else np.ma.getdata(invalid).copy()
+    original_mask = None if invalid is None else np.ma.getmaskarray(invalid).copy()
+    output = tmp_path / 'invalid_gaussian_parameters'
+    monkeypatch.setattr(fixed, 'retr_limtpara',
+                        lambda *args: pytest.fail('Invalid Gaussian parameters reached plotting preparation'))
+    monkeypatch.setattr(fixed, 'sample_fixed_chains',
+                        lambda *args, **kwargs: pytest.fail('Invalid Gaussian parameters reached sampling'))
+
+    with pytest.raises(ValueError, match='Gaussian'):
+        fixed.sample_posterior(
+            None, 4, constant_legacy_likelihood,
+            ['x'], [['x', '']], ['gaus'], np.array([-5.0]), np.array([5.0]),
+            **parameters, pathbase=str(output) + '/', boolplot=False, booltqdm=False, typeverb=0,
+        )
+
+    assert not output.exists()
+    if invalid is not None:
+        np.testing.assert_array_equal(np.ma.getdata(invalid), original_data)
+        np.testing.assert_array_equal(np.ma.getmaskarray(invalid), original_mask)
+
+
+def test_sample_posterior_runs_with_valid_gaussian_parameters(tmp_path):
+    import pcat.fixed as fixed
+
+    means, standard_deviations = np.array([0.0]), np.array([0.2])
+    random_state = np.random.get_state()
+    try:
+        np.random.seed(123)
+        samples = fixed.sample_posterior(
+            None, 8, constant_legacy_likelihood,
+            ['x'], [['x', '']], ['gaus'], np.array([-1.0]), np.array([1.0]),
+            meangauspara=means, stdvgauspara=standard_deviations,
+            pathbase=str(tmp_path) + '/', boolforcrepr=True, boolplot=False,
+            numbsamppostwalk=4, numbsampburnwalk=2, booltqdm=False, booldiag=False, typeverb=0,
+        )
+    finally:
+        np.random.set_state(random_state)
+
+    assert samples['x'].size > 0
+    assert np.isfinite(samples['x']).all()
+    np.testing.assert_array_equal(means, [0.0])
+    np.testing.assert_array_equal(standard_deviations, [0.2])
+
+
+@pytest.mark.parametrize('field,invalid', [
+    ('numbsampwalk', 8.5), ('numbsampwalk', True),
+    ('numbsampwalk', 0), ('numbsampwalk', np.nan),
+    ('numbsampburnwalk', -1), ('numbsampburnwalk', 1.5), ('numbsampburnwalk', False),
+    ('numbsampburnwalkinit', -1), ('numbsampburnwalkinit', 1.5), ('numbsampburnwalkinit', True),
+    ('numbsamppostwalk', 0), ('numbsamppostwalk', -1),
+    ('numbsamppostwalk', 2.5), ('numbsamppostwalk', True),
+])
+def test_sample_posterior_rejects_invalid_counts_before_outputs(tmp_path, monkeypatch, field, invalid):
+    import pcat.fixed as fixed
+
+    counts = dict(numbsampwalk=8, numbsampburnwalk=2, numbsampburnwalkinit=0, numbsamppostwalk=4)
+    counts[field] = invalid
+    output = tmp_path / 'invalid_counts'
+    monkeypatch.setattr(fixed, 'retr_limtpara',
+                        lambda *args: pytest.fail('Invalid count reached plotting preparation'))
+    monkeypatch.setattr(fixed, 'sample_fixed_chains',
+                        lambda *args, **kwargs: pytest.fail('Invalid count reached sampling'))
+
+    with pytest.raises(ValueError, match='integer'):
+        fixed.sample_posterior(
+            None, retr_llik=constant_legacy_likelihood, **counts,
+            listnamepara=['x'], listlablpara=[['x', '']], scalpara=['self'],
+            minmpara=np.array([-1.0]), maxmpara=np.array([1.0]),
+            pathbase=str(output) + '/', boolplot=False, booltqdm=False, typeverb=0,
+        )
+
+    assert not output.exists()
+
+
+def test_sample_posterior_accepts_numpy_counts_and_default_retention(tmp_path):
+    import pcat.fixed as fixed
+
+    random_state = np.random.get_state()
+    try:
+        np.random.seed(123)
+        samples = fixed.sample_posterior(
+            None, np.int64(8), constant_legacy_likelihood,
+            ['x'], [['x', '']], ['self'], np.array([-1.0]), np.array([1.0]),
+            numbsampburnwalk=np.int64(0), numbsampburnwalkinit=np.int64(0),
+            numbsamppostwalk=None, pathbase=str(tmp_path) + '/', boolforcrepr=True,
+            boolplot=False, booltqdm=False, booldiag=False, typeverb=0,
+        )
+    finally:
+        np.random.set_state(random_state)
+
+    assert samples['x'].size > 0
+    assert np.isfinite(samples['x']).all()
+    assert np.all((samples['x'] >= -1.0) & (samples['x'] <= 1.0))
+
+
+@pytest.mark.parametrize('parameter_count,cache_rows', [(1, 1), (3, 3), (3, 1)])
+@pytest.mark.parametrize('verbosity', ['0', '1'])
+def test_sample_posterior_reads_warm_start_rows_once(tmp_path, monkeypatch, capsys, parameter_count, cache_rows, verbosity):
+    import pcat.fixed as fixed
+
+    class ReachedSampler(Exception):
+        pass
+
+    data = tmp_path / 'mcmc' / 'data'
+    data.mkdir(parents=True)
+    cache = data / 'postpara.csv'
+    medians = np.linspace(3.0, 4.0, cache_rows)
+    np.savetxt(cache, np.column_stack((medians, np.full(cache_rows, 0.1),
+                                     np.full(cache_rows, 0.2))), delimiter=',')
+    original_cache = cache.read_bytes()
+    read_calls = []
+    reader = np.loadtxt
+    initial_values = []
+
+    def read_table(*args, **kwargs):
+        read_calls.append(args[0])
+        return reader(*args, **kwargs)
+
+    def capture_sampler(*args, **kwargs):
+        initial_values.append(np.asarray(args[9]))
+        raise ReachedSampler
+
+    monkeypatch.setattr(fixed.np, 'loadtxt', read_table)
+    monkeypatch.setattr(fixed.scipy.stats.norm, 'rvs', lambda: 0.0)
+    monkeypatch.setattr(fixed, 'sample_fixed_chains', capture_sampler)
+    monkeypatch.setenv('TDPY_VERBOSITY', verbosity)
+    with pytest.raises(ReachedSampler):
+        fixed.sample_posterior(
+            None, 4, constant_legacy_likelihood,
+            [f'x{index}' for index in range(parameter_count)],
+            [[f'x{index}', ''] for index in range(parameter_count)],
+            ['self'] * parameter_count,
+            np.zeros(parameter_count), np.full(parameter_count, 10.0),
+            pathbase=str(tmp_path) + '/', boolforcrepr=True,
+            boolplot=False, booltqdm=False, typeverb=0,
+        )
+
+    expected = medians if parameter_count == cache_rows else np.full(parameter_count, 5.0)
+    np.testing.assert_array_equal(initial_values[0], np.tile(expected, (20, 1)))
+    assert read_calls == [str(cache)]
+    assert capsys.readouterr().out == (f'Reading from {cache}...\n' if verbosity == '1' else '')
+    assert cache.read_bytes() == original_cache
+
+
+@pytest.mark.parametrize('scaling,median', [
+    ('self', np.nan), ('self', np.inf), ('self', -np.inf),
+    ('logt', np.nan), ('logt', np.inf), ('logt', -np.inf),
+    ('gaus', np.nan), ('gaus', np.inf), ('gaus', -np.inf),
+    ('self', 0.0), ('self', 11.0), ('logt', 0.0), ('logt', 11.0),
+    ('gaus', -40.0), ('gaus', 40.0),
+])
+def test_sample_posterior_rejects_invalid_warm_start_medians(tmp_path, monkeypatch, scaling, median):
+    import pcat.fixed as fixed
+
+    data = tmp_path / 'mcmc' / 'data'
+    data.mkdir(parents=True)
+    cache = data / 'postpara.csv'
+    np.savetxt(cache, np.array([[median, 0.1, 0.2]]), delimiter=',')
+    original_cache = cache.read_bytes()
+    monkeypatch.setattr(fixed, 'sample_fixed_chains',
+                        lambda *args, **kwargs: pytest.fail('Invalid cached median reached the sampler'))
+    monkeypatch.setattr(fixed.scipy.stats.norm, 'rvs', lambda: 0.0)
+    gaussian = {'meangauspara': np.array([3.0]), 'stdvgauspara': np.array([1.0])} if scaling == 'gaus' else {}
+
+    with np.errstate(all='raise'):
+        with pytest.raises(ValueError, match='Cached.*median'):
+            fixed.sample_posterior(
+                None, 4, constant_legacy_likelihood,
+                ['x'], [['x', '']], [scaling], np.array([1.0]), np.array([10.0]),
+                **gaussian, pathbase=str(tmp_path) + '/', boolforcrepr=True,
+                boolplot=False, booltqdm=False, booldiag=False, typeverb=0,
+            )
+
+    assert cache.read_bytes() == original_cache
+    assert not (data / 'samppostpara.csv').exists()
+
+
+def test_sample_posterior_allows_finite_gaussian_warm_start_outside_bounds(tmp_path, monkeypatch):
+    import pcat.fixed as fixed
+
+    class ReachedSampler(Exception):
+        pass
+
+    data = tmp_path / 'mcmc' / 'data'
+    data.mkdir(parents=True)
+    cache = data / 'postpara.csv'
+    np.savetxt(cache, np.array([[3.0, 0.1, 0.2]]), delimiter=',')
+    original_cache = cache.read_bytes()
+    captured = []
+
+    def capture_sampler(*args, **kwargs):
+        captured.append(np.asarray(args[9]))
+        raise ReachedSampler
+
+    monkeypatch.setattr(fixed, 'sample_fixed_chains', capture_sampler)
+    monkeypatch.setattr(fixed.scipy.stats.norm, 'rvs', lambda: 0.0)
+    with pytest.raises(ReachedSampler):
+        fixed.sample_posterior(
+            None, 4, constant_legacy_likelihood,
+            ['x'], [['x', '']], ['gaus'], np.array([-1.0]), np.array([1.0]),
+            meangauspara=np.array([0.0]), stdvgauspara=np.array([1.0]),
+            pathbase=str(tmp_path) + '/', boolforcrepr=True,
+            boolplot=False, booltqdm=False, booldiag=False, typeverb=0,
+        )
+
+    np.testing.assert_allclose(captured[0], np.full((20, 1), 3.0), rtol=0, atol=1e-12)
+    assert cache.read_bytes() == original_cache
+
+
+@pytest.mark.parametrize('seed,native_seed,expected', [
+    (None, None, None), (7, None, 7), (None, 17, 17), (7, 17, 17),
+])
+def test_fixed_chains_forward_seed_and_preserve_explicit_native_option(monkeypatch, seed, native_seed, expected):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    import pcat.fixed as fixed
+
+    sampler = Mock(return_value=SimpleNamespace(
+        listpostparagenrscalbase=np.zeros((2, 1, 1)),
+        listpostlpostotl=np.zeros((2, 1)),
+    ))
+    monkeypatch.setattr(fixed, 'sample_fixed', sampler)
+    options = {} if native_seed is None else {'typeseed': native_seed}
+
+    sample_fixed_chains(
+        None, constant_legacy_likelihood, None, ('x',), ('self',),
+        (-1.,), (1.,), None, None, np.zeros((1, 1)), 1, 2, 0,
+        seed=seed, **options,
+    )
+
+    assert sampler.call_args.kwargs.get('typeseed') == expected
+
+
+@pytest.mark.parametrize('second_seed', [7, 8])
+def test_fixed_chains_native_seed_controls_reproducibility(tmp_path, second_seed):
+    outputs = [sample_fixed_chains(
+        None, constant_legacy_likelihood, None, ('x',), ('self',),
+        (-1.,), (1.,), None, None, None, 1, 12, 4,
+        pathbase=tmp_path / str(index), seed=seed, booldiag=False,
+        booladaptstdp=False, proposal_scales=(0.2,),
+    ) for index, seed in enumerate((7, second_seed))]
+
+    if second_seed == 7:
+        np.testing.assert_array_equal(outputs[0][0], outputs[1][0])
+        np.testing.assert_array_equal(outputs[0][1], outputs[1][1])
+    else:
+        assert not np.array_equal(outputs[0][0], outputs[1][0])
+
+
 def test_fixed_chains_estimate_constant_likelihood_evidence(tmp_path):
     chain, logprob, evidence = sample_fixed_chains(
         None, constant_legacy_likelihood, None, ('x',), ('self',),

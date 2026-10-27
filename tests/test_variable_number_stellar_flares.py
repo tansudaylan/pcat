@@ -108,6 +108,56 @@ def test_flare_cli_uses_native_inputs_and_replay_keeps_inputs_untouched(tmp_path
     }
 
 
+def test_flare_animation_keeps_changing_text_and_frame_geometry_fixed(tmp_path, monkeypatch):
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+    from PIL import Image
+
+    example = _load_flare_example(monkeypatch)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    observed = np.array([1000.0, 1020.0, 1010.0])
+    meantime = example.TIME_OFFSET_DAYS + np.array([0.1, 0.2, 0.3])
+    posterior = ModuleType("flare_animation_fixture")
+    posterior.listanimstate = [
+        {"cntrswep": sweep, "boolburn": burn, "numbelem": [count],
+         "cntpmodl": model[:, None, None]}
+        for sweep, burn, count, model in (
+            (0, True, 0, np.array([1000.0, 1000.0, 1000.0])),
+            (9, True, 9, np.array([1000.0, 1010.0, 1000.0])),
+            (10000, False, 100, np.array([1000.0, 1020.0, 1010.0])),
+        )
+    ]
+    measurements = []
+    original_savefig = Figure.savefig
+
+    def capture_frame(figure, output, **kwargs):
+        canvas = FigureCanvasAgg(figure)
+        canvas.draw()
+        axis = figure.axes[0]
+        title = axis._left_title
+        assert title.get_ha() == "left"
+        assert title.get_fontfamily() == ["monospace"]
+        np.testing.assert_array_equal(axis.lines[0].get_ydata(), observed)
+        np.testing.assert_array_equal(
+            axis.lines[1].get_ydata(),
+            posterior.listanimstate[len(measurements)]["cntpmodl"][:, 0, 0],
+        )
+        measurements.append((*title.get_window_extent(canvas.get_renderer()).bounds,
+                             len(title.get_text()),
+                             len(axis.get_legend().get_texts()[1].get_text())))
+        original_savefig(figure, output, **kwargs)
+
+    monkeypatch.setattr(Figure, "savefig", capture_frame)
+    paths = example.render_flare_posterior_frames(meantime, observed, posterior)
+    assert len(paths) == len(measurements) == 3
+    np.testing.assert_allclose(measurements, [measurements[0]] * 3)
+    dimensions = []
+    for output in paths:
+        with Image.open(output) as image:
+            dimensions.append(image.size)
+    assert len(set(dimensions)) == 1
+
+
 def test_variable_number_stellar_flares_uses_input_counts_bins_and_baseline_template(tmp_path):
     # a flat quiescent baseline of 1000 counts per bin with one injected burst, on time bins [day]
     edges = 1.0 + np.linspace(0.0, 1.0, 41)
