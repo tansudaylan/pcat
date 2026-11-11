@@ -218,6 +218,8 @@ Sampler operation
    ``visuals/post/operation``. ``catalog_options`` are passed to
    :func:`pcat.plotting.plot_catalog_trace`. Its returned ``sampler_trajectory``
    view aligns proposal-level acceptance terms and likelihood temperature.
+   When the state contains condensed-source associations, the overview also
+   writes :func:`pcat.plotting.plot_condensed_catalog_trace`.
 
 .. py:function:: pcat.plotting.plot_sampler_trajectory(state, output_path, typefileplot="png")
 
@@ -250,6 +252,12 @@ Sampler operation
    Stages nest, so their times do not add to each move's total. Stages timed
    once per sweep, such as frame plotting, are omitted.
 
+.. py:function:: pcat.plotting.plot_proposal_covariance(proposal_scales, output_path, parameter_labels=None, typefileplot="png")
+
+   Plot the Hessian-derived proposal covariance at the burn-in boundary in unit
+   parameter coordinates. The current optimizer estimates only diagonal terms;
+   off-diagonal covariance is not inferred.
+
 Catalogs and fits
 ~~~~~~~~~~~~~~~~~
 
@@ -261,6 +269,12 @@ Catalogs and fits
    shows the catalog size and a side panel the expected number of elements per
    position bin over all chains. Use ``position="xpos"`` or ``"ypos"`` for
    image catalogs.
+
+.. py:function:: pcat.plotting.plot_condensed_catalog_trace(state, output_path, position="xpos", amplitude="flux", population=0, position_label=None, amplitude_label=None, typefileplot="png")
+
+   Plot condensed-source positions against retained sample index, with marker
+   color showing the requested amplitude. This view requires source associations
+   produced by ``retr_condcatl`` and does not infer a source where it was absent.
 
 .. py:function:: pcat.plotting.plot_posterior_predictive(state, output_path, axis_values=None, axis_label="Data axis", data_label="Counts per bin", typefileplot="png", seed=0)
 

@@ -11,7 +11,8 @@ from PIL import Image
 from pcat import plotting
 from pcat.plotting import (
     has_one_dimensional_prediction, plot_acceptance_decomposition, plot_catalog_trace,
-    plot_compute_budget, plot_posterior_predictive, plot_proposal_ledger, plot_sampler_overview,
+    plot_compute_budget, plot_condensed_catalog_trace, plot_posterior_predictive,
+    plot_proposal_covariance, plot_proposal_ledger, plot_sampler_overview,
 )
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -51,6 +52,10 @@ def synthetic_state(chain_count=2, sweep_count=600, sample_count=50, seed=3):
         cntpdata=rng.poisson(models[0])[:, None, None].astype(float),
         listpostcntpmodl=np.array(models)[:, :, None, None],
         bctrpara=SimpleNamespace(ener=axis),
+        dictglob={"liststkscond": [
+            {"population": 0, "sample_index": [0, 2], "xpos": [1.2, 1.4], "flux": [8.0, 12.0]},
+            {"population": 0, "sample_index": [1, 2], "xpos": [1.6, 1.7], "flux": [20.0, 30.0]},
+        ]},
     )
     return state
 
@@ -58,7 +63,8 @@ def synthetic_state(chain_count=2, sweep_count=600, sample_count=50, seed=3):
 def test_sampler_overview_writes_every_applicable_view(tmp_path):
     paths = plot_sampler_overview(synthetic_state(), tmp_path)
     assert set(paths) == {"proposal_ledger", "sampler_trajectory", "acceptance_decomposition",
-                          "compute_budget", "catalog_trace", "posterior_predictive"}
+                          "compute_budget", "catalog_trace", "condensed_catalog_trace",
+                          "posterior_predictive"}
     for path in paths.values():
         print(f"Reading from {path}...")
         with Image.open(path) as image:
@@ -84,6 +90,26 @@ def test_views_reject_unusable_inputs(tmp_path):
         plot_proposal_ledger(state, tmp_path / "ledger")
 
 
+def test_condensed_catalog_trace_uses_condensation_sample_indices_and_flux(tmp_path, monkeypatch):
+    state = synthetic_state()
+    captured = {}
+    original = plotting.plt.Axes.scatter
+
+    def record(axis, x_values, y_values, **options):
+        captured["sample_index"] = np.asarray(x_values)
+        captured["positions"] = np.asarray(y_values)
+        captured["flux"] = np.asarray(options["c"])
+        return original(axis, x_values, y_values, **options)
+
+    monkeypatch.setattr(plotting.plt.Axes, "scatter", record)
+    path = plot_condensed_catalog_trace(state, tmp_path / "condensed", population=0)
+
+    np.testing.assert_array_equal(captured["sample_index"], [0, 2, 1, 2])
+    np.testing.assert_array_equal(captured["positions"], [1.2, 1.4, 1.6, 1.7])
+    np.testing.assert_array_equal(captured["flux"], [8.0, 12.0, 20.0, 30.0])
+    assert path.is_file()
+
+
 def test_compute_budget_omits_stages_timed_once_per_sweep(tmp_path, monkeypatch):
     shown = []
     original = plotting.plt.Axes.set_xticks
@@ -96,6 +122,29 @@ def test_compute_budget_omits_stages_timed_once_per_sweep(tmp_path, monkeypatch)
     monkeypatch.setattr(plotting.plt.Axes, "set_xticks", record)
     plot_compute_budget(synthetic_state(), tmp_path / "budget")
     assert "Proposal" in shown and "Likelihood" in shown and "Plotting" not in shown
+
+
+def test_proposal_covariance_plot_uses_diagonal_hessian_scales(tmp_path, monkeypatch):
+    captured = {}
+    original = plotting.plt.Axes.imshow
+
+    def record(axis, values, *arguments, **options):
+        captured["covariance"] = np.asarray(values)
+        return original(axis, values, *arguments, **options)
+
+    monkeypatch.setattr(plotting.plt.Axes, "imshow", record)
+    path = plot_proposal_covariance([0.1, 0.2], tmp_path / "covariance",
+                                    parameter_labels=("x", "y"))
+
+    np.testing.assert_allclose(captured["covariance"], [[0.01, 0.0], [0.0, 0.04]])
+    assert path.is_file()
+
+
+@pytest.mark.parametrize("scales", [[], [0.1, np.nan], [0.1, np.inf], [0.1, 0.0], [[0.1]]])
+def test_proposal_covariance_rejects_invalid_scales_before_writing(tmp_path, scales):
+    with pytest.raises(ValueError, match="Proposal scales"):
+        plot_proposal_covariance(scales, tmp_path / "invalid")
+    assert not list(tmp_path.iterdir())
 
 
 def test_posterior_predictive_tail_probability_is_calibrated_for_the_true_model(tmp_path, monkeypatch):

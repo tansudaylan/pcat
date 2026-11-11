@@ -16,8 +16,11 @@ from __future__ import annotations
 from tdpy.verbosity import print
 
 import argparse
+from datetime import datetime, timezone
+import json
 import shutil
 from pathlib import Path
+from uuid import uuid4
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,7 +28,10 @@ from tdpy.cli import add_plot_arguments
 
 from pcat.diagnostics import gelman_rubin
 from pcat.main import retr_pathrun
-from pcat.mejiro_lens import LABELS, render_mejiro_counts, run_mejiro_lens_inference, simulate_mejiro_exposure
+from pcat.mejiro_lens import (
+    LABELS, SUBHALO_PARAMETER_PRIORS, labels_for_specification, render_mejiro_counts,
+    run_mejiro_lens_inference, simulate_mejiro_exposure,
+)
 from pcat.plotting import (
     animation_phase_labels, animation_states, make_image_sequence_animation,
     plot_lens_image_fit, plot_lens_parameter_recovery,
@@ -87,6 +93,72 @@ def run_example(smoke: bool = False, typefileplot: str = "png") -> dict:
     }
 
 
+def run_one_subhalo_example(smoke: bool = False, typefileplot: str = "png",
+                            output_root: Path | None = None) -> dict:
+    """Fit one same-plane TNFW subhalo in a Mejiro-simulated Roman exposure."""
+    specification = simulate_mejiro_exposure(one_subhalo=True)
+    output_root = Path(output_root) if output_root is not None else EXAMPLE_PATH / "one_subhalo_runs"
+    run_tag = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") + "_" + uuid4().hex[:8]
+    run_name = f"mejiro_one_subhalo_{run_tag}"
+    run_directory = output_root / run_name
+    run_directory.mkdir(parents=True, exist_ok=False)
+    chain_count = 1 if smoke else NUMBER_CHAINS
+    posterior = run_mejiro_lens_inference(
+        specification, str(run_directory), run_name,
+        numbproc=chain_count,
+        numbframanim=4 if smoke else 24,
+        numbswep=300 if smoke else 60000,
+        numbburn=100 if smoke else 40000,
+        numbsamp=100 if smoke else 2000,
+    )
+    draws = np.asarray(posterior.listpostparagenrscalbase, dtype=float)
+    median_parameters = np.median(draws, axis=0)
+    median_counts = render_mejiro_counts(specification, median_parameters)
+    visual_directory = run_directory / "visuals"
+    labels = labels_for_specification(specification)
+    figure_paths = [
+        plot_lens_image_fit(
+            visual_directory / "mejiro_one_subhalo_image_fit",
+            specification["observed_counts"], median_counts, median_counts,
+            specification["pixel_scale"], typefileplot,
+        ),
+        plot_lens_parameter_recovery(
+            visual_directory / "mejiro_one_subhalo_parameter_recovery",
+            draws, specification["true_parameters"], typefileplot, labels=labels,
+        ),
+    ]
+    summary = {
+        "run_name": run_name,
+        "band": specification["band"],
+        "lens_backend": specification["backend"],
+        "lens_profile": "TNFW",
+        "subhalo_redshift": specification["lens_redshift_list"][-1],
+        "subhalo_parameters": {
+            "scale_radius_arcsec": specification["kwargs_lens"][-1]["Rs"],
+            "truncation_radius_arcsec": specification["kwargs_lens"][-1]["r_trunc"],
+            "sampled_parameters": ["alpha_Rs", "center_x", "center_y"],
+            "prior_ranges": {name: [minimum, maximum]
+                             for name, _, minimum, maximum, _ in SUBHALO_PARAMETER_PRIORS},
+        },
+        "parameter_labels": labels,
+        "true_parameters": specification["true_parameters"].tolist(),
+        "posterior_medians": median_parameters.tolist(),
+        "posterior_standard_deviations": draws.std(axis=0).tolist(),
+        "retained_draws": len(draws),
+        "figure_paths": [str(path) for path in figure_paths],
+        "interpretation": (
+            "Synthetic Mejiro Roman exposure with one fixed-count TNFW subhalo. "
+            "PCAT samples its lensing strength and position while scale and truncation radii stay fixed."
+        ),
+    }
+    (run_directory / "summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    summary["run_directory"] = run_directory
+    summary["figure_paths"] = [Path(path) for path in figure_paths]
+    return summary
+
+
 def plot_psf_mismodeling(specification: dict, posterior: object, posterior_mismodeled: object,
                          typefileplot: str) -> Path:
     """Posterior offsets from the injected values, in posterior standard deviations, for both PSFs."""
@@ -138,8 +210,17 @@ def write_replicated_image_animation(posterior: object, specification: dict) -> 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--smoke", action="store_true", help="Run a short pipeline check.")
+    parser.add_argument("--one-subhalo", action="store_true",
+                        help="Fit one TNFW subhalo in a Mejiro-simulated Roman exposure.")
+    parser.add_argument("--output-root", type=Path)
     add_plot_arguments(parser)
     arguments = parser.parse_args()
+    if arguments.one_subhalo:
+        summary = run_one_subhalo_example(
+            arguments.smoke, arguments.typefileplot, arguments.output_root,
+        )
+        print(f"One-subhalo run saved under {summary['run_directory']}")
+        return 0
     summary = run_example(arguments.smoke, arguments.typefileplot)
     for label, truth, median, stdv in zip(LABELS, summary["true_parameters"], summary["posterior_medians"],
                                           summary["posterior_stdvs"]):

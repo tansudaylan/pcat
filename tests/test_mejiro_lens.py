@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from pcat.mejiro_lens import (  # noqa: E402
-    LABELS, PARAMETERS, mejiro_lens_log_likelihood, render_mejiro_counts,
+    LABELS, PARAMETERS, add_one_subhalo, mejiro_lens_log_likelihood, render_mejiro_counts,
     run_mejiro_lens_inference, simulate_mejiro_exposure,
 )
 from pcat import mejiro_lens as mejiro_lens_module  # noqa: E402
@@ -16,6 +16,35 @@ def specification():
     pytest.importorskip("mejiro")
     pytest.importorskip("roman_technical_information")
     return simulate_mejiro_exposure()
+
+
+def test_add_one_subhalo_appends_a_same_plane_tnfw_without_mutating_input():
+    specification = {
+        "z_lens": 0.3,
+        "z_source": 1.5,
+        "lens_model_list": ["SIE", "SHEAR"],
+        "lens_redshift_list": [0.3, 0.3],
+        "kwargs_lens": [
+            {"theta_E": 0.7, "e1": 0.08, "e2": -0.04, "center_x": 0.0, "center_y": 0.0},
+            {"gamma1": 0.02, "gamma2": 0.01},
+        ],
+        "kwargs_source": [{"center_x": 0.04, "center_y": 0.02}],
+        "kwargs_lens_light": [],
+    }
+    original = {key: value.copy() if isinstance(value, list) else value for key, value in specification.items()}
+
+    result = add_one_subhalo(specification)
+
+    assert result["lens_model_list"] == ["SIE", "SHEAR", "TNFW"]
+    assert result["lens_redshift_list"] == [0.3, 0.3, 0.3]
+    assert result["kwargs_lens"][-1] == {
+        "Rs": 0.12, "alpha_Rs": 0.04, "r_trunc": 0.5, "center_x": 0.6, "center_y": -0.2,
+    }
+    assert result["true_parameters"].shape == (len(PARAMETERS) + 3,)
+    assert len(specification["lens_model_list"]) == len(original["lens_model_list"])
+    assert specification["kwargs_lens"] == original["kwargs_lens"]
+    with pytest.raises(ValueError, match="already includes"):
+        add_one_subhalo(result)
 
 
 @pytest.mark.parametrize("halo_redshift", [0.3, 0.7])
@@ -101,6 +130,51 @@ def test_pcat_model_reproduces_mejiro_image(specification):
     assert model.shape == specification["observed_counts"].shape
     assert specification["sky_counts"] > 0.0
     assert len(specification["true_parameters"]) == len(PARAMETERS) == len(LABELS)
+
+
+def test_mejiro_one_subhalo_exposure_is_rendered_and_sampled(tmp_path):
+    pytest.importorskip("mejiro")
+    pytest.importorskip("roman_technical_information")
+    specification = simulate_mejiro_exposure(one_subhalo=True)
+    expected = render_mejiro_counts(specification, specification["true_parameters"])
+
+    assert specification["lens_model_list"][-1] == "TNFW"
+    assert specification["lens_redshift_list"][-1] == specification["z_lens"]
+    assert len(specification["true_parameters"]) == len(PARAMETERS) + 3
+    np.testing.assert_allclose(expected, specification["expected_counts"], rtol=1e-12, atol=1e-12)
+    assert np.ptp(expected - specification["sky_counts"]) > 0.0
+    assert not np.allclose(
+        specification["mejiro_counts"] + specification["sky_counts"], expected,
+    )
+
+    specification["observed_counts"] = np.random.default_rng(2028).poisson(expected).astype(float)
+    posterior = run_mejiro_lens_inference(
+        specification, tmp_path, "mejiro_one_subhalo", numbswep=60,
+        numbburn=20, numbsamp=20, numbproc=1, numbframanim=4,
+    )
+    draws = np.asarray(posterior.listpostparagenrscalbase)
+    assert draws.shape == (20, len(PARAMETERS) + 3)
+    assert np.isfinite(draws).all()
+
+
+def test_one_subhalo_example_writes_recovery_figures(tmp_path):
+    pytest.importorskip("mejiro")
+    pytest.importorskip("roman_technical_information")
+    from examples.mejiro_roman_strong_lens.mejiro_roman_strong_lens import run_one_subhalo_example
+
+    summary = run_one_subhalo_example(smoke=True, output_root=tmp_path)
+
+    assert summary["lens_profile"] == "TNFW"
+    assert len(summary["true_parameters"]) == len(PARAMETERS) + 3
+    assert summary["subhalo_parameters"]["prior_ranges"] == {
+        "subhalo_alpha_Rs": [0.002, 0.10],
+        "subhalo_x": [-0.8, 0.8],
+        "subhalo_y": [-0.8, 0.8],
+    }
+    assert summary["retained_draws"] == 100
+    assert len(summary["figure_paths"]) == 2
+    assert all(path.is_file() for path in summary["figure_paths"])
+    assert (summary["run_directory"] / "summary.json").is_file()
 
 
 def test_likelihood_prefers_injected_lens(specification):

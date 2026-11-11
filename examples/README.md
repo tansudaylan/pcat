@@ -33,7 +33,7 @@ These examples showcase the PCAT model families used by the papers. They do not 
 ## Layout
 
 - `gaussian_mixture_catalog/`: transdimensional inference of a compact Gaussian mixture
-- `chandra_point_source_catalog/`: point-source inference in a simulated Chandra-style image
+- `chandra_point_source_catalog/`: simulated Chandra-style point-source inference, including fixed- and floating-PSF fits of a single star in a 15-by-15 image
 - `daylan+2017_fermi_point_sources/`: a 300-source synthetic analog of the mock analysis in the 2017 paper
 - `daylan+2018_strong_lens_subhalos/`: a simulated HST strong-lens catalog and one-subhalo comparison inspired by the 2018 paper
 - `portillo+2017_crowded_sdss_m2/`: a scaled crowded-field SDSS catalog analysis inspired by Portillo et al. (2017)
@@ -43,11 +43,12 @@ These examples showcase the PCAT model families used by the papers. They do not 
 - `hall+2026_herschel_dsfg_multiplicity/`: crowded three-band source multiplicity inspired by Hall et al. (2026)
 - `simulated_hst_strong_lens/`: catalog inference in a simulated Hubble Space Telescope lens image
 - `roman_strong_lens_perturber_catalog/`: a seeded Roman strong-lens benchmark and its generated figures
-- `mejiro_roman_strong_lens/`: PCAT inference of the lens and source of a Roman F129 exposure simulated by mejiro, and the parameter bias caused by a PSF 30% too wide
+- `mejiro_roman_strong_lens/`: PCAT inference of a Mejiro-simulated Roman F129 lens, a PSF-mismatch comparison, and an opt-in fit of one same-plane TNFW subhalo
+- `mejiro_time_delay_cosmography/`: a synthetic Mejiro `LensedSupernova` delay model with a PCAT posterior for $H_0$ under a fixed lens potential
 - `mismodeling_flare_catalog/`: correct and misspecified fits of the same flare light curves, with residual and posterior-predictive chi-squared shape comparisons beyond the per-bin chi-squared value
 - `simulated_rubin_cluster_lens/`: a synthetic Rubin-like cluster-scale lens fitted with PCAT's Poisson image sampler
 - `rubin_dp1_confirmed_strong_lenses/`: an RSP-only workflow that crossmatches confirmed SIMBAD lens systems to real Rubin DP1 imaging, retrieves all catalog-footprint matches, plots every lens-band cutout in a complete collage and per-system multiband figures, runs demonstration PCAT fits, and compares all fitted Einstein radii in one posterior summary figure
-- `catalog_association_completeness_purity/`: completeness and purity across catalog-matching radii
+- `catalog_association_completeness_purity/`: source completeness and target-catalog purity/false-discovery rate across matching radii, calculated with Pergamon
 - `image_forward_model/`: deterministic Gaussian-PSF forward modeling of an explicitly simulated two-source image with `pcat.image.forward_model_image`
 - `voigt_spectral_line_catalog/`: nominal and high-signal Voigt-profile line detection in simulated spectra
 - `jwst_miri_ngc7027_line_catalog/`: transdimensional emission-line catalog of the planetary nebula NGC 7027 from a real JWST MIRI MRS spectrum

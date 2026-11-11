@@ -848,9 +848,10 @@ def plot_grid(
     listvarbdraw=None,
     typefileplot="pdf",
     typeplotback=None,
+    return_figure=False,
     **kwargs,
 ):
-    """Plot all one- and two-dimensional projections of posterior samples."""
+    """Plot posterior projections, optionally returning the live figure after saving."""
     background, foreground = plot_background_colors(typeplotback)
     samples = np.asarray(listpara)
     if samples.size == 0:
@@ -969,6 +970,8 @@ def plot_grid(
         bbox_inches="tight",
         facecolor=background,
     )
+    if return_figure:
+        return figure
     plt.close(figure)
     return output_path
 
@@ -1319,6 +1322,37 @@ def plot_compute_budget(state, output_path, typefileplot="png"):
     return _save_view(figure, output_path, typefileplot)
 
 
+def _diagonal_proposal_covariance(proposal_scales):
+    scales = np.asarray(proposal_scales, dtype=float)
+    if scales.ndim != 1 or scales.size == 0 or not np.isfinite(scales).all() or (scales <= 0).any():
+        raise ValueError("Proposal scales must be a nonempty finite positive vector")
+    return np.diag(np.square(scales))
+
+
+def plot_proposal_covariance(proposal_scales, output_path, parameter_labels=None, typefileplot="png"):
+    """Plot the diagonal Hessian-derived proposal covariance in unit coordinates."""
+    covariance = _diagonal_proposal_covariance(proposal_scales)
+    size = covariance.shape[0]
+    if parameter_labels is None:
+        parameter_labels = [str(index) for index in range(size)]
+    if len(parameter_labels) != size:
+        raise ValueError("Parameter labels must match the proposal scale vector")
+
+    figure_size = min(max(5.5, 0.45 * size + 2.0), 12.0)
+    figure, axis = plt.subplots(figsize=(figure_size, figure_size), facecolor="white",
+                                constrained_layout=True)
+    image = axis.imshow(covariance, cmap="magma", interpolation="nearest")
+    if size <= 24:
+        indices = np.arange(size)
+        axis.set_xticks(indices, parameter_labels, rotation=45, ha="right")
+        axis.set_yticks(indices, parameter_labels)
+    axis.set(xlabel="Parameter", ylabel="Parameter",
+             title="Hessian proposal covariance\nDiagonal approximation")
+    axis.grid(False)
+    figure.colorbar(image, ax=axis, label="Proposal variance\n[unit parameter$^2$]", pad=0.12)
+    return _save_view(figure, output_path, typefileplot)
+
+
 def plot_catalog_trace(state, output_path, position="elin", amplitude="flux", population=0,
                        chain=0, position_label=None, amplitude_label=None, typefileplot="png"):
     """Draw a transdimensional trace: every element of every retained catalog of one chain.
@@ -1382,6 +1416,49 @@ def plot_catalog_trace(state, output_path, position="elin", amplitude="flux", po
               xlim=(-0.5, sizes.size - 0.5))
     strip.yaxis.get_major_locator().set_params(integer=True)
     strip.grid(False)
+    return _save_view(figure, output_path, typefileplot)
+
+
+def plot_condensed_catalog_trace(state, output_path, position="xpos", amplitude="flux",
+                                 population=0, position_label=None, amplitude_label=None,
+                                 typefileplot="png"):
+    """Plot condensed-source positions and amplitudes against retained sample index."""
+    condensed = getattr(state, "dictglob", {}).get("liststkscond")
+    if not condensed:
+        raise ValueError("The state stores no condensed catalog")
+
+    sample_indices = []
+    positions = []
+    amplitudes = []
+    for source in condensed:
+        if source.get("population") != population:
+            continue
+        indices = np.asarray(source.get("sample_index", []), dtype=int).ravel()
+        source_positions = np.asarray(source.get(position, []), dtype=float).ravel()
+        source_amplitudes = np.asarray(source.get(amplitude, []), dtype=float).ravel()
+        if indices.size != source_positions.size or indices.size != source_amplitudes.size:
+            raise ValueError("Condensed catalog sample indices and values must align")
+        sample_indices.extend(indices)
+        positions.extend(source_positions)
+        amplitudes.extend(source_amplitudes)
+    if not sample_indices:
+        raise ValueError(f"No condensed sources contain population {population} and the requested features")
+
+    sample_indices = np.asarray(sample_indices, dtype=int)
+    positions = np.asarray(positions, dtype=float)
+    amplitudes = np.asarray(amplitudes, dtype=float)
+    if (sample_indices.min() < 0 or not np.isfinite(positions).all()
+            or not np.isfinite(amplitudes).all()):
+        raise ValueError("Condensed catalog trace values must be finite with nonnegative sample indices")
+
+    figure, axis = plt.subplots(figsize=(9, 4.8), facecolor="white")
+    shown = axis.scatter(sample_indices, positions, c=amplitudes, s=12, cmap="viridis",
+                         linewidths=0, rasterized=True)
+    axis.set(xlabel="Retained sample index", ylabel=position_label or position,
+             title="Condensed catalog trace")
+    axis.grid(False)
+    figure.colorbar(shown, ax=axis, label=amplitude_label or amplitude)
+    figure.tight_layout()
     return _save_view(figure, output_path, typefileplot)
 
 
@@ -1475,6 +1552,14 @@ def plot_sampler_overview(state, output_directory, typefileplot="png", **catalog
                         for sample in catalogs[:50]):
         paths["catalog_trace"] = plot_catalog_trace(
             state, output_directory / "catalog_trace", typefileplot=typefileplot, **catalog_options)
+    condensed = getattr(state, "dictglob", {}).get("liststkscond")
+    if condensed:
+        condensed_options = {key: value for key, value in catalog_options.items()
+                             if key in {"position", "amplitude", "population", "position_label",
+                                        "amplitude_label"}}
+        paths["condensed_catalog_trace"] = plot_condensed_catalog_trace(
+            state, output_directory / "condensed_catalog_trace", typefileplot=typefileplot,
+            **condensed_options)
     if has_one_dimensional_prediction(state):
         paths["posterior_predictive"] = plot_posterior_predictive(
             state, output_directory / "posterior_predictive", typefileplot=typefileplot)

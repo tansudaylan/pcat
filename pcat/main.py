@@ -3002,6 +3002,8 @@ def retr_condcatl(gdat, *, coordinate_names=('xpos', 'ypos'), distance_maximum=N
         gdat.dictglob['poststkscond'].append([])
         gdat.dictglob['poststkscond'][r] = {}
         indxpoplcntr = indxtupl[indxstksassc[r][0]][1]
+        gdat.dictglob['liststkscond'][r]['sample_index'] = []
+        gdat.dictglob['liststkscond'][r]['population'] = indxpoplcntr
         for strgfeat in gmod.namepara.genrelem[indxpoplcntr]:
             gdat.dictglob['liststkscond'][r][strgfeat] = []
 
@@ -3010,6 +3012,7 @@ def retr_condcatl(gdat, *, coordinate_names=('xpos', 'ypos'), distance_maximum=N
             indxsamptotlcntr = indxtupl[indxstksassc[r][k]][0]
             indxpoplcntr = indxtupl[indxstksassc[r][k]][1]
             indxelemcntr = indxtupl[indxstksassc[r][k]][2]
+            gdat.dictglob['liststkscond'][r]['sample_index'].append(indxsamptotlcntr)
             
             for strgfeat in gmod.namepara.genrelem[indxpoplcntr]:
                 temp = gdat.listpostdictelem[indxsamptotlcntr][indxpoplcntr][strgfeat]
@@ -5410,7 +5413,7 @@ def setp_modlemis_finl(gdat, strgmodl='fitt'):
         for strgmodl in gdat.liststrgmodl:
             gmod = getattr(gdat, strgmodl)
             varb = getattr(gmod, strgvarb, False)
-            varbcomm = varbcomm or varb
+            varbcomm = varbcomm or bool(np.any(varb))
         setattr(gdat, strgvarb + 'anyy', varbcomm) 
 
     #gdat.fitt.namepara.genrelemtagg = [[[] for l in gmod.indxpopl] for q in gdat.indxrefr]
@@ -13308,7 +13311,7 @@ def plot_samp(gdat, gdatmodi, strgstat, strgmodl, strgphas, strgpdfn='post', gda
                         pathtemp = gdat.pathplotcnfg + strgpdfn + '/finl/'
                     elif strgstat == 'pdfn':
                         pathtemp = gdat.pathplotcnfg + strgpdfn + '/finl/'
-                colr = retr_colr(gdat, strgstat, strgmodl, indxpopl=None)
+                colr = retr_colr(gdat, strgstat, strgmodl)
         
                 # transdimensional element parameters projected onto the data axes
                 if not (strgstat == 'pdfn' and not gdat.boolcondcatl):
@@ -14446,7 +14449,7 @@ def plot_sbrt(gdat, gdatmodi, strgstat, strgmodl, strgpdfn, specconvunit):
                         alph = 1.
                         linestyl = '-'
                     else:
-                        colr = retr_colr(gdat, strgstat, liststrgmodl[a], indxpopl=None)
+                        colr = retr_colr(gdat, strgstat, liststrgmodl[a])
                         linestyl = '--'
                         alph = 0.5
                    
@@ -18239,7 +18242,7 @@ def sample_parallel( \
         print('listnamecnfgextn')
         print(listnamecnfgextn)
     for k, strgcnfgextn in enumerate(listnamecnfgextn):
-        narr_task('Preparing configuration %d/%d (%s).' % (k + 1, len(listnamecnfgextn), strgcnfgextn), phase='during', major=False, typeverb=typeverbnarr)
+        narr_task('Preparing configuration %d/%d (%s).' % (k + 1, len(listnamecnfgextn), strgcnfgextn), phase='during', typeverb=typeverbnarr)
         
         if strgcnfgextnexec is not None:
             if strgcnfgextn != strgcnfgextnexec:
@@ -18479,7 +18482,7 @@ def sample_parallel( \
     if typeverbnarr > 0:
         print('Making animations...')
     for strgcnfg in liststrgcnfg:
-        narr_task('Generating animation for %s.' % strgcnfg, phase='during', major=False, typeverb=typeverbnarr)
+        narr_task('Generating animation for %s.' % strgcnfg, phase='during', typeverb=typeverbnarr)
         if typeverbnarr > 1:
             print('Working on %s...' % strgcnfg)
         proc_anim(strgcnfg=strgcnfg)
@@ -18898,18 +18901,26 @@ def work(pathoutpcnfg, lock, strgpdfn, indxprocwork, convshare=None):
            
         if gdat.typeopti == 'hess' and gdatmodi.cntrswep == gdat.numbburn:
             path = gdat.pathoutpcnfg + 'opti.h5'
+            covariance = np.diag(np.square(gdatmodi.stdp))
             if gdat.typeverb > 0:
                 print('Writing the estimated covariance matrix to %s...' % path)
             thisfile = open_h5_narr(path, 'w')
             thisfile.create_dataset('stdp', data=gdatmodi.stdp)
+            thisfile.create_dataset('proposal_covariance', data=covariance)
             thisfile.close()
             
             if gdat.boolmakeplot:
+                from .plotting import plot_proposal_covariance
+
+                pathopti = os.path.join(gdat.pathplotcnfg, gdat.strgpdfn, 'opti') + os.sep
+                make_directory(pathopti)
+                covariance_path = pathopti + 'proposal_covariance%d' % gdatmodi.indxprocwork
+                plot_proposal_covariance(gdatmodi.stdp, covariance_path,
+                                         typefileplot=gdat.typefileplot)
                 
                 xdat = gdat.indxstdp
                 ydat = gdatmodi.stdp
                 
-                pathopti = getattr(gdat, 'path' + gdat.strgpdfn + 'opti')
                 path = pathopti + 'stdv%d.%s' % (gdatmodi.indxprocwork, gdat.typefileplot)
                 tdpy.plot_gene(path, xdat, ydat, scalydat='logt', \
                                 lablxdat='$i_{stdp}$', lablydat=r'$\sigma$', plottype='hist', limtydat=[np.amin(ydat) / 2., 2. * np.amax(ydat)])

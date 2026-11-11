@@ -85,23 +85,43 @@ def run_sampler(numbswep, run_name=RUN_NAME):
 
 
 def read_chain(run_name=RUN_NAME):
-    """Return per-sweep proposal type, acceptance, prior filter, time, and pipeline-phase times."""
+    """Return validated per-sweep metadata and elapsed times in milliseconds.
+
+    Arrays must have matching nonempty lengths, known integral proposal codes,
+    Boolean or zero/one flags, and finite nonnegative real sweep times.
+    Native-run entries take priority over legacy storage, including symlinks.
+    """
     relative = Path("data") / "outp" / run_name / "gdatmodi0000post.h5"
-    path = Path(retr_pathrun(EXAMPLE_PATH, run_name)) / relative
-    if not path.is_file():
-        path = EXAMPLE_PATH / relative
+    native_root = Path(retr_pathrun(EXAMPLE_PATH, run_name))
+    native_present = native_root.exists() or native_root.is_symlink()
+    path = native_root / relative if native_present else EXAMPLE_PATH / relative
     print(f"Reading from {path}...")
     with h5py.File(path, "r") as file:
+        proposal_types = file["listpostindxproptype"][()].ravel()
+        accepted = file["listpostboolpropaccp"][()].ravel()
+        filtered = file["listpostboolpropfilt"][()].ravel()
+        times = file["listpostchrototl"][()].ravel()
+        if proposal_types.size == 0 or any(values.shape != proposal_types.shape for values in (accepted, filtered, times)):
+            raise ValueError("Saved profiling arrays must have matching nonempty lengths")
+        if (proposal_types.dtype.kind not in "iuf" or not np.isfinite(proposal_types).all()
+                or np.any(proposal_types < 0) or np.any(proposal_types >= len(LABELS))
+                or np.any(proposal_types != np.floor(proposal_types))):
+            raise ValueError("Saved proposal indices must be integers identifying known proposal types")
+        for flags in (accepted, filtered):
+            if flags.dtype.kind not in "biuf" or not np.isin(flags, (0, 1)).all():
+                raise ValueError("Saved profiling flags must contain only Boolean or zero/one values")
+        if times.dtype.kind not in "iuf" or not np.isfinite(times).all() or np.any(times < 0.0):
+            raise ValueError("Saved profiling times must be finite real nonnegative values")
         phase = {
             key[len("listpostchro"):]: file[key][()].ravel() * 1e3  # [ms]
             for key in file.keys()
             if key.startswith("listpostchro") and key != "listpostchrototl"
         }
         return {
-            "type": file["listpostindxproptype"][()].ravel().astype(int),
-            "accp": file["listpostboolpropaccp"][()].ravel().astype(bool),
-            "filt": file["listpostboolpropfilt"][()].ravel().astype(bool),
-            "time": file["listpostchrototl"][()].ravel() * 1e3,  # [ms]
+            "type": proposal_types.astype(int),
+            "accp": accepted.astype(bool),
+            "filt": filtered.astype(bool),
+            "time": times * 1e3,  # [ms]
             "phase": phase,
         }
 
@@ -128,12 +148,13 @@ def plot_acceptance_and_cost(chain, typefileplot):
     indxtype = [k for k in range(len(LABELS)) if np.any(chain["type"] == k)]
     fracaccp = [chain["accp"][chain["type"] == k].mean() for k in indxtype]
     fracfilt = [chain["filt"][chain["type"] == k].mean() for k in indxtype]
-    fraccost = [chain["time"][chain["type"] == k].sum() / chain["time"].sum() for k in indxtype]
+    scaled_time = np.asarray(chain["time"], dtype=float) / np.max(chain["time"])
+    fraccost = [scaled_time[chain["type"] == k].sum() / scaled_time.sum() for k in indxtype]
     position = np.arange(len(indxtype))
     width = 0.27
     figure, axis = plt.subplots(figsize=(6.5, 3.2))
     axis.bar(position - width, fracfilt, width, color="0.6", label="Inside prior support")
-    axis.bar(position, fracaccp, width, color="C0", label="Accepted")
+    axis.bar(position, fracaccp, width, color="C0", label="Acceptance ratio")
     axis.bar(position + width, fraccost, width, color="C3", label="Share of total run time")
     axis.set_xticks(position, [LABELS[k] for k in indxtype])
     axis.set_ylabel("Fraction")

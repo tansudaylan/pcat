@@ -174,7 +174,8 @@ def load_example_posterior(relative_path: str, *, output_root: Path | None = Non
         root = Path(output_root) if output_root is not None else example_directory / relative.parts[0]
         native_root = Path(pcat_main.retr_pathrun(root, relative.parts[3]))
         suffix = Path(*relative.parts[1:])
-        path = native_root / suffix if native_root.exists() else root / suffix
+        native_present = native_root.exists() or native_root.is_symlink()
+        path = native_root / suffix if native_present else root / suffix
     print(f"Reading from {path}...")
     return pcat_main.readfile(str(path))
 

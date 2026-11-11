@@ -47,6 +47,13 @@ wall time.
    :alt: Mean wall time per sampler stage and move type
    :width: 100%
 
+:func:`pcat.plotting.plot_proposal_covariance` shows the diagonal
+Hessian-derived proposal covariance available at the end of burn-in.
+
+.. image:: _static/gallery/proposal_covariance.png
+   :alt: Diagonal Hessian proposal covariance in unit-parameter coordinates
+   :width: 100%
+
 Catalogs and fits
 -----------------
 
@@ -55,6 +62,13 @@ catalog of one chain, so births, deaths, splits, and merges appear as tracks.
 
 .. image:: _static/gallery/catalog_trace.png
    :alt: Element positions of every retained catalog with catalog size
+   :width: 100%
+
+:func:`pcat.plotting.plot_condensed_catalog_trace` follows associated source
+positions across retained samples, with flux shown by marker color.
+
+.. image:: _static/gallery/condensed_catalog_trace.png
+   :alt: Condensed source positions over sample index colored by flux
    :width: 100%
 
 :func:`pcat.plotting.plot_posterior_predictive` compares the data with data

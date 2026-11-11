@@ -74,7 +74,6 @@ def run_example(sample_count=3000, burn_count=1000, chain_count=4, typefileplot=
         chain_count,
         sample_count,
         burn_count,
-        pathbase=None,
         typeverb=0,
         typeseed=23,
         booladaptstdp=True,

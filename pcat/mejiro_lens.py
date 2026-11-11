@@ -31,9 +31,64 @@ LABELS = (
     r"$\theta_{\rm E}$ [arcsec]", r"Lens $e_1$", r"Lens $e_2$", "Lens x [arcsec]", "Lens y [arcsec]",
     r"Shear $\gamma_1$", r"Shear $\gamma_2$", "Source x [arcsec]", "Source y [arcsec]",
 )
+SUBHALO_LABELS = (r"Subhalo $\alpha_{R_s}$ [arcsec]", "Subhalo x [arcsec]", "Subhalo y [arcsec]")
+SUBHALO_PARAMETER_PRIORS = (
+    ("subhalo_alpha_Rs", "alpha_Rs", 0.002, 0.10, 0.003),
+    ("subhalo_x", "center_x", -0.8, 0.8, 0.02),
+    ("subhalo_y", "center_y", -0.8, 0.8, 0.02),
+)
 
 # lenstronomy image models are rebuilt once per process and configuration, since they are not plain data
 _IMAGE_MODELS: dict[tuple, object] = {}
+
+
+def _parameter_definitions(specification: dict) -> tuple:
+    if not specification.get("include_one_subhalo"):
+        return PARAMETERS
+    index = specification["subhalo_component_index"]
+    return PARAMETERS + tuple(
+        (name, "kwargs_lens", index, key, minimum, maximum, proposal_scale)
+        for name, key, minimum, maximum, proposal_scale in SUBHALO_PARAMETER_PRIORS
+    )
+
+
+def labels_for_specification(specification: dict) -> tuple[str, ...]:
+    """Return plot labels matching a Mejiro specification's sampled parameters."""
+    return LABELS + SUBHALO_LABELS if specification.get("include_one_subhalo") else LABELS
+
+
+def add_one_subhalo(specification: dict, *, scale_radius: float = 0.12,
+                    alpha_Rs: float = 0.04, truncation_radius: float = 0.5,
+                    center_x: float = 0.6, center_y: float = -0.2) -> dict:
+    """Return a copied Mejiro specification with one same-plane TNFW subhalo."""
+    if specification.get("include_one_subhalo"):
+        raise ValueError("Specification already includes a subhalo")
+    values = np.asarray((scale_radius, alpha_Rs, truncation_radius, center_x, center_y), dtype=float)
+    if not np.isfinite(values).all() or np.any(values[:3] <= 0.0):
+        raise ValueError("Subhalo scales, strength, and position must be finite with positive scales")
+    result = deepcopy(specification)
+    component_index = len(result["kwargs_lens"])
+    if component_index != len(result["lens_model_list"]):
+        raise ValueError("Lens model names and parameter dictionaries must have matching lengths")
+    lens_redshifts = result.get("lens_redshift_list")
+    if lens_redshifts is None:
+        lens_redshifts = [result["z_lens"]] * component_index
+    if len(lens_redshifts) != component_index:
+        raise ValueError("Lens component redshifts must match the existing lens model")
+    result["lens_model_list"].append("TNFW")
+    result["kwargs_lens"].append({
+        "Rs": float(scale_radius), "alpha_Rs": float(alpha_Rs),
+        "r_trunc": float(truncation_radius),
+        "center_x": float(center_x), "center_y": float(center_y),
+    })
+    result["lens_redshift_list"] = list(lens_redshifts) + [float(result["z_lens"])]
+    result["include_one_subhalo"] = True
+    result["subhalo_component_index"] = component_index
+    result["true_parameters"] = np.asarray([
+        result[group][index][key]
+        for _, group, index, key, *_ in _parameter_definitions(result)
+    ], dtype=float)
+    return result
 
 
 def _plain(kwargs_list: list[dict]) -> list[dict]:
@@ -50,6 +105,7 @@ def simulate_mejiro_exposure(
     fov_arcsec: float = 5.0,  # [arcsec]
     supersampling_factor: int = 3,
     seed: int = 2026,
+    one_subhalo: bool = False,
 ) -> dict:
     """Render a mejiro lens with Roman WFI and draw one Poisson exposure.
 
@@ -99,13 +155,22 @@ def simulate_mejiro_exposure(
         "kwargs_source": _plain(lens.kwargs_source),
         "kwargs_lens_light": _plain(lens.kwargs_lens_light),
     }
-    specification["true_parameters"] = np.array(
-        [specification[group][index][key] for _, group, index, key, *_ in PARAMETERS]
+    specification["true_parameters"] = np.asarray(
+        [specification[group][index][key] for _, group, index, key, *_ in PARAMETERS],
+        dtype=float,
     )
-    specification["expected_counts"] = image.data * exposure_time + specification["sky_counts"]  # [counts pixel^-1]
+    mejiro_counts = image.data * exposure_time
+    if one_subhalo:
+        specification = add_one_subhalo(specification)
+        expected_counts = render_mejiro_counts(
+            specification, specification["true_parameters"]
+        )
+    else:
+        expected_counts = image.data * exposure_time + specification["sky_counts"]
+    specification["expected_counts"] = expected_counts  # [counts pixel^-1]
     specification["observed_counts"] = np.random.default_rng(seed).poisson(
         specification["expected_counts"]).astype(float)  # [counts pixel^-1]
-    specification["mejiro_counts"] = image.data * exposure_time  # [counts pixel^-1], mejiro's noiseless image
+    specification["mejiro_counts"] = mejiro_counts  # [counts pixel^-1], Mejiro's macro-only render
     return specification
 
 
@@ -161,9 +226,13 @@ def _image_model(specification: dict) -> object:
 
 def render_mejiro_counts(specification: dict, parameters: np.ndarray) -> np.ndarray:
     """Return expected counts per pixel for sampled lens and source parameters."""
+    parameter_definitions = _parameter_definitions(specification)
+    parameters = np.asarray(parameters, dtype=float)
+    if parameters.shape != (len(parameter_definitions),):
+        raise ValueError(f"Expected {len(parameter_definitions)} parameters, received {parameters.size}")
     kwargs = {group: deepcopy(specification[group])
               for group in ("kwargs_lens", "kwargs_source", "kwargs_lens_light")}
-    for value, (_, group, index, key, *_) in zip(parameters, PARAMETERS):
+    for value, (_, group, index, key, *_) in zip(parameters, parameter_definitions):
         kwargs[group][index][key] = float(value)
     rate = _image_model(specification).image(
         kwargs["kwargs_lens"], kwargs["kwargs_source"], kwargs["kwargs_lens_light"])  # [counts s^-1 pixel^-1]
@@ -190,15 +259,16 @@ def run_mejiro_lens_inference(
     """Sample the macro lens and source position with PCAT, starting from a prior draw."""
     from .main import sample
 
+    parameter_definitions = _parameter_definitions(specification)
     return sample(
         typeexpr="gener",
         retr_llik=mejiro_lens_log_likelihood,
         mejiro_specification=specification,
-        parameter_names=tuple(row[0] for row in PARAMETERS),
-        prior_types=("self",) * len(PARAMETERS),
-        prior_minima=tuple(row[4] for row in PARAMETERS),
-        prior_maxima=tuple(row[5] for row in PARAMETERS),
-        proposal_scales=tuple(row[6] for row in PARAMETERS),
+        parameter_names=tuple(row[0] for row in parameter_definitions),
+        prior_types=("self",) * len(parameter_definitions),
+        prior_minima=tuple(row[4] for row in parameter_definitions),
+        prior_maxima=tuple(row[5] for row in parameter_definitions),
+        proposal_scales=tuple(row[6] for row in parameter_definitions),
         propwithsing=True,
         probpropblock=0.0,
         # a prior draw lands far from the arcs, so the likelihood is annealed slowly during burn-in

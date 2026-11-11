@@ -59,10 +59,17 @@ def association_rates(
     target_is_genuine: np.ndarray,
     radii: np.ndarray,
     magnitude_difference_maximum: float = 0.5,  # [mag]
-) -> tuple[np.ndarray, np.ndarray]:
-    """Return completeness and purity across angular matching radii."""
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return source completeness, target purity, and FDR by match radius."""
+    from pergamon import estimate_detection_performance
+
     completeness = np.empty(radii.size)
-    purity = np.empty(radii.size)
+    false_discovery_rate = np.empty(radii.size)
+    number_false_targets = np.count_nonzero(~target_is_genuine)
+    source_truth = np.concatenate((
+        np.ones(coordinates_source.shape[0], dtype=int),
+        np.zeros(number_false_targets, dtype=int),
+    ))
     for index, radius in enumerate(radii):
         _, genuine_source = associate_catalogs(
             coordinates_source,
@@ -81,9 +88,24 @@ def association_rates(
             radius,
             magnitude_difference_maximum,
         )
-        completeness[index] = (genuine_source > 0.5).mean()
-        purity[index] = target_is_genuine[matched_target].mean() if matched_target.any() else 1.0
-    return completeness, purity
+        source_recovered = np.concatenate((
+            (genuine_source > 0.5).astype(int),
+            matched_target[~target_is_genuine].astype(int),
+        ))
+        if source_recovered.any():
+            source_metrics = estimate_detection_performance(source_truth, source_recovered)
+            completeness[index] = source_metrics["completeness"]
+        else:
+            completeness[index] = 0.0
+        if matched_target.any():
+            target_metrics = estimate_detection_performance(
+                target_is_genuine.astype(int), matched_target.astype(int)
+            )
+            false_discovery_rate[index] = target_metrics["false_discovery_rate"]
+        else:
+            false_discovery_rate[index] = 0.0
+    purity = 1.0 - false_discovery_rate
+    return completeness, purity, false_discovery_rate
 
 
 def run_example(
@@ -94,11 +116,13 @@ def run_example(
     """Simulate two catalogs and plot their association performance."""
     catalogs = simulate_catalogs(number_sources=number_sources, seed=seed)
     radii = np.linspace(0.02, 0.40, 20)  # [arcsec]
-    completeness, purity = association_rates(*catalogs, radii)
+    completeness, purity, false_discovery_rate = association_rates(*catalogs, radii)
 
     figure, axis = plt.subplots(figsize=(6.4, 4.0), facecolor="white")
     axis.plot(radii, completeness, color="#A51417", linewidth=2.0, label="Completeness")
     axis.plot(radii, purity, color="#007360", linewidth=2.0, label="Purity")
+    axis.plot(radii, false_discovery_rate, color="#2166AC", linewidth=2.0,
+              linestyle="--", label="False discovery rate")
     axis.set_xlabel("Association radius [arcsec]")
     axis.set_ylabel("Catalog fraction")
     axis.set_ylim(0.0, 1.03)
@@ -121,6 +145,7 @@ def run_example(
         "reference_radius_arcsec": float(radii[reference_index]),
         "completeness": float(completeness[reference_index]),
         "purity": float(purity[reference_index]),
+        "false_discovery_rate": float(false_discovery_rate[reference_index]),
     }
 
 

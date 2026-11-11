@@ -544,15 +544,17 @@ Analysis utilities
    does not execute them.
 
 ``catalog_association_completeness_purity``
-   Seeded completeness and purity calculation for coordinate-and-value catalog
-   matching across a range of association radii.
+   Seeded completeness, purity, and false-discovery rate calculation for
+   coordinate-and-value catalog matching across association radii. Pergamon
+   computes completeness over reference sources and false-discovery rate over
+   recovered target candidates; install Pergamon in the same environment.
 
    .. code-block:: bash
 
       python examples/catalog_association_completeness_purity/catalog_association_completeness_purity.py
 
    .. image:: ../examples/catalog_association_completeness_purity/visuals/catalog_association_completeness_purity.png
-      :alt: Catalog completeness and purity across association radii
+      :alt: Catalog completeness, purity, and false-discovery rate across association radii
       :width: 640px
       :align: center
 

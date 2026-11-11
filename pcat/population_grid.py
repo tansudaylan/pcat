@@ -1148,7 +1148,7 @@ def plot_population_grid(
                 if not os.path.exists(path) or boolwritover:
                     _plot_population_histodim(listmantlabl, listpara, k, listlablparatotl, indxpopl, listlablpopl, \
                                                 bins, listcolrpopl, listparadraw, lablnumbsamp, lablsampgene, boolinte, \
-                                                boolmakelegd, listscalpara, factulimyaxihist, titl, plotsize, limt, limtrims, boolcumu=False, path=path)
+                                                boolmakelegd, listscalpara, factulimyaxihist, titl, plotsize, limt, limtrims, path=path)
             if listnamefeatcumu is not None:
                 if listnamepara[k] in listnamefeatcumu:
                     if pathbase is not None:
@@ -1265,7 +1265,7 @@ def plot_population_grid(
                                                                  typeannosamp, listlablannosamp, \
                                                                  listmrkrpopl, listcolrpopltdim, listlablpopl, boolmakelegd, \
                                                                  bins=bins, midpgrid=midpgrid, \
-                                                                 listlablsamp=listlablsamptemp, boolcbar=True)
+                                                                 listlablsamp=listlablsamptemp)
                                 
                                 if e == 0:
                                     axis.set_xlim(limt[l])

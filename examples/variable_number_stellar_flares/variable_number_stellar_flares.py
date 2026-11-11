@@ -140,8 +140,9 @@ def _fresh_run_root(run_name):
 
 
 def run_pcat(edges, template, numbswep, proposal, flare_profile="flarfred", *,
-             run_name=None, number_chains=NUMBER_CHAINS):
+             run_name=None, number_chains=NUMBER_CHAINS, liketype="pois"):
     from pcat import sampling
+    from pcat.main import retr_llik_bind
 
     run_name = run_name or (RUN_NAME if flare_profile == "flarfred" else f"{RUN_NAME}_{flare_profile}")
     if Path(run_name).name != run_name or run_name in {".", ".."}:
@@ -153,6 +154,8 @@ def run_pcat(edges, template, numbswep, proposal, flare_profile="flarfred", *,
     return sampling.sample(
         typeexpr="fire",
         typedata="inpt",
+        liketype=liketype,
+        retr_llik=retr_llik_bind if liketype == "gaus" else None,
         strgexprsbrt="sbrt.fits",
         typeexpo="file",
         strgexpo="expo.fits",

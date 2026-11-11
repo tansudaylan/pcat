@@ -75,6 +75,7 @@ def test_one_dimensional_condensation_uses_explicit_coordinate_and_tolerance():
 	assert posterior.dictglob == {}
 	retr_condcatl(posterior, coordinate_names=('center',), distance_maximum=0.1)
 	assert posterior.numbstkscond == 2
+	assert sorted(sorted(entry['sample_index']) for entry in posterior.dictglob['liststkscond']) == [[0, 1], [0, 1, 2]]
 	summaries = posterior.dictglob['poststkscond']
 	order = np.argsort([entry['center'][0] for entry in summaries])
 	np.testing.assert_allclose([summaries[index]['center'][0] for index in order], [0.01, 2.01])

@@ -124,7 +124,8 @@ def test_proposal_profiling_requires_a_single_run_name(tmp_path, monkeypatch, na
 
 
 @pytest.mark.parametrize("native_layout", [False, True])
-def test_proposal_profiling_reads_the_requested_chain_and_timing_units(tmp_path, monkeypatch, native_layout):
+@pytest.mark.parametrize("encoding", ["bool", "numeric"])
+def test_proposal_profiling_reads_the_requested_chain_and_timing_units(tmp_path, monkeypatch, native_layout, encoding):
     import h5py
 
     script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
@@ -134,18 +135,171 @@ def test_proposal_profiling_reads_the_requested_chain_and_timing_units(tmp_path,
     cache = root / "data" / "outp" / "selected"
     cache.mkdir(parents=True)
     with h5py.File(cache / "gdatmodi0000post.h5", "w") as output:
-        output["listpostindxproptype"] = [0, 1, 2]
-        output["listpostboolpropaccp"] = [True, False, True]
-        output["listpostboolpropfilt"] = [True, True, True]
+        output["listpostindxproptype"] = [0, 1, 2] if encoding == "bool" else [0.0, 1.0, 2.0]
+        output["listpostboolpropaccp"] = [True, False, True] if encoding == "bool" else [1, 0, 1]
+        output["listpostboolpropfilt"] = [True, True, True] if encoding == "bool" else [1.0, 1.0, 1.0]
         output["listpostchrototl"] = [0.001, 0.002, 0.003]  # [s]
         output["listpostchroprop"] = [0.0001, 0.0002, 0.0003]  # [s]
+    if native_layout:
+        legacy_cache = tmp_path / "data" / "outp" / "selected"
+        legacy_cache.mkdir(parents=True)
+        with h5py.File(legacy_cache / "gdatmodi0000post.h5", "w") as output:
+            output["listpostindxproptype"] = [0, 1, 2]
+            output["listpostboolpropaccp"] = [False, False, False]
+            output["listpostboolpropfilt"] = [True, True, True]
+            output["listpostchrototl"] = [0.010, 0.020, 0.030]  # [s]
     chain = example.read_chain("selected")
     np.testing.assert_array_equal(chain["type"], [0, 1, 2])
+    np.testing.assert_array_equal(chain["accp"], [True, False, True])
+    np.testing.assert_array_equal(chain["filt"], [True, True, True])
     np.testing.assert_allclose(chain["time"], [1.0, 2.0, 3.0])  # [ms]
     np.testing.assert_allclose(chain["phase"]["prop"], [0.1, 0.2, 0.3])  # [ms]
 
 
+@pytest.mark.parametrize("name", ["", ".", "..", "nested/run", "../other"])
+def test_proposal_profiling_reader_requires_a_single_run_name(tmp_path, monkeypatch, name):
+    script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
+    example = load_example_module("profiling_reader_run_names", script)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    with pytest.raises(ValueError, match="Invalid run tag"):
+        example.read_chain(name)
+
+
+@pytest.mark.parametrize("native_kind", ["directory", "broken_symlink"])
+def test_proposal_profiling_does_not_fall_back_from_incomplete_native_run(tmp_path, monkeypatch, native_kind):
+    import h5py
+
+    script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
+    example = load_example_module("profiling_incomplete_native_run", script)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    native_root = tmp_path / "pcat_runs" / "selected"
+    native_root.parent.mkdir(parents=True)
+    if native_kind == "directory":
+        native_root.mkdir()
+    else:
+        native_root.symlink_to("missing_run", target_is_directory=True)
+    legacy_cache = tmp_path / "data" / "outp" / "selected"
+    legacy_cache.mkdir(parents=True)
+    path = legacy_cache / "gdatmodi0000post.h5"
+    with h5py.File(path, "w") as output:
+        output["listpostindxproptype"] = [0, 1, 2]
+        output["listpostboolpropaccp"] = [True, False, True]
+        output["listpostboolpropfilt"] = [True, True, True]
+        output["listpostchrototl"] = [0.001, 0.002, 0.003]  # [s]
+    original = path.read_bytes()
+    with pytest.raises(FileNotFoundError):
+        example.read_chain("selected")
+    assert path.read_bytes() == original
+
+
+def test_shared_posterior_loader_does_not_fall_back_from_broken_native_symlink(tmp_path, monkeypatch):
+    from pcat.demo import load_example_posterior
+    import pcat.main
+
+    native_root = tmp_path / "pcat_runs" / "selected"
+    native_root.parent.mkdir()
+    native_root.symlink_to("missing_run", target_is_directory=True)
+    legacy_path = tmp_path / "data" / "outp" / "selected" / "gdatfinlpost"
+    legacy_path.parent.mkdir(parents=True)
+    print(f"Writing to {legacy_path}...")
+    legacy_path.write_bytes(b"legacy artifact")
+
+    def read_existing(path):
+        if not Path(path).is_file():
+            raise FileNotFoundError(path)
+        return path
+
+    monkeypatch.setattr(pcat.main, "readfile", read_existing)
+    with pytest.raises(FileNotFoundError):
+        load_example_posterior("example/data/outp/selected/gdatfinlpost", output_root=tmp_path)
+    print(f"Reading from {legacy_path}...")
+    assert legacy_path.read_bytes() == b"legacy artifact"
+
+
+@pytest.mark.parametrize("dataset,values", [
+    ("listpostindxproptype", [0.0, 0.5, 2.0]),
+    ("listpostindxproptype", [0, 6, 2]),
+    ("listpostboolpropaccp", [0, 2, 1]),
+    ("listpostboolpropaccp", [0.0, np.nan, 1.0]),
+    ("listpostboolpropfilt", np.array([b"0", b"False", b"1"])),
+    ("listpostboolpropfilt", [True, False]),
+    ("listpostchrototl", [0.001, np.nan, 0.003]),  # [s]
+    ("listpostchrototl", [0.001, -0.002, 0.003]),  # [s]
+])
+def test_proposal_profiling_rejects_invalid_saved_chain_metadata(tmp_path, monkeypatch, dataset, values):
+    import h5py
+
+    script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
+    example = load_example_module("profiling_invalid_metadata", script)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    cache = tmp_path / "data" / "outp" / "selected"
+    cache.mkdir(parents=True)
+    path = cache / "gdatmodi0000post.h5"
+    with h5py.File(path, "w") as output:
+        output["listpostindxproptype"] = [0, 1, 2]
+        output["listpostboolpropaccp"] = [True, False, True]
+        output["listpostboolpropfilt"] = [True, True, True]
+        output["listpostchrototl"] = [0.001, 0.002, 0.003]  # [s]
+        del output[dataset]
+        output[dataset] = values
+    original = path.read_bytes()
+    with pytest.raises(ValueError, match="proposal|flag|length|shape|time"):
+        example.read_chain("selected")
+    assert path.read_bytes() == original
+
+
+@pytest.mark.parametrize("times, expected_cost", [
+    ([1.0, 3.0, 2.0, 2.0], [0.5, 0.5]),
+    ([1e308, 1e308, 5e307, 5e307], [2.0 / 3.0, 1.0 / 3.0]),
+])
+def test_proposal_profiling_plot_shows_per_type_acceptance_ratio(tmp_path, monkeypatch, times, expected_cost):
+    import matplotlib.pyplot as plt
+
+    script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
+    example = load_example_module("profiling_acceptance", script)
+    monkeypatch.setattr(example, "EXAMPLE_PATH", tmp_path)
+    captured = {}
+
+    def capture_figure(figure, example_root, name, typefileplot):
+        captured.update(figure=figure, name=name)
+
+    monkeypatch.setattr(example, "save_example_figure", capture_figure)
+    chain = {
+        "type": np.array([0, 0, 1, 1]),
+        "accp": np.array([True, False, True, True]),
+        "filt": np.array([True, True, False, True]),
+        "time": np.array(times),  # [ms]
+    }
+
+    with np.errstate(over="raise", invalid="raise"):
+        example.plot_acceptance_and_cost(chain, "png")
+
+    axis = captured["figure"].axes[0]
+    assert captured["name"] == "proposal_acceptance_and_cost"
+    assert axis.containers[1].get_label() == "Acceptance ratio"
+    np.testing.assert_allclose(
+        [bar.get_height() for bar in axis.containers[1]], [0.5, 1.0]
+    )
+    np.testing.assert_allclose([bar.get_height() for bar in axis.containers[2]], expected_cost)
+    plt.close(captured["figure"])
+
+
 def test_proposal_profiling_cli_uses_selected_output_and_run(tmp_path, monkeypatch):
+    script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
+    example = load_example_module("profiling_cli", script)
+    monkeypatch.setattr("sys.argv", [str(script), "--numbswep", "100", "--run-name", "fresh",
+                                    "--output-root", str(tmp_path)])
+    calls = []
+    monkeypatch.setattr(example, "run_sampler", lambda sweeps, name: calls.append((sweeps, name)) or 0.1)
+    chain = {"type": np.array([0]), "accp": np.array([True]), "filt": np.array([True]),
+             "time": np.array([1.0]), "phase": {}}  # [ms]
+    monkeypatch.setattr(example, "read_chain", lambda name: calls.append(name) or chain)
+    monkeypatch.setattr(example, "configure_example_style", lambda theme: None)
+    for name in ("plot_time_per_proposal", "plot_acceptance_and_cost", "plot_time_breakdown_by_phase"):
+        monkeypatch.setattr(example, name, lambda *args: None)
+    example.main()
+    assert calls == [(100, "fresh"), "fresh"]
+    assert example.EXAMPLE_PATH == tmp_path.resolve()
     script = REPOSITORY_ROOT / "examples" / "proposal_profiling" / "proposal_profiling.py"
     example = load_example_module("profiling_cli", script)
     monkeypatch.setattr("sys.argv", [str(script), "--numbswep", "100", "--run-name", "fresh",
@@ -169,7 +323,7 @@ def test_run_pipeline_demo_applies_defaults_and_overrides(tmp_path, monkeypatch)
     monkeypatch.setattr(
         demo.pcat_main, "sample", lambda **configuration: captured.update(configuration)
     )
-    output_root = tmp_path / "pcat-output"
+        output_root = tmp_path / "pcat-output"
 
     demo.run_pipeline_demo(output_root, typeexpr="gmix", numbswep=3)
 
@@ -380,7 +534,13 @@ def test_notebook_posterior_diagnostics_plot_loaded_catalog_samples(tmp_path, mo
         (
             "gaussian_mixture_catalog",
             "gaussian_mixture_catalog",
-            {"typeexpr": "gmix", "typeelem": ["clusvari"], "numbspatdims": 2},
+            {
+                "typeexpr": "gmix",
+                "typeelem": ["clusvari"],
+                "numbspatdims": 2,
+                "boolcondcatl": True,
+                "strgcnfg": "gaussian_mixture_catalog_comparison",
+            },
         ),
         (
             "simulated_hst_strong_lens",
@@ -410,6 +570,15 @@ def test_demo_entrypoint_preserves_scientific_configuration(
             output_root=output_root, **configuration
         ),
     )
+    comparisons = []
+    if example_name == "gaussian_mixture_catalog":
+        monkeypatch.setattr(
+            module,
+            "make_catalog_comparison",
+            lambda output_root, comparison_run_name: comparisons.append(
+                (output_root, comparison_run_name)
+            ),
+        )
 
     monkeypatch.setattr("sys.argv", [str(script_path)])
     module.main()
@@ -431,6 +600,275 @@ def test_demo_entrypoint_preserves_scientific_configuration(
         assert captured["numbswep"] == 1_000
         assert captured["numbsamp"] == 100
         assert captured["numbswepplot"] == 100
+        assert comparisons == [
+            (expected_output_root, "gaussian_mixture_catalog_comparison")
+        ]
+
+
+@pytest.mark.parametrize("empty_best", [False, True])
+def test_gaussian_mixture_comparison_displays_completed_empty_catalogs(tmp_path, monkeypatch, empty_best):
+    from types import SimpleNamespace
+    import matplotlib.pyplot as plt
+
+    script_path = REPOSITORY_ROOT / "examples" / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py"
+    module = load_example_module("pcat_gaussian_empty_comparison", script_path)
+    best = {"xpos": np.array([] if empty_best else [0.1]),
+            "ypos": np.array([] if empty_best else [0.2])}
+    state = SimpleNamespace(
+        listpostlpostotl=np.array([-1.0]), listpostdictelem=[[best]],
+        dictglob={"poststkscond": []}, prvl=np.array([]), numbstkscond=0,
+    )
+    figures = []
+    original_close = plt.close
+
+    def capture_close(figure=None):
+        if hasattr(figure, "axes"):
+            figures.append(figure)
+        original_close(figure)
+
+    monkeypatch.setattr(plt, "close", capture_close)
+    result = module.plot_most_likely_vs_condensed(state, tmp_path / "empty_comparison.png")
+    assert result["best_positions"].shape == (0 if empty_best else 1, 2)
+    assert result["condensed_positions"].shape == (0, 2)
+    assert result["association_frequencies"].shape == (0,)
+    assert result["output_path"].is_file()
+    assert len(figures[-1].axes) == 2
+    for axis, count in zip(figures[-1].axes, (0 if empty_best else 1, 0)):
+        assert len(axis.collections[0].get_offsets()) == count
+        if count == 0:
+            assert any(text.get_text() == "No catalog elements" for text in axis.texts)
+
+
+@pytest.mark.parametrize("location", ["best", "condensed"])
+@pytest.mark.parametrize("coordinate", ["xpos", "ypos"])
+@pytest.mark.parametrize("kind", ["masked", "complex", "nonfinite"])
+def test_gaussian_mixture_comparison_rejects_unavailable_positions_before_figure(tmp_path, monkeypatch, location, coordinate, kind):
+    from types import SimpleNamespace
+    import matplotlib.pyplot as plt
+
+    script_path = REPOSITORY_ROOT / "examples" / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py"
+    module = load_example_module("pcat_gaussian_invalid_position", script_path)
+    best = {"xpos": np.array([0.1]), "ypos": np.array([0.2])}
+    condensed = {"xpos": np.array([0.1, 0.1, 0.1]), "ypos": np.array([0.2, 0.2, 0.2])}
+    target = best if location == "best" else condensed
+    values = target[coordinate]
+    if kind == "masked":
+        target[coordinate] = np.ma.array(values, mask=True)
+    elif kind == "complex":
+        target[coordinate] = values.astype(complex) + 0.1j
+    else:
+        target[coordinate] = np.full(values.shape, np.nan)
+    state = SimpleNamespace(
+        listpostlpostotl=np.array([-1.0]), listpostdictelem=[[best]],
+        dictglob={"poststkscond": [condensed]}, prvl=np.array([0.8]),
+    )
+
+    def unexpected_figure(*args, **kwargs):
+        pytest.fail("Invalid positions reached figure creation")
+
+    monkeypatch.setattr(plt, "subplots", unexpected_figure)
+    output_path = tmp_path / "invalid_comparison.png"
+    with pytest.raises(ValueError, match="position|coordinate"):
+        module.plot_most_likely_vs_condensed(state, output_path)
+    assert not output_path.exists()
+
+
+def test_gaussian_mixture_comparison_uses_available_medians_with_missing_uncertainty_bounds(tmp_path):
+    from types import SimpleNamespace
+
+    script_path = REPOSITORY_ROOT / "examples" / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py"
+    module = load_example_module("pcat_gaussian_available_position_medians", script_path)
+    coordinates = np.ma.array([0.1, 0.0, 0.0], mask=[False, True, True])
+    original_data = coordinates.data.copy()
+    original_mask = coordinates.mask.copy()
+    state = SimpleNamespace(
+        listpostlpostotl=np.array([-1.0]),
+        listpostdictelem=[[{"xpos": np.array([0.1]), "ypos": np.array([0.2])}]],
+        dictglob={"poststkscond": [{"xpos": coordinates, "ypos": np.array([0.2, np.nan, np.nan])}]},
+        prvl=np.array([0.8]),
+    )
+    result = module.plot_most_likely_vs_condensed(state, tmp_path / "comparison.png")
+    np.testing.assert_array_equal(result["condensed_positions"], [[0.1, 0.2]])
+    np.testing.assert_array_equal(coordinates.data, original_data)
+    np.testing.assert_array_equal(coordinates.mask, original_mask)
+
+
+@pytest.mark.parametrize("probabilities, expected_index", [
+    (np.ma.array([-3.0, 99.0, -1.0], mask=[False, True, False]), 2),
+    (np.ma.array([-3.0, -1.0, -2.0], mask=False), 1),
+    (np.array([-3.0, np.nan, -1.0]), 2),
+    (np.array([-3.0, np.inf, -1.0]), 2),
+])
+def test_gaussian_mixture_comparison_excludes_masked_log_probabilities(tmp_path, probabilities, expected_index):
+    from types import SimpleNamespace
+
+    script_path = REPOSITORY_ROOT / "examples" / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py"
+    module = load_example_module("pcat_gaussian_masked_log_probability", script_path)
+    original_data = np.ma.getdata(probabilities).copy()
+    original_mask = np.ma.getmaskarray(probabilities).copy()
+    state = SimpleNamespace(
+        listpostlpostotl=probabilities,
+        listpostdictelem=[
+            [{"xpos": np.array([0.0]), "ypos": np.array([0.0])}],
+            [{"xpos": np.array([9.0]), "ypos": np.array([9.0])}],
+            [{"xpos": np.array([0.1]), "ypos": np.array([0.2])}],
+        ],
+        dictglob={"poststkscond": [{"xpos": np.array([0.1, 0.1, 0.1]), "ypos": np.array([0.2, 0.2, 0.2])}]},
+        prvl=np.array([0.8]),
+    )
+    result = module.plot_most_likely_vs_condensed(state, tmp_path / "comparison.png")
+    assert result["best_sample_index"] == expected_index
+    best = state.listpostdictelem[expected_index][0]
+    np.testing.assert_array_equal(result["best_positions"], np.column_stack((best["xpos"], best["ypos"])))
+    np.testing.assert_array_equal(np.ma.getdata(probabilities), original_data)
+    np.testing.assert_array_equal(np.ma.getmaskarray(probabilities), original_mask)
+
+
+@pytest.mark.parametrize("probabilities", [
+    np.ma.array([-1.0], mask=[True]), np.array([np.nan]), np.array([-1.0 + 0.1j]),
+])
+def test_gaussian_mixture_comparison_rejects_unusable_log_probabilities(tmp_path, probabilities):
+    from types import SimpleNamespace
+
+    script_path = REPOSITORY_ROOT / "examples" / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py"
+    module = load_example_module("pcat_gaussian_unusable_log_probability", script_path)
+    state = SimpleNamespace(
+        listpostlpostotl=probabilities,
+        listpostdictelem=[[{"xpos": np.array([0.1]), "ypos": np.array([0.2])}]],
+        dictglob={"poststkscond": [{"xpos": np.array([0.1, 0.1, 0.1]), "ypos": np.array([0.2, 0.2, 0.2])}]},
+        prvl=np.array([0.8]),
+    )
+    output_path = tmp_path / "invalid_comparison.png"
+    with pytest.raises(ValueError, match="finite|real"):
+        module.plot_most_likely_vs_condensed(state, output_path)
+    assert not output_path.exists()
+
+
+@pytest.mark.parametrize("frequencies", [
+    np.array([-0.1]), np.array([1.1]), np.array([np.nan]), np.array([np.inf]),
+    np.ma.array([0.8], mask=[True]), np.array([0.8], dtype=complex),
+])
+@pytest.mark.parametrize("existing_output", [False, True])
+def test_gaussian_mixture_comparison_rejects_invalid_association_fraction(tmp_path, frequencies, existing_output):
+    from types import SimpleNamespace
+
+    script_path = REPOSITORY_ROOT / "examples" / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py"
+    module = load_example_module("pcat_gaussian_invalid_frequency", script_path)
+    state = SimpleNamespace(
+        listpostlpostotl=np.array([-1.0]),
+        listpostdictelem=[[{"xpos": np.array([0.1]), "ypos": np.array([0.2])}]],
+        dictglob={"poststkscond": [{"xpos": np.array([0.1, 0.1, 0.1]), "ypos": np.array([0.2, 0.2, 0.2])}]},
+        prvl=frequencies,
+    )
+    output_path = tmp_path / "invalid_comparison.png"
+    original = b"existing comparison artifact"
+    if existing_output:
+        print(f"Writing to {output_path}...")
+        output_path.write_bytes(original)
+    with pytest.raises(ValueError, match="frequenc|fraction|zero|one"):
+        module.plot_most_likely_vs_condensed(state, output_path)
+    if existing_output:
+        print(f"Reading from {output_path}...")
+        assert output_path.read_bytes() == original
+    else:
+        assert not output_path.exists()
+
+
+@pytest.mark.parametrize("frequencies", [[0.8, 0.55], [0.0, 1.0]])
+def test_gaussian_mixture_catalog_comparison_uses_best_sample_and_condensed_positions(tmp_path, frequencies):
+    from types import SimpleNamespace
+
+    script_path = (
+        REPOSITORY_ROOT
+        / "examples"
+        / "gaussian_mixture_catalog"
+        / "gaussian_mixture_catalog.py"
+    )
+    module = load_example_module("pcat_gaussian_catalog_comparison", script_path)
+    state = SimpleNamespace(
+        listpostlpostotl=np.array([[-3.0], [-1.0], [-2.0]]),
+        listpostdictelem=[
+            [{"xpos": np.array([0.0]), "ypos": np.array([0.0])}],
+            [{"xpos": np.array([0.2, 0.4]), "ypos": np.array([0.1, 0.3])}],
+            [{"xpos": np.array([0.1]), "ypos": np.array([0.2])}],
+        ],
+        dictglob={"poststkscond": [
+            {"xpos": np.array([0.25, 0.2, 0.3]), "ypos": np.array([0.2, 0.1, 0.3])},
+            {"xpos": np.array([0.45, 0.4, 0.5]), "ypos": np.array([0.35, 0.3, 0.4])},
+        ]},
+        prvl=np.array(frequencies),
+    )
+
+    result = module.plot_most_likely_vs_condensed(
+        state, tmp_path / "most_likely_vs_condensed_catalog.png",
+    )
+
+    assert result["best_sample_index"] == 1
+    np.testing.assert_array_equal(result["best_positions"], [[0.2, 0.1], [0.4, 0.3]])
+    np.testing.assert_array_equal(result["condensed_positions"], [[0.25, 0.2], [0.45, 0.35]])
+    np.testing.assert_array_equal(result["association_frequencies"], frequencies)
+    assert result["output_path"].is_file()
+    with Image.open(result["output_path"]) as image:
+        assert image.width > 400 and image.height > 300
+
+
+def test_gaussian_mixture_comparison_reuses_completed_empty_summary(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import pcat.main
+
+    script_path = REPOSITORY_ROOT / "examples" / "gaussian_mixture_catalog" / "gaussian_mixture_catalog.py"
+    module = load_example_module("pcat_gaussian_completed_empty_summary", script_path)
+    state = SimpleNamespace(
+        listpostlpostotl=np.array([-1.0]),
+        listpostdictelem=[[{"xpos": np.array([]), "ypos": np.array([])}]],
+        dictglob={"poststkscond": []}, prvl=np.array([]), numbstkscond=0,
+    )
+    monkeypatch.setattr(pcat.main, "readfile", lambda _: state)
+
+    def unexpected_condensation(*args, **kwargs):
+        pytest.fail("Completed empty summary was recomputed")
+
+    monkeypatch.setattr(pcat.main, "retr_condcatl", unexpected_condensation)
+    result = module.make_catalog_comparison(tmp_path, "completed_empty_run")
+    assert result["condensed_positions"].shape == (0, 2)
+    assert result["output_path"].is_file()
+
+
+@pytest.mark.parametrize("summary_initialized", [False, True])
+def test_gaussian_mixture_comparison_condenses_legacy_saved_state(tmp_path, monkeypatch, summary_initialized):
+    from types import SimpleNamespace
+    import pcat.main
+
+    script_path = (
+        REPOSITORY_ROOT
+        / "examples"
+        / "gaussian_mixture_catalog"
+        / "gaussian_mixture_catalog.py"
+    )
+    module = load_example_module("pcat_gaussian_catalog_saved_comparison", script_path)
+    state = SimpleNamespace(
+        listpostlpostotl=np.array([[-2.0]]),
+        listpostdictelem=[[{"xpos": np.array([0.1]), "ypos": np.array([0.2])}]],
+        dictglob={"poststkscond": []} if summary_initialized else {},
+    )
+    condensation_calls = []
+
+    def condense(posterior):
+        condensation_calls.append(posterior)
+        posterior.dictglob["poststkscond"] = [{
+            "xpos": np.array([0.1, 0.1, 0.1]),
+            "ypos": np.array([0.2, 0.2, 0.2]),
+        }]
+        posterior.prvl = np.array([1.0])
+
+    monkeypatch.setattr(pcat.main, "readfile", lambda _: state)
+    monkeypatch.setattr(pcat.main, "retr_condcatl", condense)
+
+    result = module.make_catalog_comparison(tmp_path, "legacy_run")
+
+    assert condensation_calls == [state]
+    assert result["best_sample_index"] == 0
+    assert result["output_path"].is_file()
 
 
 def test_voigt_smoke_configuration_enables_animation(monkeypatch):

@@ -141,6 +141,16 @@ def test_documented_example_commands_resolve():
         assert (REPOSITORY_ROOT / relative_path).is_file()
 
 
+def test_catalog_association_example_documents_false_discovery_rate():
+    readme = (REPOSITORY_ROOT / "examples" / "README.md").read_text()
+    examples = (DOCS_ROOT / "examples.rst").read_text()
+
+    assert "source completeness and target-catalog purity/false-discovery rate" in readme
+    assert "completeness, purity, and false-discovery rate" in examples
+    assert "calculated with Pergamon" in readme
+    assert "Pergamon" in examples
+
+
 def test_every_example_script_has_a_notebook():
     examples = REPOSITORY_ROOT / "examples"
     script_only_automation = set(examples.glob("run_all_examples*.py"))
